@@ -1,0 +1,167 @@
+/******************************************************************************
+
+Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+                    and Stephen Freund (Williams College) 
+
+All rights reserved.  Revision $REV ($DATE)
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the names of the University of California, Santa Cruz
+      and Williams College nor the names of its contributors may be
+      used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+******************************************************************************/
+
+
+package rr.tool.parser;
+
+import rr.tool.*;
+import acme.util.Assert;
+import acme.util.option.*;
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+import rr.simple.*;
+import rr.split.*;
+import rr.state.agent.*;
+
+action code {:
+:}
+
+parser code {:
+    static CommandLine cl;
+    static ToolLoader loader;
+
+	private static void prepTool(String name) {
+		loader.prepToolClass(name);
+  	}
+
+	public static Tool build(ToolLoader l, String chain, CommandLine c) throws Exception {
+		cl = c;
+		loader = l;
+		parser p = new parser(new Lexer(new StringReader(chain)));        
+		T e = (T)p.parse().value;
+		e.prep();
+		return e.gen(last());
+	}
+
+    
+    static protected Tool make(String name, Tool next) throws Exception {
+		Class c = loader.loadToolClass(name);
+		cl.addGroup(c.getSimpleName());
+		Tool tool = (Tool)c.getConstructor(String.class, Tool.class, CommandLine.class).newInstance(c.getName(), next, cl);
+		return tool;
+    	
+    }
+    
+    static protected Tool last() {
+        return new LastTool("Last", null);
+    }
+
+	
+	public void syntax_error(Symbol cur_token) {
+	       Assert.fail("Syntax Error on token '" + cur_token.value + "'");
+	}
+	
+	public void unrecovered_syntax_error(Symbol cur_token) {
+	       syntax_error(cur_token);
+	}
+
+	static abstract class T { 
+		public abstract Tool gen(Tool next) throws Exception;
+		public abstract void prep();
+	}
+
+	static class Id extends T {
+		protected String id;
+		public Id(String id) {
+		  this.id = id;
+		} 
+		public void prep() {
+			prepTool(id);
+		}
+		public Tool gen(Tool next) throws Exception{
+			return make(id, next);
+		}
+	}
+
+	static class Seq extends T {
+		protected T x1, x2;
+		public Seq(T x1, T x2) {
+		  this.x1 = x1;
+		  this.x2 = x2;
+		} 
+		public void prep() {
+			x1.prep();
+			x2.prep();
+		}
+		
+		public Tool gen(Tool next) throws Exception {
+			return x1.gen(x2.gen(next));
+		}
+	}
+
+	static class Bar extends T {
+		protected T x1, x2;
+		public Bar(T x1, T x2) {
+		  this.x1 = x1;
+		  this.x2 = x2;
+		} 
+		public void prep() {
+			x1.prep();
+			x2.prep();
+		}
+		
+		public Tool gen(Tool next) throws Exception {
+		   return new SplitTool("Split", x1.gen(last()), x2.gen(last()), next, cl) ;
+		}
+	}
+	
+
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal COLON, BAR, OPAREN, CPAREN;
+terminal String ID;
+
+
+nonterminal parser.T		ToolSpec;
+
+precedence left BAR;
+precedence left COLON;
+
+
+/* The grammar */
+ToolSpec      ::=	    ID:x	
+						    {: RESULT = new parser.Id(x); :} 
+				  |     OPAREN ToolSpec:cl CPAREN
+							{: RESULT = cl; :} 
+				  |     ToolSpec:x1 COLON ToolSpec:x2
+							{: RESULT = new parser.Seq(x1, x2); :} 
+				  |     ToolSpec:x1 BAR ToolSpec:x2
+							{: RESULT = new parser.Bar(x1, x2); :} 
+				  ;

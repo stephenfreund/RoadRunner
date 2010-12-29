@@ -1,0 +1,188 @@
+<!-- Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+                    and Stephen Freund (Williams College) 
+
+All rights reserved.  
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the names of the University of California, Santa Cruz
+      and Williams College nor the names of its contributors may be
+      used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-->
+
+<project name="RoadRunner" basedir="." default="clean-build">
+
+	<dirname property="rr.basedir" file="${ant.file.RoadRunner}" />
+
+
+	<property name="src.dir" location="${rr.basedir}/src" />
+	<property name="build.dir" location="${rr.basedir}/build" />
+	<property name="auto.dir" location="${rr.basedir}/auto" />
+	<property name="classes.dir" location="${rr.basedir}/classes" />
+	<property name="docs.dir" location="${rr.basedir}/docs" />
+	<property name="log.dir" location="${rr.basedir}/log" />
+
+	<property name="jar.dir" location="${build.dir}/jar" />
+	<property name="bin.dir" location="${build.dir}/bin" />
+
+
+
+	<property name="java.home" value="$$JAVA_HOME" />
+	<property name="cup.jar" value="${rr.basedir}/jars/java-cup-11a.jar" />
+	<property name="jflex.jar" value="${rr.basedir}/jars/JFlex.jar" />
+	<property name="rr.vmargs" value="-javaagent:${jar.dir}/rragent.jar $$JVM_ARGS" />
+
+	<property name="rr.main" value="rr.RRMain" />
+	<property name="run-script" value="rrrun" />
+
+	<path id="rr.classpath">
+		<pathelement location="${classes.dir}" />
+		<pathelement location="${cup.jar}" />
+	</path>
+
+	<path id="rr.classpath.jar">
+		<pathelement location="${jar.dir}/RoadRunner.jar" />
+	</path>
+
+	<taskdef name="cup" classname="java_cup.anttask.CUPTask" classpath="${cup.jar}" />
+	<taskdef name="jflex" classname="JFlex.anttask.JFlexTask" classpath="${jflex.jar}" />
+
+	<target name="init">
+	</target>
+
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete dir="${auto.dir}" />
+		<delete dir="${classes.dir}" />
+		<delete dir="${docs.dir}" />
+		<delete dir="${log.dir}" />
+	</target>
+
+	<target name="cup" depends="init">
+		<cup srcfile="${src.dir}/rr/tool/parser/rr.cup" interface="on" destdir="${auto.dir}" parser="parser" symbols="sym" quiet="true" nonterms="true" />
+	</target>
+
+	<target name="jflex" depends="cup">
+		<jflex file="${src.dir}/rr/tool/parser/rr.flex" destdir="${auto.dir}" />
+	</target>
+
+
+	<target name="values">
+		<mkdir dir="${auto.dir}/rr/tool/" />
+		<exec executable="cpp">
+			<arg line="-P -I${src.dir}/rr/tool ${src.dir}/rr/tool/RRValueEventGenerator.tem  ${auto.dir}/rr/tool/RRValueEventGenerator.java" />
+		</exec>
+	</target>
+
+	<target name="wc">
+		<echo> acme loc: </echo>
+		<exec executable="bash">
+			<arg line="-c 'find ${src.dir}/acme -name *.java | xargs wc -l | tail -1'" />
+		</exec>
+		<echo> rr loc: </echo>
+		<exec executable="bash">
+			<arg line="-c 'find ${src.dir}/rr -name *.java | xargs wc -l | tail -1'" />
+		</exec>
+	</target>
+
+	<target name="compile" depends="bootstrap-loader,cup,jflex,values">
+		<mkdir dir="${classes.dir}" />
+		<mkdir dir="${auto.dir}/bin" />
+		<javac srcdir="${src.dir}:${auto.dir}" destdir="${classes.dir}" classpathref="rr.classpath" debug="true">
+			<compilerarg value="-Xbootclasspath/p:${classes.dir}" />
+		</javac>
+		<echo file="${auto.dir}/bin/${run-script}" append="false" message="#!/bin/bash${line.separator}
+								  ${java.home}/bin/java -version ${line.separator}
+			                      echo ${line.separator}
+								  ${java.home}/bin/java ${rr.vmargs} -Xbootclasspath/p:${toString:rr.classpath}:$$RR_TOOLPATH: ${rr.main} $$*" />
+		<chmod file="${auto.dir}/bin/${run-script}" perm="u+x" />
+
+		<antcall target="props" />
+	</target>
+
+
+	<target name="props" depends="">
+		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/tools" />
+		<move file="rrtools.properties" todir="${classes.dir}/tools" />
+
+		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/rr/simple" />
+		<move file="rrtools.properties" todir="${classes.dir}/rr/simple" />
+	</target>
+
+
+	<target name="jar" depends="compile">
+		<mkdir dir="${jar.dir}" />
+		<mkdir dir="${bin.dir}" />
+		<jar destfile="${jar.dir}/RoadRunner.jar" basedir="${classes.dir}">
+			<manifest>
+				<attribute name="Rr.Main" value="${rr.main}" />
+			</manifest>
+		</jar>
+		<echo file="${bin.dir}/${run-script}" append="false" message="#!/bin/bash${line.separator}
+								  ${java.home}/bin/java -version ${line.separator}
+								  ${java.home}/bin/java ${rr.vmargs} -Xbootclasspath/p:${toString:rr.classpath.jar}:$$RR_TOOLPATH ${rr.main} $$*" />
+		<chmod file="${bin.dir}/${run-script}" perm="u+x" />
+
+	</target>
+
+	<target name="agent" depends="compile">
+		<mkdir dir="${jar.dir}" />
+		<mkdir dir="${bin.dir}" />
+		<jar destfile="${jar.dir}/rragent.jar" includes="rr/state/agent/**" basedir="${classes.dir}">
+			<manifest>
+				<attribute name="Premain-Class" value="rr.state.agent.ThreadStateExtensionAgent" />
+			</manifest>
+		</jar>
+	</target>
+
+
+	<target name="javadoc">
+		<javadoc classpathref="rr.classpath" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true">
+			<tag name="RRInternal" description="RR Internal Element. Do Not Use." />
+			<tag name="RRExperimental" description="RR Experimental Element. Do Not Use." />
+			<fileset dir="${rr.basedir}" includesfile="${src.dir}/api.txt" casesensitive="yes" />
+
+			<link href="http://download.oracle.com/javase/6/docs/api/" />
+			
+		</javadoc>
+	</target>
+
+
+	<target name="bootstrap-loader">
+		<mkdir dir="${classes.dir}"/>
+		<javac srcdir="${src.dir}/acme" destdir="${classes.dir}" debug="true"/>
+		<javac srcdir="${src.dir}/org" destdir="${classes.dir}" debug="true"/>
+		<javac srcdir="${src.dir}" includes="rr/loader/ClassLoaderTransformer.java" destdir="${classes.dir}" debug="true"/>
+		<java classname="rr.loader.ClassLoaderTransformer" classpath="${classes.dir}"/>
+		<copy file="/tmp/RR_ClassLoader.class" tofile="${classes.dir}/java/lang/ClassLoader.class"/>
+		<mkdir dir="${jar.dir}"/>
+		<jar destfile="${jar.dir}/ClassLoaderWithListener.jar" basedir="${classes.dir}"/>
+	</target>
+
+	<target name="clean-build" depends="clean,wc,compile,jar,agent,javadoc" />
+
+</project>

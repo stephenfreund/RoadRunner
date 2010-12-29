@@ -1,0 +1,198 @@
+/******************************************************************************
+
+Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+                    and Stephen Freund (Williams College) 
+
+All rights reserved.  Revision $REV ($DATE)
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the names of the University of California, Santa Cruz
+      and Williams College nor the names of its contributors may be
+      used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+******************************************************************************/
+
+#define TEM(X,Y) \
+	public static X writeAccess(Object target, ShadowVar gs, int fadId, ShadowThread td, X oldValue, X newValue) {\
+			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, true, oldValue, newValue);\
+			firstAccess.access(ae);\
+			ae.setInfo(null);\
+			newValue = ae.newValue.Y();\
+			ae.oldValue.clear();\
+			ae.newValue.clear();\
+			return newValue;\
+	}\
+	\
+	\
+	public static X volatileWriteAccess(Object target, ShadowVar gs, int fadId, ShadowThread td, X oldValue, X newValue) {\
+		try {\
+			VolatileAccessEvent ae = prepVolatileAccessEvent(target, gs, fadId, td, true, oldValue, newValue);\
+			getTool().volatileAccess(ae);					\
+			ae.setInfo(null);\
+			newValue = ae.newValue.Y();\
+			ae.oldValue.clear();\
+			ae.newValue.clear();\
+			return newValue;\
+		} catch (Throwable e) {\
+			Assert.panic(e);\
+			return oldValue;\
+		}\
+	}\
+	\
+	public static X readAccess(Object target, ShadowVar gs, int fadId, ShadowThread td, X oldValue) {\
+			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, false, oldValue, oldValue);\
+			firstAccess.access(ae);\
+			ae.setInfo(null);\
+			X newValue = ae.newValue.Y();\
+			ae.oldValue.clear();\
+			ae.newValue.clear();\
+			return newValue;\
+	}\
+	\
+	public static X volatileReadAccess(Object target, ShadowVar gs, int fadId, ShadowThread td, X oldValue) {\
+		try {\
+			VolatileAccessEvent ae = prepVolatileAccessEvent(target, gs, fadId, td, false, oldValue, oldValue);\
+			getTool().volatileAccess(ae);					\
+			ae.setInfo(null);\
+			X newValue = ae.newValue.Y();\
+			ae.oldValue.clear();\
+			ae.newValue.clear();\
+			return newValue;\
+		} catch (Throwable e) {\
+			Assert.panic(e);\
+			return oldValue;\
+		}\
+	}\
+	\
+	public static X arrayRead(Object array, int index, int arrayAccessId, ShadowThread td, X oldValue) {\
+			if (!RREventGenerator.matches(index)) return oldValue;\
+	\
+			final AbstractArrayState as = RREventGenerator.arrayShadow(array, index, arrayAccessId, td);\
+			final ArrayAccessEvent aae = prepArrayAccessEvent(array, index,\
+					arrayAccessId, td, as, false, oldValue, oldValue);\
+			firstAccess.access(aae);\
+			X newValue = aae.newValue.Y();\
+			aae.oldValue.clear();\
+			aae.newValue.clear();\
+			return newValue;\
+	}\
+\
+	public static X arrayWrite(Object array, int index, int arrayAccessId, ShadowThread td, X oldValue, X newValue) {\
+			if (!RREventGenerator.matches(index)) return newValue;\
+			\
+			final AbstractArrayState as = RREventGenerator.arrayShadow(array, index, arrayAccessId, td);\
+			final ArrayAccessEvent aae = prepArrayAccessEvent(array, index,\
+					arrayAccessId, td, as, true, oldValue, newValue);\
+			firstAccess.access(aae);\
+			newValue = aae.newValue.Y();\
+			aae.oldValue.clear();\
+			aae.newValue.clear();\
+			return newValue;\
+	}\
+	\
+	protected static FieldAccessEvent prepAccessEvent(Object target, ShadowVar gs, int fadId, ShadowThread td, boolean isWrite, X oldValue, X newValue) { \
+		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);\
+\
+		/* must be done first!  because loading updater could trigget other accesses, which will write over fields of fae.  Bitter... */\
+		AbstractFieldUpdater updater = fad.getField().getUpdater();\
+		\
+		FieldAccessEvent fae = td.getFieldAccessEvent();\
+		fae.setTarget(target);\
+		fae.setInfo(fad);\
+		fae.setUpdater(updater);\
+		fae.setWrite(isWrite);\
+		fae.oldValue.setValue(oldValue);\
+		fae.newValue.setValue(newValue);\
+		if (gs == null) {\
+			fae.putOriginalShadow(null); \
+			gs = getTool().makeShadowVar(fae);\
+			if (!fae.putShadow(gs)) {\
+			  gs = updater.getState(target); \
+			  Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly"); \
+			}\
+		}\
+\
+		fae.putOriginalShadow(gs);\
+		return fae;\
+	}	\
+	\
+	\
+	protected static VolatileAccessEvent prepVolatileAccessEvent(Object target,\
+			ShadowVar gs, int fadId, ShadowThread td, boolean isWrite, X oldValue, X newValue) {\
+		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);\
+		/* do first.  see above */ \
+		AbstractFieldUpdater updater = fad.getField().getUpdater();\
+		VolatileAccessEvent fae = td.getVolatileAccessEvent();\
+		fae.setTarget(target);\
+		fae.setInfo(fad);\
+		fae.setUpdater(updater);\
+		fae.setWrite(isWrite);\
+		fae.oldValue.setValue(oldValue);\
+		fae.newValue.setValue(newValue);\
+		fae.setShadowVolatile(ShadowVolatile.get(target, fad.getField()));\
+		if (gs == null) { \
+			fae.putOriginalShadow(null);\
+			gs = getTool().makeShadowVar(fae);\
+			if (fae.putShadow(gs)) {\
+				gs = updater.getState(target);\
+				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");\
+			}\
+		}\
+\
+		fae.putOriginalShadow(gs);\
+		return fae;\
+	}\
+	\
+	\
+	\
+	protected static ArrayAccessEvent prepArrayAccessEvent(Object array,\
+			int index, int arrayAccessId, ShadowThread td, AbstractArrayState as, boolean isWrite, X oldValue, X newValue) {\
+		final ArrayAccessInfo aad = MetaDataInfoMaps.getArrayAccesses().get(arrayAccessId); \
+		\
+		ArrayAccessEvent aae = td.getArrayAccessEvent();\
+\
+		aae.setIndex(index);\
+		aae.setWrite(isWrite);\
+		aae.setTarget(array);\
+		aae.setInfo(aad);\
+		aae.setArrayState(as);\
+		aae.oldValue.setValue(oldValue);\
+		aae.newValue.setValue(newValue);\
+\
+		ShadowVar gs = as.getState(index);\
+		if (gs == null) {\
+			aae.putOriginalShadow(null); \
+			if (!aae.putShadow(getTool().makeShadowVar(aae))) {\
+			  gs = as.getState(index); \
+			  Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly"); \
+			}\
+		} \
+		aae.putOriginalShadow(gs);\
+		return aae;\
+	}\
+	
+	

@@ -1,0 +1,116 @@
+Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+                    and Stephen Freund (Williams College) 
+
+All rights reserved.  
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the names of the University of California, Santa Cruz
+      and Williams College nor the names of its contributors may be
+      used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+To Install:
+-----------
+
+1. You will need Ant, Java 1.6, and cpp to build RoadRunner. 
+   The $JAVA_HOME environment variable must point to the proper
+   Java distribution.
+
+2. Unzip the dist file, and cd into the top-level directory.
+
+3. Build the source:
+
+	> cd RoadRunner; ant
+	
+To Run:
+-------
+
+1. cd RoadRunner
+
+2. source msetup
+
+	Note: this sets up environment variables and configures 
+	      everything for Java 1.6.  
+	      
+3. Test it:
+
+ 
+	> javac test/Test.java
+	> rrrun test.Test
+
+   You should get no errors.
+
+	> rrrun -tool=TL:RS:LS test.Test
+
+   You should get many race errors on field Test.y.
+	
+4.  Look at options:
+
+    	 > rrrun -help
+
+    You will at least want to look at the following:
+
+     -quiet                         
+     -help                          
+     -classpath={String}            
+     -toolpath={String}             
+     -tool={String}                 
+
+     -classes={StringMatcher}       
+     -fields={StringMatcher}        
+     -methods={StringMatcher}       
+
+     -array={ArrayMode}             
+     -field={FieldMode}             
+
+
+5.  Look at sample tools:
+
+     	 > rrrun -tools
+
+    Look at rr.tool.Tool abstract class and sample tools for
+    implementation info.
+    
+    
+
+ECLIPSE SUPPORT:
+-----------
+
+After building as described above, you can import the RoadRunner directory
+as an existing project.  
+   
+Refresh, Clean, etc. should rebuild everything as
+necessary.  The "rrrun script" will pick up any modifications you made.
+
+If adding new Tools, changing abbreviations, tools paths, changing the ClassLoader,
+changing the agent, or doing anything else unusual, you should rebuilt 
+RoadRunner with the build.xml ant script to ensure all the auto-generated 
+files are in sync.
+
+There is a sample launch script "scripts/RRMain-tools.launch" to print out all 
+the supported tools from inside Eclipse if you wish to work exclusively
+in the Eclipse environment.
