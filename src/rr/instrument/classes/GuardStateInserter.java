@@ -75,7 +75,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		String mName = m.getName();
 		String mDesc = m.getDescriptor();
 		MethodInfo method = MetaDataInfoMaps.getMethod(this.getCurrentClass(), mName, mDesc);
-		method.setFlags((access & ACC_STATIC) != 0, (access & ACC_NATIVE) != 0);
+		method.setFlags((access & ACC_STATIC) != 0, (access & ACC_NATIVE) != 0, (access & ACC_SYNCHRONIZED) != 0);
 		return new RRMethodAdapter(cv.visitMethod(access, mName, mDesc, null, null), method);
 	}
 

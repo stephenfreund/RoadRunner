@@ -88,7 +88,7 @@ public class InterfaceThunkInserter extends RRClassAdapter implements Opcodes {
 
 	private void createThreadDataThunk(int access, String name, String desc, String signature, String[] exceptions) {
 		MethodInfo method = MetaDataInfoMaps.getMethod(context.getRRClass(), name, desc);
-		method.setFlags((access & Opcodes.ACC_STATIC) != 0,(access & Opcodes.ACC_NATIVE) != 0);
+		method.setFlags((access & Opcodes.ACC_STATIC) != 0,(access & Opcodes.ACC_NATIVE) != 0, (access & ACC_SYNCHRONIZED) != 0);
 
 		RRMethodAdapter mv = new RRMethodAdapter(cv.visitMethod(access, name, desc, signature, exceptions), method); 
 

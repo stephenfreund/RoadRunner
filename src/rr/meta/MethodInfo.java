@@ -51,6 +51,7 @@ public class MethodInfo extends MetaDataInfo {
 
 	protected boolean isStatic;
 	protected boolean isNative;
+	private boolean isSynchronized;
 	protected boolean flagsSet = false;
 	
 	protected final Vector<OperationInfo> ops = new Vector<OperationInfo>();
@@ -63,7 +64,7 @@ public class MethodInfo extends MetaDataInfo {
 		this.desc = descriptor;
 		this.isSynthetic = isSynthetic;
 		if (name.contains("<")) {
-			this.setFlags(name.contains("<clinit>"), false);
+			this.setFlags(name.contains("<clinit>"), false, false);
 		}
 	} 
 
@@ -72,13 +73,15 @@ public class MethodInfo extends MetaDataInfo {
 		return MetaDataInfoKeys.getMethodKey(getOwner(), getName(), getDescriptor());
 	}
 
-	public void setFlags(boolean isStatic, boolean isNative) {
+	public void setFlags(boolean isStatic, boolean isNative, boolean isSynchronized) {
 		if (flagsSet) { 
 			Assert.assertTrue(isStatic == this.isStatic, this + " Static set twice: tools.internal = " + this.isStatic); 
 			Assert.assertTrue(isNative == this.isNative, this + " Native set twice: tools.internal = " + this.isNative); 
+			Assert.assertTrue(isNative == this.isSynchronized, this + " Native set twice: tools.internal = " + this.isSynchronized); 
 		}
 		this.isStatic = isStatic;
 		this.isNative = isNative;
+		this.isSynchronized = isSynchronized;
 		flagsSet = true;
 	}
 
@@ -132,8 +135,15 @@ public class MethodInfo extends MetaDataInfo {
 		return isNative;
 	}
 
-	public void setFlags(MethodInfo method) {
-		this.setFlags(method.isStatic, method.isNative);
+
+	public boolean isSynchronized() {
+		Assert.assertTrue(flagsSet, "No flag set: " + this);
+		return isSynchronized;
 	}
+	
+	public void setFlags(MethodInfo method) {
+		this.setFlags(method.isStatic, method.isNative, method.isSynchronized);
+	}
+
 
 }

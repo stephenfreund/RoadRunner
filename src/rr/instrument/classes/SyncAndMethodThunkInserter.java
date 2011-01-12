@@ -113,7 +113,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 
 			final String desc2 = desc; // ASMUtil.addThreadDataToDescriptor(desc);
 			final MethodInfo newMethod = MetaDataInfoMaps.getMethod(owner, newName, desc2);
-			newMethod.setFlags(method.isStatic(), false);
+			newMethod.setFlags(method.isStatic(), false, false);
 			final int maxVar = Instrumentor.methodContext.get(method).getMaxVar();
 			Instrumentor.methodContext.get(newMethod).setFirstFreeVar(maxVar+1);
 			MethodVisitor mv = cv.visitMethod(access & ~ACC_SYNCHRONIZED,
@@ -202,7 +202,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 
 		private void createSyncThunk(int access, String name, String desc, String signature, String[] exceptions, String wrappedMethodName, int maxLocals) {
 			final MethodInfo method = MetaDataInfoMaps.getMethod(MetaDataInfoMaps.getClass(owner), name, desc);
-			method.setFlags((access & ACC_STATIC) != 0, false);
+			method.setFlags((access & ACC_STATIC) != 0, false, false);
 			Instrumentor.methodContext.get(method).setFirstFreeVar(maxLocals + 1);
 
 			MethodVisitor omv = cvForThunks.visitMethod(access, name, desc, signature, exceptions);
@@ -278,7 +278,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 
 		private void createMethodThunk(int access, String name, String desc, String signature, String[] exceptions, String wrappedMethodName, int maxLocals) {
 			final MethodInfo method = MetaDataInfoMaps.getMethod(MetaDataInfoMaps.getClass(owner), name, desc);
-			method.setFlags((access & ACC_STATIC) != 0, false);
+			method.setFlags((access & ACC_STATIC) != 0, false, false);
 			Instrumentor.methodContext.get(method).setFirstFreeVar(maxLocals + 1);
 			
 			MethodVisitor omv = cvForThunks.visitMethod(access, name, desc, signature, exceptions);

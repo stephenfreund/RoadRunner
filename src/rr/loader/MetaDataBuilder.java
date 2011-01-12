@@ -127,7 +127,7 @@ public class MetaDataBuilder {
 				visitType(t);
 			}
 			MethodInfo method = MetaDataInfoMaps.getMethod(current, name, desc);
-			method.setFlags((access & Opcodes.ACC_STATIC) != 0,(access & Opcodes.ACC_NATIVE) != 0);
+			method.setFlags((access & Opcodes.ACC_STATIC) != 0,(access & Opcodes.ACC_NATIVE) != 0, (access & Opcodes.ACC_SYNCHRONIZED) != 0);
 			final MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
 			return sigsOnly ? mv : new MetaDataMethodVisitor(method, mv);
 		}
