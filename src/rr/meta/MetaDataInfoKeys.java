@@ -75,7 +75,7 @@ public class MetaDataInfoKeys {
 	}
 
 	public static String getFieldAccessKey(String fileName, int line, FieldInfo field, boolean isWrite) {
-		return (isWrite ? "wr":"rd") + "_" + field.getKey() + "@" + SourceLocation.toKeyString(fileName, line); 
+		return (isWrite ? "wr":"rd") + "_" + (field == null ? "null" : field.getKey()) + "@" + SourceLocation.toKeyString(fileName, line); 
 	}
 
 	public static String getJoinKey(String fileName, int line) {

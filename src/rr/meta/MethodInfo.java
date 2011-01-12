@@ -42,6 +42,8 @@ package rr.meta;
 import java.util.Vector;
 
 import acme.util.Assert;
+import acme.util.StackDump;
+import acme.util.Util;
 
 public class MethodInfo extends MetaDataInfo {
 
@@ -51,7 +53,7 @@ public class MethodInfo extends MetaDataInfo {
 
 	protected boolean isStatic;
 	protected boolean isNative;
-	private boolean isSynchronized;
+	protected boolean isSynchronized;
 	protected boolean flagsSet = false;
 	
 	protected final Vector<OperationInfo> ops = new Vector<OperationInfo>();
@@ -77,7 +79,7 @@ public class MethodInfo extends MetaDataInfo {
 		if (flagsSet) { 
 			Assert.assertTrue(isStatic == this.isStatic, this + " Static set twice: tools.internal = " + this.isStatic); 
 			Assert.assertTrue(isNative == this.isNative, this + " Native set twice: tools.internal = " + this.isNative); 
-			Assert.assertTrue(isNative == this.isSynchronized, this + " Native set twice: tools.internal = " + this.isSynchronized); 
+			Assert.assertTrue(isSynchronized == this.isSynchronized, this + " Synchronized set twice: tools.internal = " + this.isSynchronized); 
 		}
 		this.isStatic = isStatic;
 		this.isNative = isNative;
