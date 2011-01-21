@@ -65,7 +65,7 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 			Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] bytes) throws IllegalClassFormatException {
 
-		if (!(className.startsWith("rr/") || className.startsWith("java/") || className.startsWith("acme/") || className.startsWith("org/asm/") || className.startsWith("sun/"))) {
+		if (!(className.startsWith("rr/") || className.startsWith("rrtools/") || className.startsWith("java/") || className.startsWith("acme/") || className.startsWith("org/asm/") || className.startsWith("sun/"))) {
 			if (hook != null) {
 				return hook.define(definingLoader, className, bytes);
 			}

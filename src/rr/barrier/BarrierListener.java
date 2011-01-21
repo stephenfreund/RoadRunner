@@ -47,6 +47,6 @@ public interface BarrierListener<T> {
 	/**
 	 * Method called by a barrier monitor when a thread leaves a barrier.
 	 */
-public void postDoBarrier(BarrierEvent<T> be);
+	public void postDoBarrier(BarrierEvent<T> be);
 
 }

@@ -141,12 +141,14 @@ public class ToolLoader extends URLClassLoader {
 	}
 
 	public void prepToolClass(String x) {
-		final String expandAbbrev = expandAbbrev(x);
+		String expanded = x;
+		final String expandAbbrev = expandAbbrev(expanded);
 		if (expandAbbrev != null) {
-			String expanded = expandAbbrev.replace(".", "/");
-			InputStream in = getToolAsStream(x);
-			ThreadStateExtensionAgent.registerTool(expanded, in);
-		}
+			expanded = expandAbbrev;
+		} 
+		expanded = expanded.replace(".", "/");
+		InputStream in = getToolAsStream(expanded);
+		ThreadStateExtensionAgent.registerTool(expanded, in);
 	}
 
 	@Override
