@@ -77,13 +77,12 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 		cvForThunks.visit(version, access, name, signature, superName, interfaces);
 	}
 
-
-	@Override
-	public void visitSource(String source,
-			String debug) {
-		super.visitSource(source, debug);
-		cvForThunks.visitSource(source, debug);
-	}
+//	@Override
+//	public void visitSource(String source,
+//			String debug) {
+//		super.visitSource(source, debug);
+//		cvForThunks.visitSource(source, debug);
+//	}
 
 
 	@Override
@@ -145,7 +144,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 			this.signature = signature;
 			this.exceptions = exceptions;
 		}
-
+		
 		@Override
 		public void visitLineNumber(int line, Label l) {
 			super.visitLineNumber(line, l);
@@ -223,7 +222,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 
 			Label start = new Label();
 			mv.visitLabel(start);
-			mv.visitLineNumber(startLine-1, start);
+			mv.visitLineNumber((startLine == -1 ? 0 : startLine-1), start);
 
 			/*
 			 * Perform Acquire
@@ -294,7 +293,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 
 			Label start = new Label();
 			mv.visitLabel(start);
-			mv.visitLineNumber(startLine-1, start);
+			mv.visitLineNumber((startLine == -1 ? 0 : startLine-1), start);
 
 			/*
 			 * Perform Enter
