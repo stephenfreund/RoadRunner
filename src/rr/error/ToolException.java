@@ -4,7 +4,6 @@ package rr.error;
  * Base class for exceptions that tools throw into target programs.  
  * Unlike all other exceptions thrown by tools, ToolExceptions are not
  * caught by RoadRunner.  They propagate up to the target program.
- * (Currently this is only true in memory access hooks.)
  * 
  * Programming model exceptions (e.g. a DataRaceException) should subclass
  * ToolException.
