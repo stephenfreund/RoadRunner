@@ -77,13 +77,12 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 		cvForThunks.visit(version, access, name, signature, superName, interfaces);
 	}
 
-
-	@Override
-	public void visitSource(String source,
-			String debug) {
-		super.visitSource(source, debug);
-		cvForThunks.visitSource(source, debug);
-	}
+//	@Override
+//	public void visitSource(String source,
+//			String debug) {
+//		super.visitSource(source, debug);
+//		cvForThunks.visitSource(source, debug);
+//	}
 
 
 	@Override

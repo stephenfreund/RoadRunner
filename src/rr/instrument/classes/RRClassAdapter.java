@@ -57,9 +57,13 @@ public class RRClassAdapter extends ClassAdapter {
 
 	@Override
 	public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-		this.context = Instrumentor.classContext.get(MetaDataInfoMaps.getClass(name));
-		this.version = version;
+		setCurrentClass(version, name);
 		super.visit(version, access, name, signature, superName, interfaces);
+	}
+	
+	protected void setCurrentClass(int version, String name) {
+		this.context = Instrumentor.classContext.get(MetaDataInfoMaps.getClass(name));
+		this.version = version;		
 	}
 
 	public ClassInfo getCurrentClass() {
