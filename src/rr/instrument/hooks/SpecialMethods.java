@@ -134,7 +134,9 @@ public class SpecialMethods implements Opcodes {
 		String className = "__$rr_TSRThunk_" + enclosing.getOwner().getName().replace('/', '_') + "_" + thunkCount++;
 		thunkType = Type.getObjectType(className);
 		Method invokeMethod = new Method("invoke", method.getDescriptor());
-		invokeMethod = new Method("invoke", ASMUtil.addTypeToDescriptor(invokeMethod.getDescriptor(), Type.getObjectType(method.getOwner().getName().replace('.','/')), 0));
+		if (opcode != INVOKESTATIC) {
+			invokeMethod = new Method("invoke", ASMUtil.addTypeToDescriptor(invokeMethod.getDescriptor(), Type.getObjectType(method.getOwner().getName().replace('.','/')), 0));
+		}
 
 		gen.invokeStatic(thunkType, invokeMethod);
 
