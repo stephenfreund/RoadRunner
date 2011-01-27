@@ -119,7 +119,7 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 
 	@Override
 	public void visitMaxs(int stack, int vars) {
-		super.visitMaxs(stack + 4, Math.max(vars, context.getMaxVar()));
+		super.visitMaxs(stack + 4, Math.max(vars, context.getMaxVar() + 1));
 	}
 
 	protected void loadShadowForArray(ArrayShadowValue v) {

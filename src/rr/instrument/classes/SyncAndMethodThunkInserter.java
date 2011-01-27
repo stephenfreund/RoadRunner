@@ -337,7 +337,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 			}
 			mv.visitLabel(returnStatement);
 			mv.visitInsn(ASMUtil.returnInstr(Type.getReturnType(desc)));
-			mv.visitMaxs(10, mv.getContext().getMaxVar());
+			mv.visitMaxs(10, mv.getContext().getMaxVar() + 1);
 			mv.visitEnd();
 		}
 	}
