@@ -499,7 +499,7 @@ public class RREventGenerator extends RR {
 		try {
 			final MethodInfo methodData = MetaDataInfoMaps.getMethods().get(methodDataId);
 			int invokeId = td.invokeId;
-			final InvokeInfo invokeInfo = MetaDataInfoMaps.getInvokes().get(invokeId);
+			final InvokeInfo invokeInfo = invokeId == InvokeInfo.NULL_ID ? InvokeInfo.NULL : MetaDataInfoMaps.getInvokes().get(invokeId);
 			final MethodEvent me = td.enter(target, methodData); 
 			me.setInvokeInfo(invokeInfo);
 			firstEnter.enter(me);

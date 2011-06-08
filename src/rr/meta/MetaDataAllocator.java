@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.meta;
 
@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
@@ -53,20 +54,20 @@ import acme.util.decorations.SingletonValue;
 public class MetaDataAllocator<S extends MetaDataInfo> implements Iterable<S>, Serializable {
 
 	protected S mapById[];
-	protected final HashMap<String,S> map = new LinkedHashMap<String,S>();
+	protected final ConcurrentHashMap<String, S> map = new ConcurrentHashMap<String,S>();
 	protected final DecorationFactory<S> decorations = new DecorationFactory<S>();
 
-        private static <T> T[] copyOf(T[] original, int newLength) {
-	    T[] copy = (T[]) java.lang.reflect.Array.newInstance(original.getClass().getComponentType(), newLength);
-	    System.arraycopy(original, 0, copy, 0,
-			     Math.min(original.length, newLength));
-	    return copy;
-        }
-   
+	private static <T> T[] copyOf(T[] original, int newLength) {
+		T[] copy = (T[]) java.lang.reflect.Array.newInstance(original.getClass().getComponentType(), newLength);
+		System.arraycopy(original, 0, copy, 0,
+				Math.min(original.length, newLength));
+		return copy;
+	}
+
 	public MetaDataAllocator(S[] bogusArray) {
 		mapById = copyOf(bogusArray, 128);
 	}
-	
+
 	public synchronized S get(final String key) {
 		return map.get(key);
 	}
@@ -74,11 +75,11 @@ public class MetaDataAllocator<S extends MetaDataInfo> implements Iterable<S>, S
 	public S get(final int id) {
 		return mapById[id];
 	}
-	
+
 	public int size() {
 		return map.size();
 	}
-	
+
 	private synchronized void resize(final int n) {
 		mapById = copyOf(mapById, n);
 	}
@@ -98,7 +99,7 @@ public class MetaDataAllocator<S extends MetaDataInfo> implements Iterable<S>, S
 	public <T extends Serializable> Decoration<S, T> makeDecoration(final String name, DecorationFactory.Type type, final T defaultValue) {
 		return decorations.make(name, type, new SingletonValue<S,T>(defaultValue));
 	}
-	
+
 	public Iterator<S> iterator() {
 		return map.values().iterator();
 	}

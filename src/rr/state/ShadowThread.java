@@ -165,7 +165,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/**
 	 * @RRInternal
 	 */
-	public int invokeId = InvokeInfo.NULL.getId();
+	public int invokeId = InvokeInfo.NULL_ID; // InvokeInfo.NULL.getId();
 
 
 	private static void initFreeList() {

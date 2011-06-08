@@ -123,7 +123,7 @@ public class MetaDataInfoMaps {
 				arrayAccesses = read("array accesses", in);
 				invokes = read("invokes", in);
 
-				Util.logf("decorations...");
+				Util.log("decorations...");
 				opDecorations = (DecorationFactory<OperationInfo>)in.readObject();
 				globalDecorations = (GlobalMetaDataInfoDecorations)in.readObject();
 				in.close();

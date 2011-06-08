@@ -177,6 +177,10 @@ public final class LockSet implements ShadowVar {
 		return result;
 	}
 
+	public LockSet intersect(LockSet other) {
+		return intersect(this, other);
+	}
+	
 	public static LockSet intersect(LockSet ls1, LockSet ls2) {
 		if (ls1 == ls2) {
 //			Util.log(ls1 + " /\\ " + ls2 + " ==> " + ls1);
