@@ -81,10 +81,10 @@ public class RREventGenerator extends RR {
 
 
 	public static CommandLineOption<Boolean> noJoinOption  = 
-		CommandLine.makeBoolean("nojoin", false, CommandLineOption.Kind.EXPERIMENTAL, "By default RoadRunner waits for a thread to finishin by joining on it.  This causes problems if the target wait()'s on a Thread object, as is the case in Eclipse.  This option turns on a less efficient polling scheme.");
+			CommandLine.makeBoolean("nojoin", false, CommandLineOption.Kind.EXPERIMENTAL, "By default RoadRunner waits for a thread to finishin by joining on it.  This causes problems if the target wait()'s on a Thread object, as is the case in Eclipse.  This option turns on a less efficient polling scheme.");
 
 	public static CommandLineOption<Boolean> multiClassLoaderOption  = 
-		CommandLine.makeBoolean("multiLoader", false, CommandLineOption.Kind.EXPERIMENTAL, "Attempt to support multiple class loaders.");
+			CommandLine.makeBoolean("multiLoader", false, CommandLineOption.Kind.EXPERIMENTAL, "Attempt to support multiple class loaders.");
 
 
 	public final static CommandLineOption<Integer> indicesToWatch  = 
@@ -99,6 +99,7 @@ public class RREventGenerator extends RR {
 	protected static boolean matches(final int index) {
 		return index <= maxArrayIndex;
 	} 
+
 
 
 	/****************************************************************/
@@ -478,10 +479,14 @@ public class RREventGenerator extends RR {
 
 		try {
 			final MethodInfo methodData = MetaDataInfoMaps.getMethods().get(methodDataId);
-			int invokeId = td.invokeId;
-			final InvokeInfo invokeInfo = invokeId == InvokeInfo.NULL_ID ? InvokeInfo.NULL : MetaDataInfoMaps.getInvokes().get(invokeId);
 			final MethodEvent me = td.enter(target, methodData); 
-			me.setInvokeInfo(invokeInfo);
+			int invokeId = td.invokeId;
+			try {
+				final InvokeInfo invokeInfo = MetaDataInfoMaps.getInvokes().get(invokeId);
+				me.setInvokeInfo(invokeInfo);
+			} catch (Exception e) {
+				if (invokeId != -1) throw e;  // hack to ignore initial call to main when invokeId will be -1...
+			}
 			firstEnter.enter(me);
 		} catch(Throwable e) {
 			Assert.panic(e);
