@@ -87,40 +87,20 @@ public class RREventGenerator extends RR {
 		CommandLine.makeBoolean("multiLoader", false, CommandLineOption.Kind.EXPERIMENTAL, "Attempt to support multiple class loaders.");
 
 
-	public final static CommandLineOption<String> indicesToWatch  = 
-		CommandLine.makeString("indices", "0", CommandLineOption.Kind.EXPERIMENTAL, "Specifies which array indices sites to watch, ie 0:1:2:3:4", new Runnable() {
+	public final static CommandLineOption<Integer> indicesToWatch  = 
+		CommandLine.makeInteger("indices", Integer.MAX_VALUE, CommandLineOption.Kind.EXPERIMENTAL, "Specifies max array index to watch", new Runnable() {
 			public void run() {
-				Assert.fail("indices not currently working...");
-			}
-//				final String indices = indicesToWatch.get();
-//				if (indices == null) {
-//					Assert.panic("Must specify indices to watch");
-//				} else {
-//					String is[] = indices.split(":");
-//					Util.log("Array Indices to watch: " + Arrays.toString(is));
-//					int max = 0;
-//					for (String i : is) {
-//						max = Math.max(max, Integer.parseInt(i));
-//					}
-//					bits = new boolean[max+1];
-//					for (String i : is) {
-//						bits[Integer.parseInt(i)] = true;
-//					}			
-//				}
-//			}
-//
+				maxArrayIndex = indicesToWatch.get();
+			}	
 		});
 
-//	protected static boolean bits[];
-//
-//	protected static boolean matches(final int index) {
-//		return bits == null || index < bits.length && bits[index];
-//	} 
+	protected static int maxArrayIndex;
 
 	protected static boolean matches(final int index) {
-		return true;
-	}
-	
+		return index <= maxArrayIndex;
+	} 
+
+
 	/****************************************************************/
 
 
@@ -493,7 +473,7 @@ public class RREventGenerator extends RR {
 			Assert.panic(e);
 		}
 	}
-	
+
 	public static void enter(final Object target, final int methodDataId, final ShadowThread td) {
 
 		try {
@@ -652,7 +632,7 @@ public class RREventGenerator extends RR {
 
 
 	/*** SUPPORT FOR MULTIPLE CLASSES LOADERS ***/
- 
+
 	protected transient static ResourceManager<FieldInfo, ResourceManager<LoaderContext, AbstractFieldUpdater>> updatersByLoader = new ResourceManager<FieldInfo, ResourceManager<LoaderContext, AbstractFieldUpdater>>() {
 
 		@Override
@@ -672,10 +652,10 @@ public class RREventGenerator extends RR {
 						return null;
 					}
 				}
-				
+
 			};
 		}
-		
+
 	};
 
 

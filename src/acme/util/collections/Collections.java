@@ -92,17 +92,21 @@ public class Collections {
 		return v;
 	}
 
-	public static <T> String listToString(Iterable<T> list) {
+	public static <T> String listToString(Iterable<T> list, String sep) {
 		boolean first = true;
 		String result = "";
 		for (T t : list) {
 			if (!first) {
-				result += ",";
+				result += sep;
 			}
 			result += t;
 			first = false;
 		}
 		return result;
+	}
+	
+	public static <T> String listToString(Iterable<T> list) {
+		return listToString(list, ",");
 	}
 
 	public static <T extends Comparable<T>, U> String mapToOrderedString(Map<T,U> map, String sep) {
