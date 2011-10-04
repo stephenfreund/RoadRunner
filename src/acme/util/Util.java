@@ -298,7 +298,7 @@ public class Util {
 	 */
 	public static String objectToIdentityString(Object target) {
 		if (target == null) return "null";
-		if (true) {
+		if (false) {
 			return String.format("0x%08X (%s)", Util.identityHashCode(target), target.getClass());
 		} else {
 			synchronized(Util.class) {
