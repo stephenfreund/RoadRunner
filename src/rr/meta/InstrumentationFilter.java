@@ -63,10 +63,10 @@ public class InstrumentationFilter {
 	public static final Decoration<MethodInfo,Boolean> shouldInstrumentMethod = 
 		MetaDataInfoMaps.getMethods().makeDecoration("instrument method", DecorationFactory.Type.SINGLE, new DefaultValue<MethodInfo, Boolean>() { 
 			public Boolean get(MethodInfo method) { 
-				return shouldInstrument(method.getOwner()) && 
+				return shouldInstrument(method.getOwner()) &&
+				methodsToWatch.get().test(method.getKey()) == StringMatchResult.ACCEPT && 
 				!method.isNative() &&
-				method.getOwner().isClass() &&
-				methodsToWatch.get().test(method.getKey()) == StringMatchResult.ACCEPT;
+				method.getOwner().isClass();
 			}
 		});
 
@@ -74,11 +74,11 @@ public class InstrumentationFilter {
 	public static final Decoration<FieldInfo,Boolean> shouldInstrumentField = 
 		MetaDataInfoMaps.getFields().makeDecoration("instrument field", DecorationFactory.Type.SINGLE, new DefaultValue<FieldInfo, Boolean>() { 
 			public Boolean get(FieldInfo field) { 
-				return shouldInstrument(field.getOwner()) && 
+				return shouldInstrument(field.getOwner()) &&
+				fieldsToWatch.get().test(field.getKey()) == StringMatchResult.ACCEPT && 
 				(field.isVolatile() ||  // always track volatiles since they are sync devices...
 				!field.isFinal() &&
-				!field.isSynthetic() &&
-				fieldsToWatch.get().test(field.getKey()) == StringMatchResult.ACCEPT);
+				!field.isSynthetic());
 			}
 		});
 
@@ -86,9 +86,9 @@ public class InstrumentationFilter {
 		MetaDataInfoMaps.getOpDecorations().make("instrument op", DecorationFactory.Type.SINGLE, new DefaultValue<OperationInfo, Boolean>() {
 			public Boolean get(OperationInfo op) { 
 				final MethodInfo enclosing = op.getEnclosing();
-				return shouldInstrument(enclosing.getOwner()) &&
-				shouldInstrument(enclosing) &&		
-				linesToWatch.get().test(op.getLoc().getKey()) == StringMatchResult.ACCEPT;
+				return shouldInstrument(enclosing.getOwner()) &&		
+				linesToWatch.get().test(op.getLoc().getKey()) == StringMatchResult.ACCEPT &&
+				shouldInstrument(enclosing);
 			}	
 		});
 
@@ -97,10 +97,10 @@ public class InstrumentationFilter {
 		MetaDataInfoMaps.getMethods().makeDecoration("supportThreadStateParam", DecorationFactory.Type.SINGLE, new DefaultValue<MethodInfo, Boolean>() { 
 			public Boolean get(MethodInfo method) { 
 				final boolean b = !method.getName().contains("[") &&
-				shouldInstrument(method) && 
+				shouldInstrument(method) &&
+				methodsSupportThreadStateParam.get().test(method.getKey())==StringMatchResult.ACCEPT && 
 				!method.isNative() &&
-				method.getOwner().isClass() &&
-				methodsSupportThreadStateParam.get().test(method.getKey())==StringMatchResult.ACCEPT;
+				method.getOwner().isClass();
 				return b;
 			}
 		});
