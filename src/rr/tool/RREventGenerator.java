@@ -94,7 +94,7 @@ public class RREventGenerator extends RR {
 			}	
 		});
 
-	protected static int maxArrayIndex;
+	protected static int maxArrayIndex = Integer.MAX_VALUE;
 
 	protected static boolean matches(final int index) {
 		return index <= maxArrayIndex;
