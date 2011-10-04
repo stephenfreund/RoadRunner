@@ -81,46 +81,46 @@ public class RREventGenerator extends RR {
 
 
 	public static CommandLineOption<Boolean> noJoinOption  = 
-		CommandLine.makeBoolean("nojoin", false, CommandLineOption.Kind.EXPERIMENTAL, "By default RoadRunner waits for a thread to finishin by joining on it.  This causes problems if the target wait()'s on a Thread object, as is the case in Eclipse.  This option turns on a less efficient polling scheme.");
+			CommandLine.makeBoolean("nojoin", false, CommandLineOption.Kind.EXPERIMENTAL, "By default RoadRunner waits for a thread to finishin by joining on it.  This causes problems if the target wait()'s on a Thread object, as is the case in Eclipse.  This option turns on a less efficient polling scheme.");
 
 	public static CommandLineOption<Boolean> multiClassLoaderOption  = 
-		CommandLine.makeBoolean("multiLoader", false, CommandLineOption.Kind.EXPERIMENTAL, "Attempt to support multiple class loaders.");
+			CommandLine.makeBoolean("multiLoader", false, CommandLineOption.Kind.EXPERIMENTAL, "Attempt to support multiple class loaders.");
 
 
 	public final static CommandLineOption<String> indicesToWatch  = 
-		CommandLine.makeString("indices", "0", CommandLineOption.Kind.EXPERIMENTAL, "Specifies which array indices sites to watch, ie 0:1:2:3:4", new Runnable() {
-			public void run() {
-				Assert.fail("indices not currently working...");
-			}
-//				final String indices = indicesToWatch.get();
-//				if (indices == null) {
-//					Assert.panic("Must specify indices to watch");
-//				} else {
-//					String is[] = indices.split(":");
-//					Util.log("Array Indices to watch: " + Arrays.toString(is));
-//					int max = 0;
-//					for (String i : is) {
-//						max = Math.max(max, Integer.parseInt(i));
-//					}
-//					bits = new boolean[max+1];
-//					for (String i : is) {
-//						bits[Integer.parseInt(i)] = true;
-//					}			
-//				}
-//			}
-//
-		});
+			CommandLine.makeString("indices", "0", CommandLineOption.Kind.EXPERIMENTAL, "Specifies which array indices sites to watch, ie 0:1:2:3:4", new Runnable() {
+				public void run() {
+					Assert.fail("indices not currently working...");
+				}
+				//				final String indices = indicesToWatch.get();
+				//				if (indices == null) {
+				//					Assert.panic("Must specify indices to watch");
+				//				} else {
+				//					String is[] = indices.split(":");
+				//					Util.log("Array Indices to watch: " + Arrays.toString(is));
+				//					int max = 0;
+				//					for (String i : is) {
+				//						max = Math.max(max, Integer.parseInt(i));
+				//					}
+				//					bits = new boolean[max+1];
+				//					for (String i : is) {
+				//						bits[Integer.parseInt(i)] = true;
+				//					}			
+				//				}
+				//			}
+				//
+			});
 
-//	protected static boolean bits[];
-//
-//	protected static boolean matches(final int index) {
-//		return bits == null || index < bits.length && bits[index];
-//	} 
+	//	protected static boolean bits[];
+	//
+	//	protected static boolean matches(final int index) {
+	//		return bits == null || index < bits.length && bits[index];
+	//	} 
 
 	protected static boolean matches(final int index) {
 		return true;
 	}
-	
+
 	/****************************************************************/
 
 
@@ -493,15 +493,19 @@ public class RREventGenerator extends RR {
 			Assert.panic(e);
 		}
 	}
-	
+
 	public static void enter(final Object target, final int methodDataId, final ShadowThread td) {
 
 		try {
 			final MethodInfo methodData = MetaDataInfoMaps.getMethods().get(methodDataId);
-			int invokeId = td.invokeId;
-			final InvokeInfo invokeInfo = MetaDataInfoMaps.getInvokes().get(invokeId);
 			final MethodEvent me = td.enter(target, methodData); 
-			me.setInvokeInfo(invokeInfo);
+			int invokeId = td.invokeId;
+			try {
+				final InvokeInfo invokeInfo = MetaDataInfoMaps.getInvokes().get(invokeId);
+				me.setInvokeInfo(invokeInfo);
+			} catch (Exception e) {
+				if (invokeId != -1) throw e;  // hack to ignore initial call to main when invokeId will be -1...
+			}
 			firstEnter.enter(me);
 		} catch(Throwable e) {
 			Assert.panic(e);
@@ -652,7 +656,7 @@ public class RREventGenerator extends RR {
 
 
 	/*** SUPPORT FOR MULTIPLE CLASSES LOADERS ***/
- 
+
 	protected transient static ResourceManager<FieldInfo, ResourceManager<LoaderContext, AbstractFieldUpdater>> updatersByLoader = new ResourceManager<FieldInfo, ResourceManager<LoaderContext, AbstractFieldUpdater>>() {
 
 		@Override
@@ -672,10 +676,10 @@ public class RREventGenerator extends RR {
 						return null;
 					}
 				}
-				
+
 			};
 		}
-		
+
 	};
 
 

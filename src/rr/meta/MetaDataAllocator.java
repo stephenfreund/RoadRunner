@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
@@ -53,7 +54,7 @@ import acme.util.decorations.SingletonValue;
 public class MetaDataAllocator<S extends MetaDataInfo> implements Iterable<S>, Serializable {
 
 	protected S mapById[];
-	protected final HashMap<String,S> map = new LinkedHashMap<String,S>();
+	protected final ConcurrentHashMap<String,S> map = new ConcurrentHashMap<String,S>();
 	protected final DecorationFactory<S> decorations = new DecorationFactory<S>();
 
         private static <T> T[] copyOf(T[] original, int newLength) {

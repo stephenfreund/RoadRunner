@@ -43,7 +43,7 @@ public class InvokeInfo extends OperationInfo {
 
 	protected final MethodInfo method;
 
-	public static final InvokeInfo NULL = MetaDataInfoMaps.makeInvoke(SourceLocation.NULL, null, null);
+	public static final InvokeInfo NULL = new InvokeInfo(-1, SourceLocation.NULL, null, null);
 
 	public InvokeInfo(int id, SourceLocation loc, MethodInfo method, MethodInfo enclosing) {
 		super(id, loc, "invoke " + method, enclosing);
