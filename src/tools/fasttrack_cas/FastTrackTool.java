@@ -36,17 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************/
 
-
-/*
- * For simplicity, this version of FastTrack uses a fairly simple 
- * mutex-based locking strategy on its internal data structures. As such,  
- * performance may vary and degrade when there is high contention 
- * on these locks.  This seems particularly true on older multi-core chips.
- * 
- * We can provide details on other implementation strategies.
- */
-
-package tools.fasttrack;
+package tools.fasttrack_cas;
 
 
 import org.objectweb.asm.Opcodes;
@@ -81,9 +71,11 @@ import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.ShadowVolatile;
 import rr.tool.Tool;
+import sun.misc.Unsafe;
 import tools.util.CV;
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.decorations.DefaultValue;
@@ -92,7 +84,13 @@ import acme.util.decorations.DecorationFactory.Type;
 import acme.util.io.XMLWriter;
 import acme.util.option.CommandLine;
 
-@Abbrev("FT")
+/**
+ * A version of FastTrack that uses an optimistic synchronization strategy
+ * based on atomic compare and swap operations.  It should avoid some of
+ * the contention problems one may observe with the lock-based version. 
+ */
+
+@Abbrev("FT_CAS")
 public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarrierState>, Opcodes {
 
 	static final int INIT_CV_SIZE = 4;
@@ -225,15 +223,19 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 
 	}
 
-
 	@Override
 	public void access(final AccessEvent fae) {
-		final ShadowVar orig = fae.getOriginalShadow();
+		final ShadowVar var = fae.getOriginalShadow();
 		final ShadowThread td = fae.getThread();
 
-		if (orig instanceof FastTrackGuardState) {
-			FastTrackGuardState x = (FastTrackGuardState)orig;
-
+		if (var instanceof FastTrackGuardState) {
+			
+			// load the error guard state set by the fast path if it exists.
+			final FastTrackGuardState isItAnError = ts_get_preStateOnError(td);
+			final FastTrackGuardState x = (isItAnError != null) ? isItAnError : 
+				(FastTrackGuardState)var;
+			ts_set_preStateOnError(td, null);
+			
 			final int tdEpoch = ts_get_epoch(td);
 			final CV tdCV = ts_get_cv(td);
 
@@ -242,72 +244,98 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				CV initTime = classInitTime.get(((FieldAccessEvent)fae).getInfo().getField().getOwner());
 				tdCV.max(initTime);
 			}
+			if (!fae.isWrite()) {
+				// READ
+				retry: do {
+					final long orig = x.getWREpochs();
+					final int lastReadEpoch = EpochPair.read(orig);
 
-			synchronized(x) {
-
-				if (fae.isWrite()) {
-
-					// WRITE
-					final int lastWriteEpoch = x.lastWrite;
-					if (lastWriteEpoch == tdEpoch) {
-						return;
+					if (lastReadEpoch == tdEpoch) {
+						break;  				// commit : same epoch
 					}
 
-					final int lastWriter = Epoch.tid(lastWriteEpoch);				
-					if (lastWriteEpoch > tdCV.get(lastWriter)) {
-						error(fae, 1, "write-by-thread-", lastWriter, "write-by-thread-", td.getTid());
-					}
+					final int tid = td.getTid();
 
-					final int lastReadEpoch = x.lastRead;				
-					if (lastReadEpoch != Epoch.EMPTY) {
-						final int lastReader = Epoch.tid(lastReadEpoch);
-						if (lastReader != td.getTid() && lastReadEpoch > tdCV.get(lastReader)) {
-							error(fae, 2, "read-by-thread-", lastReader, "write-by-thread-", td.getTid());
+					final int lastWriteEpoch = EpochPair.write(orig);
+
+					if (lastReadEpoch == Epoch.READ_SHARED) {
+						if (x.get(tid) != tdEpoch) {  // (*) racy access -> should be fine.
+							synchronized(x) {
+								if (orig != x.getWREpochs()) { Yikes.yikes("concurrent mod"); continue retry; }
+								x.set(tid, tdEpoch);
+							}
 						}
 					} else {
-						if (x.anyGt(tdCV)) {
-							for (int prevReader = x.nextGt(tdCV, 0); prevReader > -1; prevReader = x.nextGt(tdCV, prevReader + 1)) {
-								if (prevReader != td.getTid()) {
-									error(fae, 3, "read-by-thread-", prevReader, "write-by-thread-", td.getTid());
+						final int lastReader = Epoch.tid(lastReadEpoch);
+						if (lastReader == tid) {
+							if (!x.cas(orig, lastWriteEpoch, tdEpoch)) { Yikes.yikes("concurrent mod"); continue retry; }
+							// commit: read-exclusive fast case
+						} else if (lastReadEpoch <= tdCV.get(lastReader)) {  
+							if (!x.cas(orig, lastWriteEpoch, tdEpoch)) { Yikes.yikes("concurrent mod"); continue retry; }
+							// commit: read-exclusive slow case
+						} else {
+							synchronized(x) {
+								x.makeCV(INIT_CV_SIZE);  // do first, in case we need it at (*)
+								if (!x.cas(orig, lastWriteEpoch, Epoch.READ_SHARED)) { Yikes.yikes("concurrent mod"); continue retry; }
+								// commit: read share
+								x.set(lastReader, lastReadEpoch); 
+								x.set(td.getTid(), tdEpoch);
+							}
+						}
+					}
+
+					final int lastWriter = Epoch.tid(lastWriteEpoch);
+					if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
+						error(fae, 4, "write-by-thread-", lastWriter, "read-by-thread-", tid);
+					}
+				} while (false);  // awesome...
+			} else {
+				// WRITE
+				retry: do {
+					final long orig = x.getWREpochs();
+					final int lastWriteEpoch = EpochPair.read(orig);
+
+					if (lastWriteEpoch == tdEpoch) {
+						break;	// commit: same epoch
+					} 
+
+					final int tid = td.getTid();
+
+					final int lastReadEpoch = EpochPair.read(orig);
+					if (lastReadEpoch == tdEpoch) { 
+						if (!x.cas(orig, tdEpoch, tdEpoch)) { Yikes.yikes("concurrent mod"); continue retry; }
+						// commit: write exclusive fast case
+					} else if (lastReadEpoch != Epoch.READ_SHARED) {
+						if (!x.cas(orig, tdEpoch, tdEpoch)) { Yikes.yikes("concurrent mod"); continue retry; }
+						// commit: write exclusive slow case
+						final int lastReader = Epoch.tid(lastReadEpoch);
+						if (lastReader != tid && lastReadEpoch > tdCV.get(lastReader)) {
+							error(fae, 2, "read-by-thread-", lastReader, "write-by-thread-", tid);
+						}
+					} else {
+						synchronized(x) {
+							if (!x.cas(orig, tdEpoch, tdEpoch)) { Yikes.yikes("concurrent mod"); continue retry; } 
+							// commit write shared
+							if (x.anyGt(tdCV)) {
+								int errorCount = 0;
+								for (int prevReader = x.nextGt(tdCV, 0); prevReader > -1; prevReader = x.nextGt(tdCV, prevReader + 1)) {
+									if (prevReader != tid) {
+										errorCount++;
+										error(fae, 3, "read-by-thread-", prevReader, "write-by-thread-", tid);
+									}
+								}					
+								if (errorCount == 0) {
+									Assert.fail("Bad error count");
 								}
 							}
 						}
 					}
-					x.lastWrite = tdEpoch;
-					x.lastRead = tdEpoch;
 
-				} else {
-					// READ
-					final int lastReadEpoch = x.lastRead;
-
-					if (lastReadEpoch == tdEpoch) {
-						return;
-					} else if (lastReadEpoch == Epoch.EMPTY) {
-						if (x.get(td.getTid()) == tdEpoch) {
-							return;
-						}
-					}
-
-					final int lastWriteEpoch = x.lastWrite;
 					final int lastWriter = Epoch.tid(lastWriteEpoch);
-					if (lastWriteEpoch > tdCV.get(lastWriter)) {
-						error(fae, 4, "write-by-thread-", lastWriter, "read-by-thread-", td.getTid());
+					if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
+						error(fae, 1, "write-by-thread-", lastWriter, "write-by-thread-", tid);
 					}
-
-					if (lastReadEpoch != Epoch.EMPTY) {
-						final int lastReader = Epoch.tid(lastReadEpoch);
-						if (lastReadEpoch <= tdCV.get(lastReader)) {
-							x.lastRead = tdEpoch;
-						} else {
-							x.makeCV(INIT_CV_SIZE);
-							x.set(lastReader, lastReadEpoch);
-							x.set(td.getTid(), tdEpoch);
-							x.lastRead = Epoch.EMPTY;
-						}
-					} else {
-						x.set(td.getTid(), tdEpoch);					
-					}
-				}
+				} while(false);
 			}
 		} else {
 			super.access(fae);
@@ -345,11 +373,11 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 						"Guard State", 					fae.getOriginalShadow(),
 						"Current Thread",				toString(currentThread), 
 						"Class",						target==null?fd.getOwner():target.getClass(),
-						"Field",						Util.objectToIdentityString(target) + "." + fd, 
-						"Prev Op",						prevOp + prevTid,
-						"Cur Op",						curOp + curTid, 
-						"Case", 						"#" + errorCase,
-						"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
+								"Field",						Util.objectToIdentityString(target) + "." + fd, 
+								"Prev Op",						prevOp + prevTid,
+								"Cur Op",						curOp + curTid, 
+								"Case", 						"#" + errorCase,
+								"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
 				);
 				if (!fieldErrors.stillLooking(fd)) {
 					advance(ae);
@@ -484,116 +512,111 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 
 	/******/
 
+	static FastTrackGuardState ts_get_preStateOnError(ShadowThread ts) { Assert.panic("Bad");	return null;	}
+	static void ts_set_preStateOnError(ShadowThread ts, FastTrackGuardState v) { Assert.panic("Bad");  }
+
 	public static boolean readFastPath(final ShadowVar gs, final ShadowThread td) {
 		if (gs instanceof FastTrackGuardState) {
 			final FastTrackGuardState x = ((FastTrackGuardState)gs);
 			final int tdEpoch = ts_get_epoch(td);
-			final int lastReadEpoch = x.lastRead;
+			final long orig = x.getWREpochs();
+			final int lastReadEpoch = EpochPair.read(orig);
 
 			if (lastReadEpoch == tdEpoch) {
-				return true;
+				return true;  				// commit : same epoch
 			}
 
 			final int tid = td.getTid();
 
-			final int lastWriteEpoch = x.lastWrite;
+			final int lastWriteEpoch = EpochPair.write(orig);
+			final CV tdCV = ts_get_cv(td);			
 
-
-			final CV fhbCV = ts_get_cv(td);			
-
-			final int lastWriter = Epoch.tid(lastWriteEpoch);
-
-			if (lastWriter != tid && lastWriteEpoch > fhbCV.get(lastWriter)) {
-				return false;
-			}
-
-			if (lastReadEpoch == Epoch.EMPTY) {
-				if (x.get(tid) != tdEpoch) {
+			if (lastReadEpoch == Epoch.READ_SHARED) {
+				if (x.get(tid) != tdEpoch) {  // (*)
 					synchronized(x) {
+						if (orig != x.getWREpochs()) return false;
 						x.set(tid, tdEpoch);
 					}
 				}
-				return true;
 			} else {
 				final int lastReader = Epoch.tid(lastReadEpoch);
 				if (lastReader == tid) {
-					synchronized(x) {
-						if (x.lastRead != lastReadEpoch) return false;
-						x.lastRead = tdEpoch;
-						return true;
-					}
-				}
-				if (lastReadEpoch <= fhbCV.get(lastReader)) {
-					synchronized(x) {
-						if (x.lastRead != lastReadEpoch) return false;
-						x.lastRead = tdEpoch;
-						return true;
-					}
+					if (!x.cas(orig, lastWriteEpoch, tdEpoch)) return false;
+					// commit: read-exclusive fast case
+				} else if (lastReadEpoch <= tdCV.get(lastReader)) {  
+					if (!x.cas(orig, lastWriteEpoch, tdEpoch)) return false;
+					// commit: read-exclusive slow case
 				} else {
 					synchronized(x) {
-						if (x.lastRead != lastReadEpoch) return false;
-						x.makeCV(INIT_CV_SIZE);
-						x.set(lastReader, lastReadEpoch);
+						x.makeCV(INIT_CV_SIZE); // do first, incase we need it above at (*)...						
+						if (!x.cas(orig, lastWriteEpoch, Epoch.READ_SHARED)) return false;
+						// commit: read share
+						x.set(lastReader, lastReadEpoch); 
 						x.set(td.getTid(), tdEpoch);
-						x.lastRead = Epoch.EMPTY;
-						return true;
 					}
 				}
 			}
+
+			final int lastWriter = Epoch.tid(lastWriteEpoch);
+			if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
+				ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
+				return false;
+			}
+			
+			return true;
+
+		} else {
+			return false;
 		}
-		return false;
 	}
 
 	public static boolean writeFastPath(final ShadowVar gs, final ShadowThread td) {
 		if (gs instanceof FastTrackGuardState) {
 			final FastTrackGuardState x = ((FastTrackGuardState)gs);
-
-			final int lastWriteEpoch = x.lastWrite;
 			final int tdEpoch = ts_get_epoch(td);
+
+			final long orig = x.getWREpochs();
+			final int lastWriteEpoch = EpochPair.read(orig);
+
 			if (lastWriteEpoch == tdEpoch) {
-				return true;
+				return true;	// commit: same epoch
 			} 
-
-			final int lastWriter = Epoch.tid(lastWriteEpoch);
+			
 			final int tid = td.getTid();
-
 			final CV tdCV = ts_get_cv(td);
-			if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
-				return false;
-			}
 
-			final int lastReadEpoch = x.lastRead;				
-
+			final int lastReadEpoch = EpochPair.read(orig);
 			if (lastReadEpoch == tdEpoch) { 
-				synchronized(x) {
-					if (x.lastWrite != lastWriteEpoch) return false;
-					if (x.lastRead != lastReadEpoch) return false;
-					x.lastWrite = tdEpoch;
-					return true;
-				}
-			}
-
-			if (lastReadEpoch != Epoch.EMPTY) {
+				if (!x.cas(orig, tdEpoch, tdEpoch)) return false;
+				// commit: write exclusive fast case
+			} else if (lastReadEpoch != Epoch.READ_SHARED) {
+				if (!x.cas(orig, tdEpoch, tdEpoch)) return false;  // make read be tdEpoch to ignore older reads
+				// commit: write exclusive slow case
 				final int lastReader = Epoch.tid(lastReadEpoch);
 				if (lastReader != tid && lastReadEpoch > tdCV.get(lastReader)) {
+					ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
 					return false;
 				}
 			} else {
-				if (x.anyGt(tdCV)) {
-					return false;
+				synchronized(x) {
+					if (!x.cas(orig, tdEpoch, tdEpoch)) return false; 
+					// commit write shared
+					if (x.anyGt(tdCV)) {
+						ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
+						return false;
+					}
 				}
 			}
-			synchronized(x) {
-				if (x.lastWrite != lastWriteEpoch) return false;
-				if (x.lastRead != lastReadEpoch) return false;
-				x.lastWrite = tdEpoch;
-				x.lastRead = tdEpoch;
-				return true;
+			
+			final int lastWriter = Epoch.tid(lastWriteEpoch);
+			if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
+				ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
+				return false;				
 			}
+			
+			return true;
+		} else {
+			return false;
 		}
-		return false;
 	}
-
-
-
 }

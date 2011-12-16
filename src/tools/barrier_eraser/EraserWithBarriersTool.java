@@ -67,7 +67,13 @@ import acme.util.io.XMLWriter;
 import acme.util.option.CommandLine;
 
 /*
- * Eraser with built-in barrier support
+ * Eraser with built-in barrier support.  
+ * 
+ * Note: For simplicity, this version does not synchronize accesses to 
+ *       the shadow memory.  It designed to simply be a simple, 
+ *       example of how to use RoadRunner features.  The missing synchronization
+ *       may cause it to miss an occasional race under very rare circumstances.
+ * 
  */
 
 @Abbrev("BE")
