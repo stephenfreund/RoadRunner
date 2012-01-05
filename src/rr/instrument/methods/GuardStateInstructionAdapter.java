@@ -41,6 +41,8 @@ package rr.instrument.methods;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
+import acme.util.Util;
+
 import rr.instrument.Constants;
 import rr.loader.RRTypeInfo;
 import rr.meta.FieldAccessInfo;
@@ -81,10 +83,14 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 				boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
 				boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
 				FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
-				int fad = access.getId();
-				this.visitAccessMethod(owner, name, desc, isWrite, isStatic, fad, threadDataLoc);
+				if (!InstrumentationFilter.shouldInstrument(access)) {
+					Util.log("Skipping field access: " + access);
+					super.visitFieldInsn(opcode, owner, name, desc);
+				} else { 
+					int fad = access.getId();
+					this.visitAccessMethod(owner, name, desc, isWrite, isStatic, fad, threadDataLoc);
+				}
 				return;
-
 			}
 		}
 		super.visitFieldInsn(opcode, owner, name, desc);

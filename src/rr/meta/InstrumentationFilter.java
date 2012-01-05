@@ -115,7 +115,7 @@ public class InstrumentationFilter {
 		CommandLine.makeStringMatcher("fields", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which fields to instrument.  The default is all.", "-.*this\\$.*");
 
 	public static CommandLineOption<StringMatcher> linesToWatch  = 
-		CommandLine.makeStringMatcher("lines", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which lines to instrument.  The default is all");
+		CommandLine.makeStringMatcher("lines", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which lines to instrument (only affects field/array/acq/rel operations).  The default is all.  (Form is 'test/Test.java:48')");
 
 	public static CommandLineOption<StringMatcher> classesToWatch  = 
 		CommandLine.makeStringMatcher("classes", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies classes to instrument.  The default is all but standard libs.  Uses the StringMatcher scheme.  Examples:\n" + 

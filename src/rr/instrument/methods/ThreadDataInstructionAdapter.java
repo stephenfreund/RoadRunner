@@ -54,6 +54,7 @@ import rr.meta.InvokeInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
 import acme.util.Assert;
+import acme.util.Util;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -163,6 +164,11 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			switch(opcode) {
 			case MONITORENTER: {
 				AcquireInfo acquire = MetaDataInfoMaps.makeAcquire(this.getLocation(), method);
+				if (!InstrumentationFilter.shouldInstrument(acquire)) {
+					Util.log("Skipping lock acquire: " + acquire);
+					super.visitInsn(opcode);
+					return;
+				} 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
 					// traget
@@ -207,6 +213,12 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			}
 			case MONITOREXIT: {
 				rr.meta.ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
+				if (!InstrumentationFilter.shouldInstrument(release)) {
+					Util.log("Skipping lock release: " + release);
+					super.visitInsn(opcode);
+					return;
+				} 
+
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
 					visitInsn(DUP);
