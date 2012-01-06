@@ -35,6 +35,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+Jan 6, 2012:  Committed change for -lines option.  It now applies to
+              array ops, field ops, but not lock ops.  It seems more
+              useful this way.
+
 Jan 5, 2012:  Committed change for -lines option.  It now applies to
               array ops, field ops, and lock acquire/release.
   

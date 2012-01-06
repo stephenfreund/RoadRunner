@@ -164,11 +164,12 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			switch(opcode) {
 			case MONITORENTER: {
 				AcquireInfo acquire = MetaDataInfoMaps.makeAcquire(this.getLocation(), method);
-				if (!InstrumentationFilter.shouldInstrument(acquire)) {
-					Util.log("Skipping lock acquire: " + acquire);
-					super.visitInsn(opcode);
-					return;
-				} 
+//				Always process all sync ops --- so don't test this anymore
+//				if (!InstrumentationFilter.shouldInstrument(acquire)) {
+//					Util.log("Skipping lock acquire: " + acquire);
+//					super.visitInsn(opcode);
+//					return;
+//				} 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
 					// traget
@@ -213,11 +214,12 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			}
 			case MONITOREXIT: {
 				rr.meta.ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
-				if (!InstrumentationFilter.shouldInstrument(release)) {
-					Util.log("Skipping lock release: " + release);
-					super.visitInsn(opcode);
-					return;
-				} 
+//				Always process all sync ops --- so don't test this anymore
+//				if (!InstrumentationFilter.shouldInstrument(release)) {
+//					Util.log("Skipping lock release: " + release);
+//					super.visitInsn(opcode);
+//					return;
+//				} 
 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
