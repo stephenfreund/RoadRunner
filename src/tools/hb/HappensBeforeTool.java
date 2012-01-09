@@ -251,7 +251,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 					final ArrayAccessInfo arrayAccessInfo = aae.getInfo();
 					arrayErrors.error(currentThread, arrayAccessInfo,  
 							"Guard State", 	prev, 
-							"Array",		Util.objectToIdentityString(target) + "[]", "" + aae.getIndex(), 
+							"Array",		Util.objectToIdentityString(target) + "[" + aae.getIndex() +"]", 
 							"Locks",		currentThread.getLocksHeld(), 
 							"Prev Op",		prevOp+"-by-thread-"+start,  
 							"Prev Op CV",	prev, 
@@ -263,8 +263,8 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 				} else {
 					FieldInfo fd = ((FieldAccessEvent)fad).getInfo().getField();
 					errors.error(currentThread, fd, 
-							"Guard State", 	prev, 
-							"Class",		target==null?fd.getOwner():target.getClass(), 
+									"Guard State", 	prev, 
+									"Class",		target==null?fd.getOwner():target.getClass(), 
 									"Field",		Util.objectToIdentityString(target) + "." + fd, 
 									"Locks",		currentThread.getLocksHeld(), 
 									"Prev Op",		prevOp+"-by-thread-"+start,  
