@@ -47,7 +47,7 @@ import rr.state.ShadowThread;
 public final class EpochPair {
 	
 	public static final long make(int write, int read) {
-		return (((long)write) << 32) | read;
+		return (((long)write) << 32) | (((long)read) & 0xFFFFFFFFL);
 	}
 	
 	public static final int write(long pair) {
@@ -55,7 +55,7 @@ public final class EpochPair {
 	}
 	
 	public static final int read(long pair) {
-		return (int)(pair & ((1L<<32)-1));
+		return (int)(pair & 0xFFFFFFFFL);
 	}
 	
 	public static String toString(long pair) {
