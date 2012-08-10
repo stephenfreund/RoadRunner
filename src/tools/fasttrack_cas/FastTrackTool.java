@@ -88,6 +88,7 @@ import acme.util.option.CommandLine;
  * A version of FastTrack that uses an optimistic synchronization strategy
  * based on atomic compare and swap operations.  It should avoid some of
  * the contention problems one may observe with the lock-based version. 
+ * Note: This version has not been tested as thoroughly as the other version.
  */
 
 @Abbrev("FT_CAS")
@@ -293,7 +294,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				// WRITE
 				retry: do {
 					final long orig = x.getWREpochs();
-					final int lastWriteEpoch = EpochPair.read(orig);
+					final int lastWriteEpoch = EpochPair.write(orig);
 
 					if (lastWriteEpoch == tdEpoch) {
 						break;	// commit: same epoch
