@@ -108,7 +108,7 @@ public class Option<T> {
 	public static void printAllXML(XMLWriter xml) {
 		xml.push("options");
 		for (Option o : options) {
-			xml.printInsideScopeWithFixedWidths("option", "name", o.id, -34, "value", o.rep(), -20);
+			xml.printInsideScopeWithFixedWidths("option", "name", o.id, -34, "value", o.rep().toString().replaceAll("<", "&lt;").replaceAll(">", "&gt;"), -20);
 		}
 		xml.pop();
 	}

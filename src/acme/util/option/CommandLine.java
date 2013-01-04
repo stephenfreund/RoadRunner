@@ -349,6 +349,7 @@ public class CommandLine {
 				// arg += ".*";
 				this.get().addNFromEnd(defaultLen, arg);
 			}
+
 		};
 		for (int i = 0; i < initialArgs.length; i++) {
 			String arg = initialArgs[i];
@@ -434,6 +435,7 @@ public class CommandLine {
 					}
 				}
 			}
+			in.close();
 			String argsArray[] = new String[args.size()];
 			args.copyInto(argsArray);
 			int end = this.applyHelper(argsArray, 0);

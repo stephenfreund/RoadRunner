@@ -1394,6 +1394,14 @@ class MethodWriter implements MethodVisitor {
             this.maxStack = maxStack;
             this.maxLocals = maxLocals;
         }
+        
+        // RoadRunner: Bug fix.
+        //      if return type is a long/double, this count gets off by one.
+        //      There must be a better way, but this seems to work.
+        if (this.descriptor.endsWith("J") || this.descriptor.endsWith("D")) {
+        	this.maxStack++;
+        	this.maxStackSize++;
+        }
     }
 
     public void visitEnd() {
