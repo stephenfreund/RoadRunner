@@ -53,8 +53,10 @@ public class CV {
 
 	public CV(CV cv) {
 		int[] ca = cv.a;
-		makeCV(ca.length);
-		assign(cv);
+		if (ca != null) {
+		    makeCV(ca.length);
+		    assign(cv);
+		}
 	}
 
 	public CV(int size) {
@@ -210,3 +212,4 @@ public class CV {
 	}
 
 }
+
