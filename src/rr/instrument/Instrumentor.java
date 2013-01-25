@@ -90,8 +90,12 @@ public class Instrumentor {
 		CommandLine.makeBoolean("fancy", false, CommandLineOption.Kind.EXPERIMENTAL, "Use a more complex instrumentor with some untested or experimental features.  The fancy version may yield faster code.");
 
 	public static final CommandLineOption<Boolean> trackArraySitesOption = 
-		CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Track arrays only on given line locations.");
+			CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Track arrays only on given line locations.");
 
+	public static final CommandLineOption<Boolean> nonAtomicVolatileOption = 
+			CommandLine.makeBoolean("nonAtomicVolatile", false, CommandLineOption.Kind.EXPERIMENTAL, "Handlers for volatile accesses are not atomic with the actual access.");
+
+	
 	public static final Option<Boolean> useTestAcquireOption = new Option<Boolean>("Use TestAcquires", false);
 
 	private static final Timer insTime = new Timer("Time", "Instrumenter");
