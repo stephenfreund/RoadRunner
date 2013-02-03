@@ -110,7 +110,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 
 	protected static Vector<Integer> onlyStaticOpcode = new Vector<Integer>();
 	static {
-		onlyStaticOpcode.add(Opcodes.INVOKEVIRTUAL);
+		onlyStaticOpcode.add(Opcodes.INVOKESTATIC);
 	}
 
 	protected static Replacement[] systemReplacements = new Replacement[] {
