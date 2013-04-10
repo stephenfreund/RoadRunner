@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.tool;
 
 import rr.RRMain;
+import rr.error.ToolException;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
 import rr.event.ClassInitializedEvent;
@@ -138,6 +139,8 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -148,6 +151,8 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -188,6 +193,8 @@ public class RREventGenerator extends RR {
 		try {
 			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
 			getTool().volatileAccess(fae);					
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -196,6 +203,8 @@ public class RREventGenerator extends RR {
 	public static void volatileReadAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
 			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -223,6 +232,8 @@ public class RREventGenerator extends RR {
 
 				firstAcquire.acquire(ae); 
 			} 
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -237,6 +248,8 @@ public class RREventGenerator extends RR {
 				re.setInfo(MetaDataInfoMaps.getReleases().get(lockReleaseId));
 				firstRelease.release(re);
 			}
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -255,6 +268,8 @@ public class RREventGenerator extends RR {
 			ae.setLock(ld);
 
 			return getTool().testAcquire(ae);
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 			return false;  
@@ -274,6 +289,8 @@ public class RREventGenerator extends RR {
 			re.setInfo(MetaDataInfoMaps.getReleases().get(lockReleaseId));
 
 			return getTool().testRelease(re);
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 			return false;
@@ -327,6 +344,8 @@ public class RREventGenerator extends RR {
 			t.start();
 			stopper.start();
 			getTool().postStart(se);
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -363,6 +382,8 @@ public class RREventGenerator extends RR {
 			getTool().preJoin(je);
 			je.getJoiningThread().getIsStopped().waitUntilTrue();
 			getTool().postJoin(je);
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -402,6 +423,8 @@ public class RREventGenerator extends RR {
 			Assert.assertTrue(ld.get() == 0);  // make sure no one is holding the lock.
 			ld.set(oldAcquireCount, td);  // restore to previous state.
 			getTool().postWait(we);
+		} catch (ToolException e) {
+			throw e;
 		} catch(InterruptedException e) {
 			throw e;
 		} catch(Throwable e) {
@@ -439,6 +462,8 @@ public class RREventGenerator extends RR {
 				lock.notify();
 			}
 			getTool().postNotify(ne);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -459,6 +484,8 @@ public class RREventGenerator extends RR {
 			getTool().preSleep(sleepEvent);
 			Thread.sleep(ms, ns);
 			getTool().postSleep(sleepEvent);
+		} catch (ToolException e) {
+			throw e;
 		} catch(InterruptedException e) {
 			throw e;
 		} catch(Throwable e) {
@@ -488,6 +515,8 @@ public class RREventGenerator extends RR {
 				if (invokeId != -1) throw e;  // hack to ignore initial call to main when invokeId will be -1...
 			}
 			firstEnter.enter(me);
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -499,6 +528,8 @@ public class RREventGenerator extends RR {
 			me.setEnter(false);
 			firstExit.exit(me);
 			td.exit();
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -524,6 +555,8 @@ public class RREventGenerator extends RR {
 					arrayAccessId, td, as, false);
 
 			firstAccess.access(aae);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -567,6 +600,8 @@ public class RREventGenerator extends RR {
 
 			firstAccess.access(aae);
 
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -581,6 +616,8 @@ public class RREventGenerator extends RR {
 			me.setInfo(data);
 			getTool().preInterrupt(me);
 			target.interrupt();
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -602,6 +639,8 @@ public class RREventGenerator extends RR {
 				}
 				return false;
 			}
+		} catch (ToolException e) {
+			throw e;
 		} catch(Throwable e) {
 			Assert.panic(e);
 		}
@@ -616,6 +655,8 @@ public class RREventGenerator extends RR {
 			ClassInitializedEvent e = td.getClassInitEvent();
 			e.setRRClass(c);
 			getTool().classInitialized(e);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -630,6 +671,8 @@ public class RREventGenerator extends RR {
 			InterruptedEvent e = td.getInterruptedEvent();
 			e.setReason(o);
 			getTool().interrupted(e);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -703,6 +746,8 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -713,6 +758,8 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -758,6 +805,8 @@ public class RREventGenerator extends RR {
 		try {
 			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
 			getTool().volatileAccess(fae);					
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -766,6 +815,8 @@ public class RREventGenerator extends RR {
 	public static void volatileReadAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
 			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+		} catch (ToolException e) {
+			throw e;
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}

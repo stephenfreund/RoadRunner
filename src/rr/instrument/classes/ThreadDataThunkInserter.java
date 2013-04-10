@@ -85,6 +85,15 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 	}
 
 	@Override
+	public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+		if (instrumentCode) {
+			super.visit(version, access, name, signature, superName, interfaces);
+		} else {
+			super.setCurrentClass(version, name);
+		}
+	}
+	
+	@Override
 	public MethodVisitor visitMethod(
 			final int access,
 			final String name,
