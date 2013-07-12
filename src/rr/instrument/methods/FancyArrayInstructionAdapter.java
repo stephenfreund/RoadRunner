@@ -222,13 +222,27 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 
 					super.visitVarInsn(ALOAD, this.arrayLoc);
 					super.visitVarInsn(ILOAD, this.indexLoc);
-					// index target 
+					
+					
+					// index target
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AALOAD){
+						this.visitInsn(DUP2);
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						mv.visitInsn(ACONST_NULL);
+					}
+					/*ADDITION BY NL*/
+					
+					//accessedReference index target
 					this.push(access.getId());
-					// arrayAccessDataid index target 
+					// arrayAccessDataid accessedReference index target 
 					super.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target   
+					// ShadowThread arrayAccessDataid accessedReference index target   
 					super.visitVarInsn(ALOAD, locForArrayShadow(v.id));				
-					// ArrayShadow ShadowThread arrayAccessDataid index target   
+					// ArrayShadow ShadowThread arrayAccessDataid accessedReference index target   
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.READ_ARRAY_WITH_UPDATER_METHOD);
 					// 
 					this.visitLabel(success);
@@ -318,7 +332,22 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 					//
 					super.visitVarInsn(ALOAD, this.arrayLoc);
 					super.visitVarInsn(ILOAD, this.indexLoc);
-					// index target 
+					
+					
+					// index target
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AASTORE){
+						this.visitInsn(DUP2);
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						mv.visitInsn(ACONST_NULL);
+					}
+					/*ADDITION BY NL*/
+					
+					
+					// accessedReference index target 
 					this.push(access.getId());
 					// arrayAccessDataid index target 
 					super.visitVarInsn(ALOAD, threadDataLoc);				
