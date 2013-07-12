@@ -97,7 +97,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 	public void visitGetSelf(RRMethodAdapter mv, String owner, String name, String desc, boolean isStatic){
 		final Type ownerType = Type.getObjectType(owner);
 		Type selfType = Type.getType(desc);
-		if(selfType.getSort() != Type.OBJECT){
+		if(selfType.getSort() != Type.OBJECT && selfType.getSort() != Type.ARRAY){
 			if(!isStatic) {mv.visitInsn(POP);}
 			mv.visitInsn(ACONST_NULL);
 		}
