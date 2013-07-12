@@ -105,7 +105,7 @@ public class RREventGenerator extends RR {
 	/****************************************************************/
 
 
-	protected static FieldAccessEvent prepAccessEvent(Object target, ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
+	protected static FieldAccessEvent prepAccessEvent(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
 		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);
 		AbstractFieldUpdater updater;
 
@@ -118,6 +118,7 @@ public class RREventGenerator extends RR {
 		fae.setInfo(fad);
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
+		fae.setAccessed(accessed);
 		if (gs == null) {
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
@@ -132,20 +133,23 @@ public class RREventGenerator extends RR {
 		return fae;
 	}	
 
-
-	public static void readAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	//accessed = field accessed
+	//null if not a reference type
+	public static void readAccess(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, false);
+			FieldAccessEvent ae = prepAccessEvent(accessed, target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
 	}
-
-	public static void writeAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	
+	//accessed = field accessed
+	//null if not a reference type
+	public static void writeAccess(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, true);
+			FieldAccessEvent ae = prepAccessEvent(accessed, target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
 		} catch (Throwable e) {
@@ -154,7 +158,7 @@ public class RREventGenerator extends RR {
 	}
 
 
-	protected static VolatileAccessEvent prepVolatileAccessEvent(Object target,
+	protected static VolatileAccessEvent prepVolatileAccessEvent(Object accessed, Object target,
 			ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
 		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);
 		// do first.  see above
@@ -171,6 +175,7 @@ public class RREventGenerator extends RR {
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
 		fae.setShadowVolatile(ShadowVolatile.get(target, fad.getField()));
+		fae.setAccessed(accessed);
 		if (gs == null) { 
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
@@ -183,19 +188,22 @@ public class RREventGenerator extends RR {
 		fae.putOriginalShadow(gs);
 		return fae;
 	}
-
-	public static void volatileWriteAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	//accessed = field accessed
+	//null if not a reference type
+	public static void volatileWriteAccess(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
+			VolatileAccessEvent fae = prepVolatileAccessEvent(accessed, target, gs, fadId, td, true);
 			getTool().volatileAccess(fae);					
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
 	}
-
-	public static void volatileReadAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	
+	//accessed = field accessed
+	//null if not a reference type
+	public static void volatileReadAccess(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+			getTool().volatileAccess(prepVolatileAccessEvent(accessed, target, gs, fadId, td, false));					
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -510,17 +518,17 @@ public class RREventGenerator extends RR {
 		return aad.getCache().get(array, td);
 	}
 
-	public static void arrayRead(Object array, int index, int arrayAccessId, ShadowThread td) {
+	public static void arrayRead(Object array, int index, Object accessed, int arrayAccessId, ShadowThread td) {
 		final AbstractArrayState as = arrayShadow(array, index, arrayAccessId, td);
 
-		arrayRead(array, index, arrayAccessId, td, as);
+		arrayRead(array, index, accessed, arrayAccessId, td, as);
 	}
 
-	public static void arrayRead(Object array, int index, int arrayAccessId, ShadowThread td, AbstractArrayState as) {
+	public static void arrayRead(Object array, int index, Object accessed, int arrayAccessId, ShadowThread td, AbstractArrayState as) {
 		try {
 			if (!matches(index)) return;
 
-			final ArrayAccessEvent aae = prepArrayAccessEvent(array, index,
+			final ArrayAccessEvent aae = prepArrayAccessEvent(accessed, array, index,
 					arrayAccessId, td, as, false);
 
 			firstAccess.access(aae);
@@ -530,7 +538,7 @@ public class RREventGenerator extends RR {
 	}
 
 
-	protected static ArrayAccessEvent prepArrayAccessEvent(Object array,
+	protected static ArrayAccessEvent prepArrayAccessEvent(Object accessed, Object array,
 			int index, int arrayAccessId, ShadowThread td, AbstractArrayState as, boolean isWrite) {
 		final ArrayAccessInfo aad = MetaDataInfoMaps.getArrayAccesses().get(arrayAccessId); 
 		ArrayAccessEvent aae = td.getArrayAccessEvent();
@@ -540,6 +548,7 @@ public class RREventGenerator extends RR {
 		aae.setTarget(array);
 		aae.setInfo(aad);
 		aae.setArrayState(as);
+		aae.setAccessed(accessed);
 
 		ShadowVar gs = as.getState(index);
 		if (gs == null) {
@@ -553,16 +562,16 @@ public class RREventGenerator extends RR {
 		return aae;
 	}
 
-	public static void arrayWrite(Object array, int index, int arrayAccessId, ShadowThread td) {
+	public static void arrayWrite(Object array, int index, Object accessed, int arrayAccessId, ShadowThread td) {
 		final AbstractArrayState as = arrayShadow(array, index, arrayAccessId, td);
 
-		arrayWrite(array, index, arrayAccessId, td, as);
+		arrayWrite(array, index, accessed, arrayAccessId, td, as);
 	}
 
-	public static void arrayWrite(Object array, int index, int arrayAccessId, ShadowThread td, AbstractArrayState as) {
+	public static void arrayWrite(Object array, int index, Object accessed, int arrayAccessId, ShadowThread td, AbstractArrayState as) {
 		try { 
 			if (!matches(index)) return;
-			ArrayAccessEvent aae = prepArrayAccessEvent(array, index,
+			ArrayAccessEvent aae = prepArrayAccessEvent(accessed, array, index,
 					arrayAccessId, td, as, true);
 
 			firstAccess.access(aae);
@@ -664,7 +673,7 @@ public class RREventGenerator extends RR {
 	};
 
 
-	protected static FieldAccessEvent prepAccessEventML(Object target, ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
+	protected static FieldAccessEvent prepAccessEventML(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
 		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);
 		AbstractFieldUpdater updater;
 
@@ -683,6 +692,7 @@ public class RREventGenerator extends RR {
 		fae.setInfo(fad);
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
+		fae.setAccessed(accessed);
 		if (gs == null) {
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
@@ -698,9 +708,9 @@ public class RREventGenerator extends RR {
 	}	
 
 
-	public static void readAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	public static void readAccessML(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, false);
+			FieldAccessEvent ae = prepAccessEventML(accessed, target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
 		} catch (Throwable e) {
@@ -708,9 +718,9 @@ public class RREventGenerator extends RR {
 		}
 	}
 
-	public static void writeAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	public static void writeAccessML(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, true);
+			FieldAccessEvent ae = prepAccessEventML(accessed, target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
 		} catch (Throwable e) {
@@ -719,7 +729,7 @@ public class RREventGenerator extends RR {
 	}
 
 
-	protected static VolatileAccessEvent prepVolatileAccessEventML(Object target,
+	protected static VolatileAccessEvent prepVolatileAccessEventML(Object accessed, Object target,
 			ShadowVar gs, int fadId, ShadowThread td, boolean isWrite) {
 		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fadId);
 		// do first.  see above
@@ -740,6 +750,7 @@ public class RREventGenerator extends RR {
 		fae.setInfo(fad);
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
+		fae.setAccessed(accessed);
 		fae.setShadowVolatile(ShadowVolatile.get(target, fad.getField()));
 		if (gs == null) { 
 			fae.putOriginalShadow(null);
@@ -754,18 +765,18 @@ public class RREventGenerator extends RR {
 		return fae;
 	}
 
-	public static void volatileWriteAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	public static void volatileWriteAccessML(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
+			VolatileAccessEvent fae = prepVolatileAccessEvent(accessed, target, gs, fadId, td, true);
 			getTool().volatileAccess(fae);					
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
 	}
 
-	public static void volatileReadAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
+	public static void volatileReadAccessML(Object accessed, Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+			getTool().volatileAccess(prepVolatileAccessEvent(accessed, target, gs, fadId, td, false));					
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
