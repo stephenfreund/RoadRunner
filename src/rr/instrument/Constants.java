@@ -77,21 +77,21 @@ public class Constants {
 	
 	public static final Method CURRENT_THREAD_METHOD =	new Method("getCurrentShadowThread", THREAD_STATE_TYPE, new Type[] { } );
 	
-	private static final Method READ_ACCESS_METHOD = new Method("readAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method WRITE_ACCESS_METHOD = new Method("writeAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method VOLATILE_READ_ACCESS_METHOD = new Method("volatileReadAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method VOLATILE_WRITE_ACCESS_METHOD = new Method("volatileWriteAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method READ_ACCESS_METHOD = new Method("readAccess", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method WRITE_ACCESS_METHOD = new Method("writeAccess", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method VOLATILE_READ_ACCESS_METHOD = new Method("volatileReadAccess", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method VOLATILE_WRITE_ACCESS_METHOD = new Method("volatileWriteAccess", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 
 	// for multiple classloaders...
-	private static final Method READ_ACCESS_METHOD_ML = new Method("readAccessML", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method WRITE_ACCESS_METHOD_ML = new Method("writeAccessML", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method VOLATILE_READ_ACCESS_METHOD_ML = new Method("volatileReadAccessML", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	private static final Method VOLATILE_WRITE_ACCESS_METHOD_ML = new Method("volatileWriteAccessML", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method READ_ACCESS_METHOD_ML = new Method("readAccessML", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method WRITE_ACCESS_METHOD_ML = new Method("writeAccessML", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method VOLATILE_READ_ACCESS_METHOD_ML = new Method("volatileReadAccessML", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	private static final Method VOLATILE_WRITE_ACCESS_METHOD_ML = new Method("volatileWriteAccessML", Type.VOID_TYPE, new Type[] {OBJECT_TYPE, OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 
-	public static final Method READ_ARRAY_METHOD = new Method("arrayRead", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	public static final Method READ_ARRAY_WITH_UPDATER_METHOD = new Method("arrayRead", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE, Type.getType(AbstractArrayState.class) });
-	public static final Method WRITE_ARRAY_METHOD = new Method("arrayWrite", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
-	public static final Method WRITE_ARRAY_WITH_UPDATER_METHOD = new Method("arrayWrite", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE, Type.getType(AbstractArrayState.class) });
+	public static final Method READ_ARRAY_METHOD = new Method("arrayRead", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	public static final Method READ_ARRAY_WITH_UPDATER_METHOD = new Method("arrayRead", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE, Type.getType(AbstractArrayState.class) });
+	public static final Method WRITE_ARRAY_METHOD = new Method("arrayWrite", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+	public static final Method WRITE_ARRAY_WITH_UPDATER_METHOD = new Method("arrayWrite", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE, Type.getType(AbstractArrayState.class) });
 	public static final Method ACQUIRE_METHOD = new Method("acquire", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 	public static final Method TEST_ACQUIRE_METHOD = new Method("testAcquire", Type.BOOLEAN_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 	public static final Method RELEASE_METHOD = new Method("release", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
