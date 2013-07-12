@@ -98,6 +98,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		final Type ownerType = Type.getObjectType(owner);
 		Type selfType = Type.getType(desc);
 		if(selfType.getSort() != Type.OBJECT){
+			if(!isStatic) {mv.visitInsn(POP);}
 			mv.visitInsn(ACONST_NULL);
 		}
 		else{
@@ -135,7 +136,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			
 			/*ADDITION BY NL*/
 			visitGetSelf(mv, rrClass.getName(), name, desc, false);
-			mv.visitVarInsn(ALOAD, 1);
+			mv.visitVarInsn(ALOAD, 0);
 			
 			
 			mv.visitVarInsn(ALOAD, 5);
@@ -194,7 +195,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			
 			/*ADDITION BY NL*/
 			visitGetSelf(mv, rrClass.getName(), name, desc, false);
-			mv.visitVarInsn(ALOAD, 1);
+			mv.visitVarInsn(ALOAD, 0);
 			
 			
 			mv.visitVarInsn(ALOAD, 5);
@@ -241,11 +242,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success);
-
-			mv.visitInsn(ACONST_NULL);
 			
 			/*ADDITION BY NL*/
 			visitGetSelf(mv, rrClass.getName(), name, desc, true);
+			
+			mv.visitInsn(ACONST_NULL);
 			
 			mv.visitVarInsn(ALOAD, 5);			
 			mv.visitVarInsn(ILOAD, 0 + valueSize);
@@ -290,11 +291,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success);
-
-			mv.visitInsn(ACONST_NULL);
 			
 			/*ADDITION BY NL*/
 			visitGetSelf(mv, rrClass.getName(), name, desc, true);
+			
+			mv.visitInsn(ACONST_NULL);
 
 			mv.visitVarInsn(ALOAD, 5);
 			mv.visitVarInsn(ILOAD, 0);
