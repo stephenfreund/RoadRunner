@@ -58,6 +58,11 @@ public abstract class AccessEvent extends Event {
 	 * Is null for static field accesses.
 	 */
 	protected Object target;
+	
+	/** For accesses to reference types, gives the value of the reference
+	 * null for accesses to primitive types
+	 */
+	protected Object accessed;
 
 	/** Whether this access is a read or a write. */
 	protected boolean isWrite;
@@ -98,7 +103,16 @@ public abstract class AccessEvent extends Event {
 	public Object getTarget() {
 		return target;
 	}
+	
+	/** Returns the accessed reference */
+	public Object getAccessed(){
+		return accessed;
+	}
 
+	public void setAccessed(Object accessed){
+		this.accessed = accessed;
+	}
+	
 	/** @RRInternal */
 	public void setTarget(Object target) {
 		this.target = target;
