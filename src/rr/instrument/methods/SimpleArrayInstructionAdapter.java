@@ -56,7 +56,7 @@ import acme.util.Assert;
 import acme.util.Util;
 
 public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter implements Opcodes {
-
+	
 	public SimpleArrayInstructionAdapter(final MethodVisitor mv, MethodInfo m) {
 		super(mv, m);
 	}
@@ -103,13 +103,32 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 
 					// index target
 					this.visitInsn(DUP2);
+					
 					// index target index target
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AALOAD){
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						this.visitInsn(POP2);
+						mv.visitInsn(ACONST_NULL);
+					}
+					//accessedReference index target
+					this.visitVarInsn(ASTORE, threadDataLoc + 1);
+					//index target
+					this.visitInsn(DUP2);
+					//index target index target
+					this.visitVarInsn(ALOAD, threadDataLoc + 1);
+					
+					
+					//accessedReference index target index target
 					this.push(access.getId());
-					// arrayAccessDataid index target index target
+					// arrayAccessDataid accessedReference index target index target
 					this.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target index target  
+					// ShadowThread arrayAccessDataid index accessedReference target index target  
 					this.visitVarInsn(ALOAD, threadDataLoc+5);				
-					// ShadowVar ShadowThread arrayAccessDataid index target index target  
+					// ShadowVar ShadowThread arrayAccessDataid accessedReference index target index target  
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.READ_ARRAY_WITH_UPDATER_METHOD);
 					// index target
 
@@ -117,11 +136,30 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 				} else {
 					// index target
 					this.visitInsn(DUP2);
+					
+					
 					// index target index target
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AALOAD){
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						this.visitInsn(POP2);
+						mv.visitInsn(ACONST_NULL);
+					}
+					//accessedReference index target
+					this.visitVarInsn(ASTORE, threadDataLoc + 1);
+					//index target
+					this.visitInsn(DUP2);
+					//index target index target
+					this.visitVarInsn(ALOAD, threadDataLoc + 1);
+					
+					//accessedReference index target index target
 					this.push(access.getId());
-					// arrayAccessDataid index target index target
+					// arrayAccessDataid accessedReference index target index target
 					this.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target index target  
+					// ShadowThread arrayAccessDataid accessedReference index target index target  
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.READ_ARRAY_METHOD);
 					// index target
 				} 
@@ -182,28 +220,65 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 
 					// index target value
 					this.visitInsn(DUP2);
+					
+					
+					
 					// index target index target value
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AASTORE){
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						this.visitInsn(POP2);
+						mv.visitInsn(ACONST_NULL);
+					}
+					//accessedReference index target value
+					this.visitVarInsn(ASTORE, threadDataLoc + 1);
+					//index target value
+					this.visitInsn(DUP2);
+					//index target index target value
+					this.visitVarInsn(ALOAD, threadDataLoc + 1);
+					
+					//accessedReference index target index target value
 					this.push(access.getId());
-					// arrayAccessDataid index target index target value
+					// arrayAccessDataid accessedReference index target index target value
 					this.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target index target value  
+					// ShadowThread arrayAccessDataid accessedReference index target index target value  
 					this.visitVarInsn(ALOAD, threadDataLoc+5);				
-					// ShadowVar ShadowThread arrayAccessDataid index target index target value  
+					// ShadowVar ShadowThread arrayAccessDataid accessedReference index target index target value  
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.WRITE_ARRAY_WITH_UPDATER_METHOD);
 					// index target value
 					this.visitLabel(success);
 				} else {
-
 					this.visitInsn(DUP2);
+					
+					
 					// index target index target value
+					/*ADDITION BY NL*/
+					//push reference at index of target (if reference type) and null otherwise
+					if(opcode == AASTORE){
+						mv.visitInsn(AALOAD);
+					}
+					else{
+						this.visitInsn(POP2);
+						mv.visitInsn(ACONST_NULL);
+					}
+					//accessedReference index target value
+					this.visitVarInsn(ASTORE, threadDataLoc + 1);
+					//index target value
+					this.visitInsn(DUP2);
+					//index target index target value
+					this.visitVarInsn(ALOAD, threadDataLoc + 1);
+					
+					//accessedReference index target index target value
 					push(access.getId());
-					// arrayAccessDataid index target index target value
+					// arrayAccessDataid accessedReference index target index target value
 					this.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target index target value
+					// ShadowThread arrayAccessDataid accessedReference index target index target value
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.WRITE_ARRAY_METHOD);
 					// index target value
 				}
-
 				if (doubleSize) {
 					// index target value value
 					this.visitInsn(DUP2_X2);
@@ -220,6 +295,6 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 			}
 			default:
 				Assert.panic("Not an target opcode!");
-		}	
+		}
 	}
 }
