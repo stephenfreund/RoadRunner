@@ -172,6 +172,21 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 		return -1;
 	}
 
+	private void putAccessed(int opcode){
+		//stack state = index target
+		if(opcode == AALOAD || opcode == AASTORE){	
+			this.visitInsn(DUP2);
+			//index target index target
+			//called on mv (not this) so this.visitArrayInsn is not called as a consequence
+			mv.visitInsn(AALOAD);
+			//accessedReference index target
+			
+		}
+		else{
+			mv.visitInsn(ACONST_NULL);
+			//null index target
+		}
+	}
 	@Override
 	protected void visitArrayInsn(int opcode) {
 		boolean old = inInstrumentationCode;
@@ -225,16 +240,7 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 					
 					
 					// index target
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AALOAD){
-						this.visitInsn(DUP2);
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						mv.visitInsn(ACONST_NULL);
-					}
-					/*ADDITION BY NL*/
+					putAccessed(opcode);
 					
 					//accessedReference index target
 					this.push(access.getId());
@@ -335,17 +341,7 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 					
 					
 					// index target
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AASTORE){
-						this.visitInsn(DUP2);
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						mv.visitInsn(ACONST_NULL);
-					}
-					/*ADDITION BY NL*/
-					
+					putAccessed(opcode);
 					
 					// accessedReference index target 
 					this.push(access.getId());

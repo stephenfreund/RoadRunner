@@ -61,6 +61,27 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 		super(mv, m);
 	}
 
+	private void putAccessed(int opcode){
+		if(opcode == AALOAD || opcode == AASTORE){
+			//push reference at index of target (if reference type) and null otherwise
+			//called on mv (not this) so this.visitArrayInsn is not called as a consequence
+			mv.visitInsn(AALOAD);
+			
+			//accessedReference index target
+			this.visitVarInsn(ASTORE, threadDataLoc + 1);
+			//index target
+			this.visitInsn(DUP2);
+			//index target index target
+			this.visitVarInsn(ALOAD, threadDataLoc + 1);
+			//accessedReference index target index target
+		}
+		else{
+			this.visitInsn(ACONST_NULL);
+			//null index target index target
+		}
+		
+		return;
+	}
 
 	@Override
 	protected void visitArrayInsn(int opcode) {
@@ -105,22 +126,7 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 					this.visitInsn(DUP2);
 					
 					// index target index target
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AALOAD){
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						this.visitInsn(POP2);
-						mv.visitInsn(ACONST_NULL);
-					}
-					//accessedReference index target
-					this.visitVarInsn(ASTORE, threadDataLoc + 1);
-					//index target
-					this.visitInsn(DUP2);
-					//index target index target
-					this.visitVarInsn(ALOAD, threadDataLoc + 1);
-					
+					putAccessed(opcode);
 					
 					//accessedReference index target index target
 					this.push(access.getId());
@@ -137,24 +143,8 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 					// index target
 					this.visitInsn(DUP2);
 					
-					
 					// index target index target
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AALOAD){
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						this.visitInsn(POP2);
-						mv.visitInsn(ACONST_NULL);
-					}
-					//accessedReference index target
-					this.visitVarInsn(ASTORE, threadDataLoc + 1);
-					//index target
-					this.visitInsn(DUP2);
-					//index target index target
-					this.visitVarInsn(ALOAD, threadDataLoc + 1);
-					
+					putAccessed(opcode);
 					//accessedReference index target index target
 					this.push(access.getId());
 					// arrayAccessDataid accessedReference index target index target
@@ -224,22 +214,7 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 					
 					
 					// index target index target value
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AASTORE){
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						this.visitInsn(POP2);
-						mv.visitInsn(ACONST_NULL);
-					}
-					//accessedReference index target value
-					this.visitVarInsn(ASTORE, threadDataLoc + 1);
-					//index target value
-					this.visitInsn(DUP2);
-					//index target index target value
-					this.visitVarInsn(ALOAD, threadDataLoc + 1);
-					
+					putAccessed(opcode);
 					//accessedReference index target index target value
 					this.push(access.getId());
 					// arrayAccessDataid accessedReference index target index target value
@@ -255,21 +230,8 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 					
 					
 					// index target index target value
-					/*ADDITION BY NL*/
-					//push reference at index of target (if reference type) and null otherwise
-					if(opcode == AASTORE){
-						mv.visitInsn(AALOAD);
-					}
-					else{
-						this.visitInsn(POP2);
-						mv.visitInsn(ACONST_NULL);
-					}
-					//accessedReference index target value
-					this.visitVarInsn(ASTORE, threadDataLoc + 1);
-					//index target value
-					this.visitInsn(DUP2);
-					//index target index target value
-					this.visitVarInsn(ALOAD, threadDataLoc + 1);
+					putAccessed(opcode);
+					
 					
 					//accessedReference index target index target value
 					push(access.getId());
