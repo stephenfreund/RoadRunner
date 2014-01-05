@@ -33,6 +33,12 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+Installation and Running
+========================
+
+See INSTALL.txt for instructions for installing and using RoadRunner.
+
+
 Package Structure
 =================
 
