@@ -90,6 +90,27 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.getField(ownerType, shadowFieldName, Constants.GUARD_STATE_TYPE);
 		}
 	}
+	
+      
+	public void visitGetSelf(RRMethodAdapter mv, String owner, String name, String desc, boolean isStatic){
+		final Type ownerType = Type.getObjectType(owner);
+		Type selfType = Type.getType(desc);
+		
+		//put null on stack if accessed field is primitive
+		//pop reference to target from stack if accessed field is non-static
+		if(selfType.getSort() != Type.OBJECT && selfType.getSort() != Type.ARRAY){
+			if(!isStatic) {mv.visitInsn(POP);}
+			mv.visitInsn(ACONST_NULL);
+		}
+		else{
+			if (isStatic){
+				mv.getStatic(ownerType, name, Type.getType(desc));
+			}
+			else{
+				mv.getField(ownerType, name, Type.getType(desc));
+			}
+		}
+	}
 
 	protected void addPutMethod(final int access, final String name, final String desc) {
 		ClassInfo rrClass = this.getCurrentClass();
@@ -101,7 +122,8 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		mv.visitCode();
 		if ((access & ACC_FINAL) == 0) {
 			final Label success = new Label();
-
+			
+			
 			mv.visitVarInsn(ALOAD, 0);
 			// THIS
 			visitGetShadow(mv, rrClass.getName(), name, false);
@@ -112,12 +134,20 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			// 
 			mv.visitVarInsn(ALOAD, 0);
 			// this
+			
+			//put refernce to accessed field on stack if values option isn't on
+			if(!RR.valuesOption.get()){
+			    visitGetSelf(mv, rrClass.getName(), name, desc, false);
+			    mv.visitVarInsn(ALOAD, 0);
+			}
+			//accessedRef this (if values option is not on)
+			
 			mv.visitVarInsn(ALOAD, 5);
-			// this gs
+			//accessedRef this gs
 			mv.visitVarInsn(ILOAD, 1 + valueSize);
-			// this gs fadid
+			//accessedRef this gs fadid
 			mv.visitVarInsn(ALOAD, 2 + valueSize);
-			// this gs fadid current 
+			//acessedRef this gs fadid current 
 
 			if (RR.valuesOption.get()) {
 				mv.visitVarInsn(ALOAD, 0);
@@ -165,6 +195,15 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success);
 
 			mv.visitVarInsn(ALOAD, 0);
+			
+		 
+			//put refernce to accessed field on stack if values option isn't on
+			if(!RR.valuesOption.get()){
+			    visitGetSelf(mv, rrClass.getName(), name, desc, false);
+			    mv.visitVarInsn(ALOAD, 0);
+			}
+			
+			
 			mv.visitVarInsn(ALOAD, 5);
 			mv.visitVarInsn(ILOAD, 1);
 			mv.visitVarInsn(ALOAD, 2);
@@ -209,8 +248,15 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success);
-
+			
+			//put refernce to accessed field on stack if values option isn't on
+			if(!RR.valuesOption.get()){
+			    visitGetSelf(mv, rrClass.getName(), name, desc, true);
+			}
+			//accessedRef
 			mv.visitInsn(ACONST_NULL);
+			//accessedRef null(target)
+
 			mv.visitVarInsn(ALOAD, 5);			
 			mv.visitVarInsn(ILOAD, 0 + valueSize);
 			mv.visitVarInsn(ALOAD, 1 + valueSize);
@@ -254,8 +300,14 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success);
-
+			
+			//put refernce to accessed field on stack if values option isn't on
+			if(!RR.valuesOption.get()){
+			    visitGetSelf(mv, rrClass.getName(), name, desc, true);
+			}
+			//accessedRef
 			mv.visitInsn(ACONST_NULL);
+			//accessedRef null(target)
 
 			mv.visitVarInsn(ALOAD, 5);
 			mv.visitVarInsn(ILOAD, 0);

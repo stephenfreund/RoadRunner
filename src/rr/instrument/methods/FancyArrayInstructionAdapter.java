@@ -172,6 +172,21 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 		return -1;
 	}
 
+	private void putAccessed(int opcode){
+		//stack state = index target
+		if(opcode == AALOAD || opcode == AASTORE){	
+			this.visitInsn(DUP2);
+			//index target index target
+			//called on mv (not this) so this.visitArrayInsn is not called as a consequence
+			mv.visitInsn(AALOAD);
+			//accessedReference index target
+			
+		}
+		else{
+			mv.visitInsn(ACONST_NULL);
+			//null index target
+		}
+	}
 	@Override
 	protected void visitArrayInsn(int opcode) {
 		boolean old = inInstrumentationCode;
@@ -222,13 +237,18 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 
 					super.visitVarInsn(ALOAD, this.arrayLoc);
 					super.visitVarInsn(ILOAD, this.indexLoc);
-					// index target 
+					
+					
+					// index target
+					putAccessed(opcode);
+					
+					//accessedReference index target
 					this.push(access.getId());
-					// arrayAccessDataid index target 
+					// arrayAccessDataid accessedReference index target 
 					super.visitVarInsn(ALOAD, threadDataLoc);				
-					// ShadowThread arrayAccessDataid index target   
+					// ShadowThread arrayAccessDataid accessedReference index target   
 					super.visitVarInsn(ALOAD, locForArrayShadow(v.id));				
-					// ArrayShadow ShadowThread arrayAccessDataid index target   
+					// ArrayShadow ShadowThread arrayAccessDataid accessedReference index target   
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.READ_ARRAY_WITH_UPDATER_METHOD);
 					// 
 					this.visitLabel(success);
@@ -318,7 +338,12 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 					//
 					super.visitVarInsn(ALOAD, this.arrayLoc);
 					super.visitVarInsn(ILOAD, this.indexLoc);
-					// index target 
+					
+					
+					// index target
+					putAccessed(opcode);
+					
+					// accessedReference index target 
 					this.push(access.getId());
 					// arrayAccessDataid index target 
 					super.visitVarInsn(ALOAD, threadDataLoc);				

@@ -163,9 +163,9 @@ public class RRReplay implements MetaDataInfoVisitor {
 						final Object obj = object(target);
 						final ShadowVar state = fad.getField().getUpdater().getState(obj);
 						if (fad.isWrite()) {
-							if (doIt) 	RREventGenerator.volatileWriteAccess(obj, state, fad.getId(), thread(thread));
+							if (doIt) 	RREventGenerator.volatileWriteAccess(null, obj, state, fad.getId(), thread(thread));
 						} else {
-							if (doIt) RREventGenerator.volatileReadAccess(obj, state, fad.getId(), thread(thread));
+							if (doIt) RREventGenerator.volatileReadAccess(null, obj, state, fad.getId(), thread(thread));
 						}
 						break;
 					} 
@@ -176,10 +176,10 @@ public class RRReplay implements MetaDataInfoVisitor {
 						final ShadowVar state = fad.getField().getUpdater().getState(obj);
 						if (fad.isWrite()) {
 							if (doIt) {
-								RREventGenerator.writeAccess(obj, state, fad.getId(), thread(thread));
+								RREventGenerator.writeAccess(null, obj, state, fad.getId(), thread(thread));
 							}
 						} else {
-							if (doIt) RREventGenerator.readAccess(obj, state, fad.getId(), thread(thread));
+							if (doIt) RREventGenerator.readAccess(null, obj, state, fad.getId(), thread(thread));
 						}
 						break;
 					} 
@@ -191,9 +191,9 @@ public class RRReplay implements MetaDataInfoVisitor {
 						}
 						Assert.assertTrue(fad != null, "Bad MetaData for " + accessKey);
 						if (fad.isWrite()) {
-							if (doIt) RREventGenerator.arrayWrite(array(target), index, fad.getId(), thread(thread), array(target));
+							if (doIt) RREventGenerator.arrayWrite(array(target), index, null, fad.getId(), thread(thread), array(target));
 						} else {
-							if (doIt) RREventGenerator.arrayRead(array(target), index, fad.getId(), thread(thread), array(target));
+							if (doIt) RREventGenerator.arrayRead(array(target), index, null, fad.getId(), thread(thread), array(target));
 						}
 						break;
 					}
