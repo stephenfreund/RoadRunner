@@ -63,11 +63,11 @@ public class SourceLocation implements Serializable, Comparable<SourceLocation> 
 
 	@Override
 	public String toString() {
-		return this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? "(" + offset + ")" : "");
+		return this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? ":" + offset : "");
 	}
 
 	public static String toKeyString(String file, int line, int offset) {
-		return file + ":" + line + (offset == -1 ? "" : "(" + offset + ")");
+		return file + ":" + line + (offset == -1 ? "" : ":" + offset);
 	}
 
 	public static String toKeyString(String file, int line) {

@@ -40,7 +40,7 @@ package rr.meta;
 
 import acme.util.decorations.Decoratable;
 
-public abstract class MetaDataInfo extends Decoratable {
+public abstract class MetaDataInfo extends Decoratable implements Comparable<MetaDataInfo> {
 
 	protected final int id;
 	protected SourceLocation loc;
@@ -83,4 +83,9 @@ public abstract class MetaDataInfo extends Decoratable {
 	}
 	
 	public abstract void accept(MetaDataInfoVisitor v);
+
+	public int compareTo(MetaDataInfo other) {
+	    return getKey().compareTo(other.getKey());
+	}
+
 }

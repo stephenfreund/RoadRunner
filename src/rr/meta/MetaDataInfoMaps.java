@@ -46,6 +46,7 @@ import java.io.PrintWriter;
 
 import rr.instrument.Constants;
 import acme.util.Assert;
+import acme.util.Yikes;
 import acme.util.Util;
 import acme.util.decorations.DecorationFactory;
 import acme.util.option.Option;
@@ -274,20 +275,30 @@ public class MetaDataInfoMaps {
 	}
 
 	public static ArrayAccessInfo makeArrayAccess(SourceLocation loc, MethodInfo enclosing, boolean isWrite) {
-		ArrayAccessInfo a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
-		if (a == null) {
-			a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
-			getArrayAccesses().put(a);
+		ArrayAccessInfo a;
+		loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset());
+		while (true) {
+			a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
+			if (a == null) break;
+			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc " + loc);
 		}
+		a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
+		getArrayAccesses().put(a);
 		return a;
 	}
 
 	public static FieldAccessInfo makeFieldAccess(SourceLocation loc, MethodInfo enclosing, boolean isWrite, FieldInfo field) {
-		FieldAccessInfo a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
-		if (a == null) {
-			a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
-			getFieldAccesses().put(a);
-		} 
+		FieldAccessInfo a;
+		loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset());
+		while (true) {
+		        a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
+			if (a == null) break;
+			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc " + loc);
+		}
+		a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
+		getFieldAccesses().put(a);
 		return a;
 	}
 

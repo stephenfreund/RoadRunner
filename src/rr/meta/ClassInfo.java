@@ -44,7 +44,7 @@ import java.util.Vector;
 
 import acme.util.Assert;
 
-public class ClassInfo extends MetaDataInfo implements Comparable {
+public class ClassInfo extends MetaDataInfo  {
 
 	public static enum State { FRESH, IN_PRELOAD, PRELOADED, COMPLETE }
 
@@ -225,7 +225,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 		return this.isSynthetic;
 	}
 
-	public int compareTo(Object o) {
+	public int compareTo(MetaDataInfo o) {
 		return getName().compareTo(((ClassInfo)o).getName());
 	}
 
