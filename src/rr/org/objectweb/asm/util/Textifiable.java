@@ -1,4 +1,4 @@
-/***
+/**
  * ASM: a very small and fast Java bytecode manipulation framework
  * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
@@ -27,61 +27,30 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package rr.instrument.analysis;
+package rr.org.objectweb.asm.util;
 
-import rr.org.objectweb.asm.AnnotationVisitor;
-import rr.org.objectweb.asm.Attribute;
-import rr.org.objectweb.asm.FieldVisitor;
-import rr.org.objectweb.asm.Opcodes;
-import rr.org.objectweb.asm.TypePath;
+import java.util.Map;
+
+import rr.org.objectweb.asm.Label;
 
 /**
- * A {@link FieldVisitor} that prints the fields it visits with a
- * {@link Printer}.
+ * An {@link org.objectweb.asm.Attribute Attribute} that can print a readable
+ * representation of itself.
  * 
- * @author Eric Bruneton
+ * Implementations should construct readable output from an attribute data
+ * structure. Such representation could be used in unit test assertions.
+ * 
+ * @author Eugene Kuleshov
  */
-public final class TraceFieldVisitor extends FieldVisitor {
+public interface Textifiable {
 
-    public final Printer p;
-
-    public TraceFieldVisitor(final Printer p) {
-        this(null, p);
-    }
-
-    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
-        super(Opcodes.ASM5, fv);
-        this.p = p;
-    }
-
-    @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        Printer p = this.p.visitFieldAnnotation(desc, visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
-                visible);
-        return new TraceAnnotationVisitor(av, p);
-    }
-
-    @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef,
-            TypePath typePath, String desc, boolean visible) {
-        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
-                visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
-                typeRef, typePath, desc, visible);
-        return new TraceAnnotationVisitor(av, p);
-    }
-
-    @Override
-    public void visitAttribute(final Attribute attr) {
-        p.visitFieldAttribute(attr);
-        super.visitAttribute(attr);
-    }
-
-    @Override
-    public void visitEnd() {
-        p.visitFieldEnd();
-        super.visitEnd();
-    }
+    /**
+     * Build a human readable representation of this attribute.
+     * 
+     * @param buf
+     *            a buffer used for printing Java code.
+     * @param labelNames
+     *            map of label instances to their names.
+     */
+    void textify(StringBuffer buf, Map<Label, String> labelNames);
 }

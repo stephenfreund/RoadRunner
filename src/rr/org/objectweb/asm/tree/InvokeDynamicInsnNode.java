@@ -27,61 +27,79 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package rr.instrument.analysis;
+package rr.org.objectweb.asm.tree;
 
-import rr.org.objectweb.asm.AnnotationVisitor;
-import rr.org.objectweb.asm.Attribute;
-import rr.org.objectweb.asm.FieldVisitor;
+import java.util.Map;
+
+import rr.org.objectweb.asm.Handle;
+import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
-import rr.org.objectweb.asm.TypePath;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
 
 /**
- * A {@link FieldVisitor} that prints the fields it visits with a
- * {@link Printer}.
+ * A node that represents an invokedynamic instruction.
  * 
- * @author Eric Bruneton
+ * @author Remi Forax
  */
-public final class TraceFieldVisitor extends FieldVisitor {
+public class InvokeDynamicInsnNode extends AbstractInsnNode {
 
-    public final Printer p;
+    /**
+     * Invokedynamic name.
+     */
+    public String name;
 
-    public TraceFieldVisitor(final Printer p) {
-        this(null, p);
-    }
+    /**
+     * Invokedynamic descriptor.
+     */
+    public String desc;
 
-    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
-        super(Opcodes.ASM5, fv);
-        this.p = p;
+    /**
+     * Bootstrap method
+     */
+    public Handle bsm;
+
+    /**
+     * Bootstrap constant arguments
+     */
+    public Object[] bsmArgs;
+
+    /**
+     * Constructs a new {@link InvokeDynamicInsnNode}.
+     * 
+     * @param name
+     *            invokedynamic name.
+     * @param desc
+     *            invokedynamic descriptor (see {@link org.objectweb.asm.Type}).
+     * @param bsm
+     *            the bootstrap method.
+     * @param bsmArgs
+     *            the boostrap constant arguments.
+     */
+    public InvokeDynamicInsnNode(final String name, final String desc,
+            final Handle bsm, final Object... bsmArgs) {
+        super(Opcodes.INVOKEDYNAMIC);
+        this.name = name;
+        this.desc = desc;
+        this.bsm = bsm;
+        this.bsmArgs = bsmArgs;
     }
 
     @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        Printer p = this.p.visitFieldAnnotation(desc, visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
-                visible);
-        return new TraceAnnotationVisitor(av, p);
+    public int getType() {
+        return INVOKE_DYNAMIC_INSN;
     }
 
     @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef,
-            TypePath typePath, String desc, boolean visible) {
-        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
-                visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
-                typeRef, typePath, desc, visible);
-        return new TraceAnnotationVisitor(av, p);
+    public void accept(final MethodVisitor mv) {
+        mv.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);
+        acceptAnnotations(mv);
     }
 
     @Override
-    public void visitAttribute(final Attribute attr) {
-        p.visitFieldAttribute(attr);
-        super.visitAttribute(attr);
-    }
-
-    @Override
-    public void visitEnd() {
-        p.visitFieldEnd();
-        super.visitEnd();
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
+        return new InvokeDynamicInsnNode(name, desc, bsm, bsmArgs)
+                .cloneAnnotations(this);
     }
 }

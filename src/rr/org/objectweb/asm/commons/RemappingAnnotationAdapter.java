@@ -27,61 +27,55 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package rr.instrument.analysis;
+
+package rr.org.objectweb.asm.commons;
 
 import rr.org.objectweb.asm.AnnotationVisitor;
-import rr.org.objectweb.asm.Attribute;
-import rr.org.objectweb.asm.FieldVisitor;
 import rr.org.objectweb.asm.Opcodes;
-import rr.org.objectweb.asm.TypePath;
+import rr.org.objectweb.asm.commons.Remapper;
+import rr.org.objectweb.asm.commons.RemappingAnnotationAdapter;
 
 /**
- * A {@link FieldVisitor} that prints the fields it visits with a
- * {@link Printer}.
+ * An {@link AnnotationVisitor} adapter for type remapping.
  * 
- * @author Eric Bruneton
+ * @author Eugene Kuleshov
  */
-public final class TraceFieldVisitor extends FieldVisitor {
+public class RemappingAnnotationAdapter extends AnnotationVisitor {
 
-    public final Printer p;
+    protected final Remapper remapper;
 
-    public TraceFieldVisitor(final Printer p) {
-        this(null, p);
+    public RemappingAnnotationAdapter(final AnnotationVisitor av,
+            final Remapper remapper) {
+        this(Opcodes.ASM5, av, remapper);
     }
 
-    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
-        super(Opcodes.ASM5, fv);
-        this.p = p;
-    }
-
-    @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        Printer p = this.p.visitFieldAnnotation(desc, visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
-                visible);
-        return new TraceAnnotationVisitor(av, p);
+    protected RemappingAnnotationAdapter(final int api,
+            final AnnotationVisitor av, final Remapper remapper) {
+        super(api, av);
+        this.remapper = remapper;
     }
 
     @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef,
-            TypePath typePath, String desc, boolean visible) {
-        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
-                visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
-                typeRef, typePath, desc, visible);
-        return new TraceAnnotationVisitor(av, p);
+    public void visit(String name, Object value) {
+        av.visit(name, remapper.mapValue(value));
     }
 
     @Override
-    public void visitAttribute(final Attribute attr) {
-        p.visitFieldAttribute(attr);
-        super.visitAttribute(attr);
+    public void visitEnum(String name, String desc, String value) {
+        av.visitEnum(name, remapper.mapDesc(desc), value);
     }
 
     @Override
-    public void visitEnd() {
-        p.visitFieldEnd();
-        super.visitEnd();
+    public AnnotationVisitor visitAnnotation(String name, String desc) {
+        AnnotationVisitor v = av.visitAnnotation(name, remapper.mapDesc(desc));
+        return v == null ? null : (v == av ? this
+                : new RemappingAnnotationAdapter(v, remapper));
+    }
+
+    @Override
+    public AnnotationVisitor visitArray(String name) {
+        AnnotationVisitor v = av.visitArray(name);
+        return v == null ? null : (v == av ? this
+                : new RemappingAnnotationAdapter(v, remapper));
     }
 }

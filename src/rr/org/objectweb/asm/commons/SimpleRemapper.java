@@ -27,61 +27,45 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package rr.instrument.analysis;
 
-import rr.org.objectweb.asm.AnnotationVisitor;
-import rr.org.objectweb.asm.Attribute;
-import rr.org.objectweb.asm.FieldVisitor;
-import rr.org.objectweb.asm.Opcodes;
-import rr.org.objectweb.asm.TypePath;
+package rr.org.objectweb.asm.commons;
+
+import java.util.Collections;
+import java.util.Map;
+
+import rr.org.objectweb.asm.commons.Remapper;
 
 /**
- * A {@link FieldVisitor} that prints the fields it visits with a
- * {@link Printer}.
+ * A {@link Remapper} using a {@link Map} to define its mapping.
  * 
- * @author Eric Bruneton
+ * @author Eugene Kuleshov
  */
-public final class TraceFieldVisitor extends FieldVisitor {
+public class SimpleRemapper extends Remapper {
 
-    public final Printer p;
+    private final Map<String, String> mapping;
 
-    public TraceFieldVisitor(final Printer p) {
-        this(null, p);
+    public SimpleRemapper(Map<String, String> mapping) {
+        this.mapping = mapping;
     }
 
-    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
-        super(Opcodes.ASM5, fv);
-        this.p = p;
-    }
-
-    @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        Printer p = this.p.visitFieldAnnotation(desc, visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
-                visible);
-        return new TraceAnnotationVisitor(av, p);
+    public SimpleRemapper(String oldName, String newName) {
+        this.mapping = Collections.singletonMap(oldName, newName);
     }
 
     @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef,
-            TypePath typePath, String desc, boolean visible) {
-        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
-                visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
-                typeRef, typePath, desc, visible);
-        return new TraceAnnotationVisitor(av, p);
+    public String mapMethodName(String owner, String name, String desc) {
+        String s = map(owner + '.' + name + desc);
+        return s == null ? name : s;
     }
 
     @Override
-    public void visitAttribute(final Attribute attr) {
-        p.visitFieldAttribute(attr);
-        super.visitAttribute(attr);
+    public String mapFieldName(String owner, String name, String desc) {
+        String s = map(owner + '.' + name);
+        return s == null ? name : s;
     }
 
     @Override
-    public void visitEnd() {
-        p.visitFieldEnd();
-        super.visitEnd();
+    public String map(String key) {
+        return mapping.get(key);
     }
 }

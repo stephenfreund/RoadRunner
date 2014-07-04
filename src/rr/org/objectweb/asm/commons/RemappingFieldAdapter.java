@@ -27,61 +27,47 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package rr.instrument.analysis;
+
+package rr.org.objectweb.asm.commons;
 
 import rr.org.objectweb.asm.AnnotationVisitor;
-import rr.org.objectweb.asm.Attribute;
 import rr.org.objectweb.asm.FieldVisitor;
 import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.TypePath;
+import rr.org.objectweb.asm.commons.Remapper;
+import rr.org.objectweb.asm.commons.RemappingAnnotationAdapter;
 
 /**
- * A {@link FieldVisitor} that prints the fields it visits with a
- * {@link Printer}.
+ * A {@link FieldVisitor} adapter for type remapping.
  * 
- * @author Eric Bruneton
+ * @author Eugene Kuleshov
  */
-public final class TraceFieldVisitor extends FieldVisitor {
+public class RemappingFieldAdapter extends FieldVisitor {
 
-    public final Printer p;
+    private final Remapper remapper;
 
-    public TraceFieldVisitor(final Printer p) {
-        this(null, p);
+    public RemappingFieldAdapter(final FieldVisitor fv, final Remapper remapper) {
+        this(Opcodes.ASM5, fv, remapper);
     }
 
-    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
-        super(Opcodes.ASM5, fv);
-        this.p = p;
+    protected RemappingFieldAdapter(final int api, final FieldVisitor fv,
+            final Remapper remapper) {
+        super(api, fv);
+        this.remapper = remapper;
     }
 
     @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        Printer p = this.p.visitFieldAnnotation(desc, visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
+    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+        AnnotationVisitor av = fv.visitAnnotation(remapper.mapDesc(desc),
                 visible);
-        return new TraceAnnotationVisitor(av, p);
+        return av == null ? null : new RemappingAnnotationAdapter(av, remapper);
     }
 
     @Override
     public AnnotationVisitor visitTypeAnnotation(int typeRef,
             TypePath typePath, String desc, boolean visible) {
-        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
-                visible);
-        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
-                typeRef, typePath, desc, visible);
-        return new TraceAnnotationVisitor(av, p);
-    }
-
-    @Override
-    public void visitAttribute(final Attribute attr) {
-        p.visitFieldAttribute(attr);
-        super.visitAttribute(attr);
-    }
-
-    @Override
-    public void visitEnd() {
-        p.visitFieldEnd();
-        super.visitEnd();
+        AnnotationVisitor av = super.visitTypeAnnotation(typeRef, typePath,
+                remapper.mapDesc(desc), visible);
+        return av == null ? null : new RemappingAnnotationAdapter(av, remapper);
     }
 }
