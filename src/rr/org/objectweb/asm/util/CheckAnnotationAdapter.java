@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.util;
+package rr.org.objectweb.asm.util;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.AnnotationVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.util.CheckAnnotationAdapter;
+import rr.org.objectweb.asm.util.CheckMethodAdapter;
 
 /**
  * An {@link AnnotationVisitor} that checks that its methods are properly used.
  * 
  * @author Eric Bruneton
  */
-public class CheckAnnotationAdapter implements AnnotationVisitor {
+public class CheckAnnotationAdapter extends AnnotationVisitor {
 
-    private AnnotationVisitor av;
-
-    private boolean named;
+    private final boolean named;
 
     private boolean end;
 
@@ -50,10 +51,11 @@ public class CheckAnnotationAdapter implements AnnotationVisitor {
     }
 
     CheckAnnotationAdapter(final AnnotationVisitor av, final boolean named) {
-        this.av = av;
+        super(Opcodes.ASM5, av);
         this.named = named;
     }
 
+    @Override
     public void visit(final String name, final Object value) {
         checkEnd();
         checkName(name);
@@ -65,20 +67,23 @@ public class CheckAnnotationAdapter implements AnnotationVisitor {
                 || value instanceof byte[] || value instanceof boolean[]
                 || value instanceof char[] || value instanceof short[]
                 || value instanceof int[] || value instanceof long[]
-                || value instanceof float[] || value instanceof double[]))
-        {
+                || value instanceof float[] || value instanceof double[])) {
             throw new IllegalArgumentException("Invalid annotation value");
+        }
+        if (value instanceof Type) {
+            int sort = ((Type) value).getSort();
+            if (sort == Type.METHOD) {
+                throw new IllegalArgumentException("Invalid annotation value");
+            }
         }
         if (av != null) {
             av.visit(name, value);
         }
     }
 
-    public void visitEnum(
-        final String name,
-        final String desc,
-        final String value)
-    {
+    @Override
+    public void visitEnum(final String name, final String desc,
+            final String value) {
         checkEnd();
         checkName(name);
         CheckMethodAdapter.checkDesc(desc, false);
@@ -90,26 +95,25 @@ public class CheckAnnotationAdapter implements AnnotationVisitor {
         }
     }
 
-    public AnnotationVisitor visitAnnotation(
-        final String name,
-        final String desc)
-    {
+    @Override
+    public AnnotationVisitor visitAnnotation(final String name,
+            final String desc) {
         checkEnd();
         checkName(name);
         CheckMethodAdapter.checkDesc(desc, false);
-        return new CheckAnnotationAdapter(av == null
-                ? null
+        return new CheckAnnotationAdapter(av == null ? null
                 : av.visitAnnotation(name, desc));
     }
 
+    @Override
     public AnnotationVisitor visitArray(final String name) {
         checkEnd();
         checkName(name);
-        return new CheckAnnotationAdapter(av == null
-                ? null
+        return new CheckAnnotationAdapter(av == null ? null
                 : av.visitArray(name), false);
     }
 
+    @Override
     public void visitEnd() {
         checkEnd();
         end = true;
@@ -120,13 +124,15 @@ public class CheckAnnotationAdapter implements AnnotationVisitor {
 
     private void checkEnd() {
         if (end) {
-            throw new IllegalStateException("Cannot call a visit method after visitEnd has been called");
+            throw new IllegalStateException(
+                    "Cannot call a visit method after visitEnd has been called");
         }
     }
 
     private void checkName(final String name) {
         if (named && name == null) {
-            throw new IllegalArgumentException("Annotation value name must not be null");
+            throw new IllegalArgumentException(
+                    "Annotation value name must not be null");
         }
     }
 }

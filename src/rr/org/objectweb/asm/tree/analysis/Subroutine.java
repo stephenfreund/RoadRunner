@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,13 +27,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree.analysis;
+package rr.org.objectweb.asm.tree.analysis;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.JumpInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.analysis.AnalyzerException;
+import rr.org.objectweb.asm.tree.analysis.Subroutine;
 
 /**
  * A method subroutine (corresponds to a JSR instruction).
@@ -46,19 +48,16 @@ class Subroutine {
 
     boolean[] access;
 
-    List callers;
+    List<JumpInsnNode> callers;
 
     private Subroutine() {
     }
 
-    public Subroutine(
-        final LabelNode start,
-        final int maxLocals,
-        final JumpInsnNode caller)
-    {
+    Subroutine(final LabelNode start, final int maxLocals,
+            final JumpInsnNode caller) {
         this.start = start;
         this.access = new boolean[maxLocals];
-        this.callers = new ArrayList();
+        this.callers = new ArrayList<JumpInsnNode>();
         callers.add(caller);
     }
 
@@ -67,7 +66,7 @@ class Subroutine {
         result.start = start;
         result.access = new boolean[access.length];
         System.arraycopy(access, 0, result.access, 0, access.length);
-        result.callers = new ArrayList(callers);
+        result.callers = new ArrayList<JumpInsnNode>(callers);
         return result;
     }
 
@@ -81,7 +80,7 @@ class Subroutine {
         }
         if (subroutine.start == start) {
             for (int i = 0; i < subroutine.callers.size(); ++i) {
-                Object caller = subroutine.callers.get(i);
+                JumpInsnNode caller = subroutine.callers.get(i);
                 if (!callers.contains(caller)) {
                     callers.add(caller);
                     changes = true;

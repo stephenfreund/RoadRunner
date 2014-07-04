@@ -38,8 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Type;
 
 import acme.util.Util;
 

@@ -40,10 +40,10 @@ package rr.instrument.methods;
 
 import java.util.Vector;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.Constants;
 import rr.loader.LoaderContext;
@@ -72,7 +72,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		try {
 			MethodInfo m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
 
@@ -92,7 +92,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		} catch (MethodResolutionException e) {
 			Assert.warn("Can't find method in System Method Replacer: " + e);
 		}
-		super.visitMethodInsn(opcode, owner, name, desc);
+		super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 	}
 
 	protected static Vector<Integer> allOpcodes = new Vector<Integer>();

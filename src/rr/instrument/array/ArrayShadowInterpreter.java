@@ -71,18 +71,18 @@ package rr.instrument.array;
 
 import java.util.List;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.IntInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MultiANewArrayInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
-import org.objectweb.asm.tree.analysis.Interpreter;
-import org.objectweb.asm.tree.analysis.Value;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.FieldInsnNode;
+import rr.org.objectweb.asm.tree.IntInsnNode;
+import rr.org.objectweb.asm.tree.LdcInsnNode;
+import rr.org.objectweb.asm.tree.MethodInsnNode;
+import rr.org.objectweb.asm.tree.MultiANewArrayInsnNode;
+import rr.org.objectweb.asm.tree.TypeInsnNode;
+import rr.org.objectweb.asm.tree.analysis.AnalyzerException;
+import rr.org.objectweb.asm.tree.analysis.Interpreter;
+import rr.org.objectweb.asm.tree.analysis.Value;
 
 import acme.util.Util;
 
@@ -93,11 +93,16 @@ import acme.util.Util;
  * @author Eric Bruneton
  * @author Bing Ran
  */
-public class ArrayShadowInterpreter implements Opcodes, Interpreter {
+public class ArrayShadowInterpreter extends Interpreter<ArrayShadowValue> implements Opcodes {
 	
+	protected ArrayShadowInterpreter() {
+		super(ASM5);
+	}
+
+
 	private int counter = 0;
 	
-    public Value newValue(final Type type) {
+    public ArrayShadowValue newValue(final Type type) {
         if (type == null) {
             return ArrayShadowValue.SINGLE_VALUE;
         }
@@ -125,7 +130,7 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
         }
     }
 
-    public Value newOperation(final AbstractInsnNode insn) {
+    public ArrayShadowValue newOperation(final AbstractInsnNode insn) {
         switch (insn.getOpcode()) {
         	case ACONST_NULL:
                 return ArrayShadowValue.NULL_VALUE;
@@ -174,13 +179,13 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
         }
     }
 
-    public Value copyOperation(final AbstractInsnNode insn, final Value value)
+    public ArrayShadowValue copyOperation(final AbstractInsnNode insn, final ArrayShadowValue value)
             throws AnalyzerException
     {
         return value;
     }
 
-    public Value unaryOperation(final AbstractInsnNode insn, final Value value)
+    public ArrayShadowValue unaryOperation(final AbstractInsnNode insn, final ArrayShadowValue value)
             throws AnalyzerException
     {
         switch (insn.getOpcode()) {
@@ -225,7 +230,7 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
                 return null;
             case GETFIELD:
             	//Util.log(Type.getType(((FieldInsnNode) insn).desc) + " <-- ");
-                Value v = newValue(Type.getType(((FieldInsnNode) insn).desc));
+            	ArrayShadowValue v = newValue(Type.getType(((FieldInsnNode) insn).desc));
                 // Util.log("" + v);
                 return v;
             case NEWARRAY:
@@ -247,7 +252,7 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
                     case T_LONG:
                         return newValue(Type.getType("[J"));
                     default:
-                        throw new AnalyzerException("Invalid target type");
+                        throw new AnalyzerException(insn, "Invalid target type");
                 }
             case ANEWARRAY: {
                 String desc = ((TypeInsnNode) insn).desc;
@@ -281,10 +286,10 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
         }
     }
 
-    public Value binaryOperation(
+    public ArrayShadowValue binaryOperation(
         final AbstractInsnNode insn,
-        final Value value1,
-        final Value value2) throws AnalyzerException
+        final ArrayShadowValue value1,
+        final ArrayShadowValue value2) throws AnalyzerException
     {
         switch (insn.getOpcode()) {
             case IALOAD:
@@ -363,16 +368,16 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
         }
     }
 
-    public Value ternaryOperation(
+    public ArrayShadowValue ternaryOperation(
         final AbstractInsnNode insn,
-        final Value value1,
-        final Value value2,
-        final Value value3) throws AnalyzerException
+        final ArrayShadowValue value1,
+        final ArrayShadowValue value2,
+        final ArrayShadowValue value3) throws AnalyzerException
     {
         return null;
     }
 
-    public Value naryOperation(final AbstractInsnNode insn, final List values)
+    public ArrayShadowValue naryOperation(final AbstractInsnNode insn, final List values)
             throws AnalyzerException
     {
         if (insn.getOpcode() == MULTIANEWARRAY) {
@@ -383,7 +388,7 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
     }
  
     
-    public Value merge(final Value v, final Value w) {
+    public ArrayShadowValue merge(final ArrayShadowValue v, final ArrayShadowValue w) {
         if (!v.equals(w)) {
         	ArrayShadowValue vv = (ArrayShadowValue)v;
         	ArrayShadowValue ww = (ArrayShadowValue)w;
@@ -405,4 +410,11 @@ public class ArrayShadowInterpreter implements Opcodes, Interpreter {
         	return v;
         }
     }
+
+	@Override
+	public void returnOperation(AbstractInsnNode insn, ArrayShadowValue value,
+			ArrayShadowValue expected) throws AnalyzerException {
+	}
+
+
 }

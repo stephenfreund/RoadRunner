@@ -187,7 +187,6 @@ public class RRMain {
 //		cl.add(InstrumentingDefineClassLoader.sanityOption);
 		cl.add(Instrumentor.fancyOption);
 		cl.add(Instrumentor.trackArraySitesOption);
-		cl.add(Instrumentor.nonAtomicVolatileOption);
 		cl.add(ThreadStateExtensionAgent.noDecorationInline);
 		cl.addOrderConstraint(ThreadStateExtensionAgent.noDecorationInline, rr.tool.RR.toolOption);
 

@@ -1,6 +1,6 @@
 /***
  * ASM XML Adapter
- * Copyright (c) 2004, Eugene Kuleshov
+ * Copyright (c) 2004-2011, Eugene Kuleshov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.xml;
+package rr.org.objectweb.asm.xml;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
@@ -38,11 +38,11 @@ import org.xml.sax.SAXException;
  * 
  * @author Eugene Kuleshov
  */
-public abstract class SAXAdapter {
+public class SAXAdapter {
 
     private final ContentHandler h;
 
-    public SAXAdapter(final ContentHandler h) {
+    protected SAXAdapter(final ContentHandler h) {
         this.h = h;
     }
 
@@ -54,7 +54,7 @@ public abstract class SAXAdapter {
         try {
             h.startDocument();
         } catch (SAXException ex) {
-            throw new RuntimeException(ex.getException());
+            throw new RuntimeException(ex.getMessage(), ex.getException());
         }
     }
 
@@ -62,7 +62,7 @@ public abstract class SAXAdapter {
         try {
             h.endDocument();
         } catch (SAXException ex) {
-            throw new RuntimeException(ex.toString());
+            throw new RuntimeException(ex.getMessage(), ex.getException());
         }
     }
 
@@ -70,7 +70,7 @@ public abstract class SAXAdapter {
         try {
             h.startElement("", name, name, attrs);
         } catch (SAXException ex) {
-            throw new RuntimeException(ex.toString());
+            throw new RuntimeException(ex.getMessage(), ex.getException());
         }
     }
 
@@ -78,7 +78,7 @@ public abstract class SAXAdapter {
         try {
             h.endElement("", name, name);
         } catch (SAXException ex) {
-            throw new RuntimeException(ex.toString());
+            throw new RuntimeException(ex.getMessage(), ex.getException());
         }
     }
 

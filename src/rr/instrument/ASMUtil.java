@@ -38,12 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.instrument.methods.RRMethodAdapter;
+import rr.org.objectweb.asm.Label;
 import rr.tool.Tool;
 import rr.tool.RR;
 import rr.tool.ToolVisitor;
@@ -157,7 +157,7 @@ public class ASMUtil implements Opcodes {
 				localVarIndex += args[i].getSize();
 
 			} 
-			mv.visitMethodInsn(INVOKESPECIAL, owner, name, desc);
+			mv.visitMethodInsn(INVOKESPECIAL, owner, name, desc, false);
 		} else {
 			Type args[] = Type.getArgumentTypes(desc);
 			int localVarIndex = 0;
@@ -166,7 +166,7 @@ public class ASMUtil implements Opcodes {
 				localVarIndex += args[i].getSize();
 
 			}
-			mv.visitMethodInsn(INVOKESTATIC, owner, name, desc);
+			mv.visitMethodInsn(INVOKESTATIC, owner, name, desc, false);
 		}
 	}
 
@@ -179,7 +179,7 @@ public class ASMUtil implements Opcodes {
 			localVarIndex += args[i].getSize();
 
 		} 
-		mv.visitMethodInsn(opcode, owner, name, desc);
+		mv.visitMethodInsn(opcode, owner, name, desc, false);
 	}
 
 

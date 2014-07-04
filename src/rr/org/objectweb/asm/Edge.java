@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm;
+package rr.org.objectweb.asm;
+
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.Edge;
+import rr.org.objectweb.asm.Label;
 
 /**
  * An edge in the control flow graph of a method body. See {@link Label Label}.
@@ -39,7 +43,7 @@ class Edge {
     /**
      * Denotes a normal control flow graph edge.
      */
-    final static int NORMAL = 0;
+    static final int NORMAL = 0;
 
     /**
      * Denotes a control flow graph edge corresponding to an exception handler.
@@ -48,7 +52,7 @@ class Edge {
      * the index, in the {@link ClassWriter} type table, of the exception that
      * is catched.
      */
-    final static int EXCEPTION = 0x7FFFFFFF;
+    static final int EXCEPTION = 0x7FFFFFFF;
 
     /**
      * Information about this control flow graph edge. If

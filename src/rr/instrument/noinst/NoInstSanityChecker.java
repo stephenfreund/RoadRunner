@@ -38,9 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.noinst;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.EmptyVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.classes.RRClassAdapter;
 import rr.meta.MetaDataInfoMaps;
@@ -52,7 +51,7 @@ import acme.util.Assert;
 public class NoInstSanityChecker extends RRClassAdapter {
 	
 	public NoInstSanityChecker() {
-		super(new EmptyVisitor());
+		super();
 	}
 
 	@Override

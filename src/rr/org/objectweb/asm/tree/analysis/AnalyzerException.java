@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree.analysis;
+package rr.org.objectweb.asm.tree.analysis;
+
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.analysis.Value;
 
 /**
  * Thrown if a problem occurs during the analysis of a method.
@@ -35,22 +38,26 @@ package org.objectweb.asm.tree.analysis;
  * @author Bing Ran
  * @author Eric Bruneton
  */
+@SuppressWarnings("serial")
 public class AnalyzerException extends Exception {
 
-    public AnalyzerException(final String msg) {
+    public final AbstractInsnNode node;
+
+    public AnalyzerException(final AbstractInsnNode node, final String msg) {
         super(msg);
+        this.node = node;
     }
 
-    public AnalyzerException(final String msg, final Throwable exception) {
+    public AnalyzerException(final AbstractInsnNode node, final String msg,
+            final Throwable exception) {
         super(msg, exception);
+        this.node = node;
     }
 
-    public AnalyzerException(
-        final String msg,
-        final Object expected,
-        final Value encountered)
-    {
+    public AnalyzerException(final AbstractInsnNode node, final String msg,
+            final Object expected, final Value encountered) {
         super((msg == null ? "Expected " : msg + ": expected ") + expected
                 + ", but found " + encountered);
+        this.node = node;
     }
 }

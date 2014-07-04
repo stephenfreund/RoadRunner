@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.commons;
+package rr.org.objectweb.asm.commons;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -39,23 +39,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LookupSwitchInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TableSwitchInsnNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.LocalVariableNode;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.JSRInlinerAdapter;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.InsnList;
+import rr.org.objectweb.asm.tree.InsnNode;
+import rr.org.objectweb.asm.tree.JumpInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.LocalVariableNode;
+import rr.org.objectweb.asm.tree.LookupSwitchInsnNode;
+import rr.org.objectweb.asm.tree.MethodNode;
+import rr.org.objectweb.asm.tree.TableSwitchInsnNode;
+import rr.org.objectweb.asm.tree.TryCatchBlockNode;
+
+import rr.org.objectweb.asm.Label;
 
 /**
- * A {@link org.objectweb.asm.MethodAdapter} that removes JSR instructions and
+ * A {@link org.objectweb.asm.MethodVisitor} that removes JSR instructions and
  * inlines the referenced subroutines.
  * 
  * <b>Explanation of how it works</b> TODO
@@ -64,57 +66,89 @@ import org.objectweb.asm.tree.LocalVariableNode;
  */
 public class JSRInlinerAdapter extends MethodNode implements Opcodes {
 
-    private final static boolean LOGGING = false;
+    private static final boolean LOGGING = false;
 
     /**
-     * The visitor to which we will emit a translation of this method without
-     * internal subroutines.
+     * For each label that is jumped to by a JSR, we create a BitSet instance.
      */
-    private MethodVisitor mv;
-
-    /**
-     * For each label that is jumped to by a JSR, we create a Subroutine
-     * instance. Map<LabelNode,Subroutine> is the generic type.
-     */
-    private final Map subroutineHeads = new HashMap();
+    private final Map<LabelNode, BitSet> subroutineHeads = new HashMap<LabelNode, BitSet>();
 
     /**
      * This subroutine instance denotes the line of execution that is not
      * contained within any subroutine; i.e., the "subroutine" that is executing
      * when a method first begins.
      */
-    private final Subroutine mainSubroutine = new Subroutine();
+    private final BitSet mainSubroutine = new BitSet();
 
     /**
      * This BitSet contains the index of every instruction that belongs to more
      * than one subroutine. This should not happen often.
      */
-    private final BitSet dualCitizens = new BitSet();
+    final BitSet dualCitizens = new BitSet();
+
+    /**
+     * Creates a new JSRInliner. <i>Subclasses must not use this
+     * constructor</i>. Instead, they must use the
+     * {@link #JSRInlinerAdapter(int, MethodVisitor, int, String, String, String, String[])}
+     * version.
+     * 
+     * @param mv
+     *            the <code>MethodVisitor</code> to send the resulting inlined
+     *            method code to (use <code>null</code> for none).
+     * @param access
+     *            the method's access flags (see {@link Opcodes}). This
+     *            parameter also indicates if the method is synthetic and/or
+     *            deprecated.
+     * @param name
+     *            the method's name.
+     * @param desc
+     *            the method's descriptor (see {@link Type}).
+     * @param signature
+     *            the method's signature. May be <tt>null</tt>.
+     * @param exceptions
+     *            the internal names of the method's exception classes (see
+     *            {@link Type#getInternalName() getInternalName}). May be
+     *            <tt>null</tt>.
+     * @throws IllegalStateException
+     *             If a subclass calls this constructor.
+     */
+    public JSRInlinerAdapter(final MethodVisitor mv, final int access,
+            final String name, final String desc, final String signature,
+            final String[] exceptions) {
+        this(Opcodes.ASM5, mv, access, name, desc, signature, exceptions);
+        if (getClass() != JSRInlinerAdapter.class) {
+            throw new IllegalStateException();
+        }
+    }
 
     /**
      * Creates a new JSRInliner.
      * 
-     * @param mv the <code>MethodVisitor</code> to send the resulting inlined
-     *        method code to (use <code>null</code> for none).
-     * @param access the method's access flags (see {@link Opcodes}). This
-     *        parameter also indicates if the method is synthetic and/or
-     *        deprecated.
-     * @param name the method's name.
-     * @param desc the method's descriptor (see {@link Type}).
-     * @param signature the method's signature. May be <tt>null</tt>.
-     * @param exceptions the internal names of the method's exception classes
-     *        (see {@link Type#getInternalName() getInternalName}). May be
-     *        <tt>null</tt>.
+     * @param api
+     *            the ASM API version implemented by this visitor. Must be one
+     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
+     * @param mv
+     *            the <code>MethodVisitor</code> to send the resulting inlined
+     *            method code to (use <code>null</code> for none).
+     * @param access
+     *            the method's access flags (see {@link Opcodes}). This
+     *            parameter also indicates if the method is synthetic and/or
+     *            deprecated.
+     * @param name
+     *            the method's name.
+     * @param desc
+     *            the method's descriptor (see {@link Type}).
+     * @param signature
+     *            the method's signature. May be <tt>null</tt>.
+     * @param exceptions
+     *            the internal names of the method's exception classes (see
+     *            {@link Type#getInternalName() getInternalName}). May be
+     *            <tt>null</tt>.
      */
-    public JSRInlinerAdapter(
-        final MethodVisitor mv,
-        final int access,
-        final String name,
-        final String desc,
-        final String signature,
-        final String[] exceptions)
-    {
-        super(access, name, desc, signature, exceptions);
+    protected JSRInlinerAdapter(final int api, final MethodVisitor mv,
+            final int access, final String name, final String desc,
+            final String signature, final String[] exceptions) {
+        super(api, access, name, desc, signature, exceptions);
         this.mv = mv;
     }
 
@@ -122,11 +156,12 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
      * Detects a JSR instruction and sets a flag to indicate we will need to do
      * inlining.
      */
+    @Override
     public void visitJumpInsn(final int opcode, final Label lbl) {
         super.visitJumpInsn(opcode, lbl);
         LabelNode ln = ((JumpInsnNode) instructions.getLast()).label;
         if (opcode == JSR && !subroutineHeads.containsKey(ln)) {
-            subroutineHeads.put(ln, new Subroutine());
+            subroutineHeads.put(ln, new BitSet());
         }
     }
 
@@ -134,14 +169,15 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
      * If any JSRs were seen, triggers the inlining process. Otherwise, forwards
      * the byte codes untouched.
      */
+    @Override
     public void visitEnd() {
         if (!subroutineHeads.isEmpty()) {
             markSubroutines();
             if (LOGGING) {
                 log(mainSubroutine.toString());
-                Iterator it = subroutineHeads.values().iterator();
+                Iterator<BitSet> it = subroutineHeads.values().iterator();
                 while (it.hasNext()) {
-                    Subroutine sub = (Subroutine) it.next();
+                    BitSet sub = it.next();
                     log(sub.toString());
                 }
             }
@@ -167,11 +203,11 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
 
         // Go through the head of each subroutine and find any nodes reachable
         // to that subroutine without following any JSR links.
-        for (Iterator it = subroutineHeads.entrySet().iterator(); it.hasNext();)
-        {
-            Map.Entry entry = (Map.Entry) it.next();
-            LabelNode lab = (LabelNode) entry.getKey();
-            Subroutine sub = (Subroutine) entry.getValue();
+        for (Iterator<Map.Entry<LabelNode, BitSet>> it = subroutineHeads
+                .entrySet().iterator(); it.hasNext();) {
+            Map.Entry<LabelNode, BitSet> entry = it.next();
+            LabelNode lab = entry.getKey();
+            BitSet sub = entry.getValue();
             int index = instructions.indexOf(lab);
             markSubroutineWalk(sub, index, anyvisited);
         }
@@ -179,22 +215,22 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
 
     /**
      * Performs a depth first search walking the normal byte code path starting
-     * at <code>index</code>, and adding each instruction encountered into
-     * the subroutine <code>sub</code>. After this walk is complete, iterates
-     * over the exception handlers to ensure that we also include those byte
-     * codes which are reachable through an exception that may be thrown during
-     * the execution of the subroutine. Invoked from
-     * <code>markSubroutines()</code>.
+     * at <code>index</code>, and adding each instruction encountered into the
+     * subroutine <code>sub</code>. After this walk is complete, iterates over
+     * the exception handlers to ensure that we also include those byte codes
+     * which are reachable through an exception that may be thrown during the
+     * execution of the subroutine. Invoked from <code>markSubroutines()</code>.
      * 
-     * @param sub TODO.
-     * @param index TODO.
-     * @param anyvisited TODO.
+     * @param sub
+     *            the subroutine whose instructions must be computed.
+     * @param index
+     *            an instruction of this subroutine.
+     * @param anyvisited
+     *            indexes of the already visited instructions, i.e. marked as
+     *            part of this subroutine or any previously computed subroutine.
      */
-    private void markSubroutineWalk(
-        final Subroutine sub,
-        final int index,
-        final BitSet anyvisited)
-    {
+    private void markSubroutineWalk(final BitSet sub, final int index,
+            final BitSet anyvisited) {
         if (LOGGING) {
             log("markSubroutineWalk: sub=" + sub + " index=" + index);
         }
@@ -206,25 +242,27 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
         boolean loop = true;
         while (loop) {
             loop = false;
-            for (Iterator it = tryCatchBlocks.iterator(); it.hasNext();) {
-                TryCatchBlockNode trycatch = (TryCatchBlockNode) it.next();
+            for (Iterator<TryCatchBlockNode> it = tryCatchBlocks.iterator(); it
+                    .hasNext();) {
+                TryCatchBlockNode trycatch = it.next();
 
                 if (LOGGING) {
+                    // TODO use of default toString().
                     log("Scanning try/catch " + trycatch);
                 }
 
                 // If the handler has already been processed, skip it.
                 int handlerindex = instructions.indexOf(trycatch.handler);
-                if (sub.instructions.get(handlerindex)) {
+                if (sub.get(handlerindex)) {
                     continue;
                 }
 
                 int startindex = instructions.indexOf(trycatch.start);
                 int endindex = instructions.indexOf(trycatch.end);
-                int nextbit = sub.instructions.nextSetBit(startindex);
+                int nextbit = sub.nextSetBit(startindex);
                 if (nextbit != -1 && nextbit < endindex) {
                     if (LOGGING) {
-                        log("Adding exception handler: " + startindex + "-"
+                        log("Adding exception handler: " + startindex + '-'
                                 + endindex + " due to " + nextbit + " handler "
                                 + handlerindex);
                     }
@@ -237,26 +275,27 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
 
     /**
      * Performs a simple DFS of the instructions, assigning each to the
-     * subroutine <code>sub</code>. Starts from <code>index</code>.
-     * Invoked only by <code>markSubroutineWalk()</code>.
+     * subroutine <code>sub</code>. Starts from <code>index</code>. Invoked only
+     * by <code>markSubroutineWalk()</code>.
      * 
-     * @param sub TODO.
-     * @param index TODO.
-     * @param anyvisited TODO.
+     * @param sub
+     *            the subroutine whose instructions must be computed.
+     * @param index
+     *            an instruction of this subroutine.
+     * @param anyvisited
+     *            indexes of the already visited instructions, i.e. marked as
+     *            part of this subroutine or any previously computed subroutine.
      */
-    private void markSubroutineWalkDFS(
-        final Subroutine sub,
-        int index,
-        final BitSet anyvisited)
-    {
+    private void markSubroutineWalkDFS(final BitSet sub, int index,
+            final BitSet anyvisited) {
         while (true) {
             AbstractInsnNode node = instructions.get(index);
 
             // don't visit a node twice
-            if (sub.instructions.get(index)) {
+            if (sub.get(index)) {
                 return;
             }
-            sub.instructions.set(index);
+            sub.set(index);
 
             // check for those nodes already visited by another subroutine
             if (anyvisited.get(index)) {
@@ -268,8 +307,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
             anyvisited.set(index);
 
             if (node.getType() == AbstractInsnNode.JUMP_INSN
-                    && node.getOpcode() != JSR)
-            {
+                    && node.getOpcode() != JSR) {
                 // we do not follow recursively called subroutines here; but any
                 // other sort of branch we do follow
                 JumpInsnNode jnode = (JumpInsnNode) node;
@@ -281,7 +319,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 int destidx = instructions.indexOf(tsnode.dflt);
                 markSubroutineWalkDFS(sub, destidx, anyvisited);
                 for (int i = tsnode.labels.size() - 1; i >= 0; --i) {
-                    LabelNode l = (LabelNode) tsnode.labels.get(i);
+                    LabelNode l = tsnode.labels.get(i);
                     destidx = instructions.indexOf(l);
                     markSubroutineWalkDFS(sub, destidx, anyvisited);
                 }
@@ -291,7 +329,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 int destidx = instructions.indexOf(lsnode.dflt);
                 markSubroutineWalkDFS(sub, destidx, anyvisited);
                 for (int i = lsnode.labels.size() - 1; i >= 0; --i) {
-                    LabelNode l = (LabelNode) lsnode.labels.get(i);
+                    LabelNode l = lsnode.labels.get(i);
                     destidx = instructions.indexOf(l);
                     markSubroutineWalkDFS(sub, destidx, anyvisited);
                 }
@@ -300,27 +338,38 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
             // check to see if this opcode falls through to the next instruction
             // or not; if not, return.
             switch (instructions.get(index).getOpcode()) {
-                case GOTO:
-                case RET:
-                case TABLESWITCH:
-                case LOOKUPSWITCH:
-                case IRETURN:
-                case LRETURN:
-                case FRETURN:
-                case DRETURN:
-                case ARETURN:
-                case RETURN:
-                case ATHROW:
-                    /*
-                     * note: this either returns from this subroutine, or a
-                     * parent subroutine which invoked it
-                     */
-                    return;
+            case GOTO:
+            case RET:
+            case TABLESWITCH:
+            case LOOKUPSWITCH:
+            case IRETURN:
+            case LRETURN:
+            case FRETURN:
+            case DRETURN:
+            case ARETURN:
+            case RETURN:
+            case ATHROW:
+                /*
+                 * note: this either returns from this subroutine, or a parent
+                 * subroutine which invoked it
+                 */
+                return;
             }
 
             // Use tail recursion here in the form of an outer while loop to
             // avoid our stack growing needlessly:
             index++;
+
+            // We implicitly assumed above that execution can always fall
+            // through to the next instruction after a JSR. But a subroutine may
+            // never return, in which case the code after the JSR is unreachable
+            // and can be anything. In particular, it can seem to fall off the
+            // end of the method, so we must handle this case here (we could
+            // instead detect whether execution can return or not from a JSR,
+            // but this is more complicated).
+            if (index >= instructions.size()) {
+                return;
+            }
         }
     }
 
@@ -329,7 +378,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
      * subroutine until the code is fully elaborated.
      */
     private void emitCode() {
-        LinkedList worklist = new LinkedList();
+        LinkedList<Instantiation> worklist = new LinkedList<Instantiation>();
         // Create an instantiation of the "root" subroutine, which is just the
         // main routine
         worklist.add(new Instantiation(null, mainSubroutine));
@@ -337,14 +386,11 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
         // Emit instantiations of each subroutine we encounter, including the
         // main subroutine
         InsnList newInstructions = new InsnList();
-        List newTryCatchBlocks = new ArrayList();
-        List newLocalVariables = new ArrayList();
+        List<TryCatchBlockNode> newTryCatchBlocks = new ArrayList<TryCatchBlockNode>();
+        List<LocalVariableNode> newLocalVariables = new ArrayList<LocalVariableNode>();
         while (!worklist.isEmpty()) {
-            Instantiation inst = (Instantiation) worklist.removeFirst();
-            emitSubroutine(inst,
-                    worklist,
-                    newInstructions,
-                    newTryCatchBlocks,
+            Instantiation inst = worklist.removeFirst();
+            emitSubroutine(inst, worklist, newInstructions, newTryCatchBlocks,
                     newLocalVariables);
         }
         instructions = newInstructions;
@@ -354,22 +400,25 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
 
     /**
      * Emits one instantiation of one subroutine, specified by
-     * <code>instant</code>. May add new instantiations that are invoked by
-     * this one to the <code>worklist</code> parameter, and new try/catch
-     * blocks to <code>newTryCatchBlocks</code>.
+     * <code>instant</code>. May add new instantiations that are invoked by this
+     * one to the <code>worklist</code> parameter, and new try/catch blocks to
+     * <code>newTryCatchBlocks</code>.
      * 
-     * @param instant TODO.
-     * @param workList TODO.
-     * @param newInstructions TODO.
-     * @param newTryCatchBlocks TODO.
+     * @param instant
+     *            the instantiation that must be performed.
+     * @param worklist
+     *            list of the instantiations that remain to be done.
+     * @param newInstructions
+     *            the instruction list to which the instantiated code must be
+     *            appended.
+     * @param newTryCatchBlocks
+     *            the exception handler list to which the instantiated handlers
+     *            must be appended.
      */
-    private void emitSubroutine(
-        final Instantiation instant,
-        final List worklist,
-        final InsnList newInstructions,
-        final List newTryCatchBlocks,
-        final List newLocalVariables)
-    {
+    private void emitSubroutine(final Instantiation instant,
+            final List<Instantiation> worklist, final InsnList newInstructions,
+            final List<TryCatchBlockNode> newTryCatchBlocks,
+            final List<LocalVariableNode> newLocalVariables) {
         LabelNode duplbl = null;
 
         if (LOGGING) {
@@ -392,7 +441,8 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 LabelNode ilbl = (LabelNode) insn;
                 LabelNode remap = instant.rangeLabel(ilbl);
                 if (LOGGING) {
-                    log("Translating lbl #" + i + ":" + ilbl + " to " + remap);
+                    // TODO use of default toString().
+                    log("Translating lbl #" + i + ':' + ilbl + " to " + remap);
                 }
                 if (remap != duplbl) {
                     newInstructions.add(remap);
@@ -425,7 +475,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 // safe if the input is verifiable).
                 LabelNode retlabel = null;
                 for (Instantiation p = instant; p != null; p = p.previous) {
-                    if (p.subroutine.ownsInstruction(i)) {
+                    if (p.subroutine.get(i)) {
                         retlabel = p.returnLabel;
                     }
                 }
@@ -439,7 +489,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 newInstructions.add(new JumpInsnNode(GOTO, retlabel));
             } else if (insn.getOpcode() == JSR) {
                 LabelNode lbl = ((JumpInsnNode) insn).label;
-                Subroutine sub = (Subroutine) subroutineHeads.get(lbl);
+                BitSet sub = subroutineHeads.get(lbl);
                 Instantiation newinst = new Instantiation(instant, sub);
                 LabelNode startlbl = newinst.gotoLabel(lbl);
 
@@ -465,11 +515,13 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
         }
 
         // Emit try/catch blocks that are relevant to this method.
-        for (Iterator it = tryCatchBlocks.iterator(); it.hasNext();) {
-            TryCatchBlockNode trycatch = (TryCatchBlockNode) it.next();
+        for (Iterator<TryCatchBlockNode> it = tryCatchBlocks.iterator(); it
+                .hasNext();) {
+            TryCatchBlockNode trycatch = it.next();
 
             if (LOGGING) {
-                log("try catch block original labels=" + trycatch.start + "-"
+                // TODO use of default toString().
+                log("try catch block original labels=" + trycatch.start + '-'
                         + trycatch.end + "->" + trycatch.handler);
             }
 
@@ -487,7 +539,8 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
             final LabelNode handler = instant.gotoLabel(trycatch.handler);
 
             if (LOGGING) {
-                log(" try catch block new labels=" + start + "-" + end + "->"
+                // TODO use of default toString().
+                log(" try catch block new labels=" + start + '-' + end + "->"
                         + handler);
             }
 
@@ -495,14 +548,13 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 throw new RuntimeException("Internal error!");
             }
 
-            newTryCatchBlocks.add(new TryCatchBlockNode(start,
-                    end,
-                    handler,
+            newTryCatchBlocks.add(new TryCatchBlockNode(start, end, handler,
                     trycatch.type));
         }
 
-        for (Iterator it = localVariables.iterator(); it.hasNext();) {
-            LocalVariableNode lvnode = (LocalVariableNode) it.next();
+        for (Iterator<LocalVariableNode> it = localVariables.iterator(); it
+                .hasNext();) {
+            LocalVariableNode lvnode = it.next();
             if (LOGGING) {
                 log("local var " + lvnode.name);
             }
@@ -515,33 +567,12 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
                 continue;
             }
             newLocalVariables.add(new LocalVariableNode(lvnode.name,
-                    lvnode.desc,
-                    lvnode.signature,
-                    start,
-                    end,
-                    lvnode.index));
+                    lvnode.desc, lvnode.signature, start, end, lvnode.index));
         }
     }
 
-    private void log(final String str) {
+    private static void log(final String str) {
         System.err.println(str);
-    }
-
-    protected static class Subroutine {
-
-        public final BitSet instructions = new BitSet();
-
-        public void addInstruction(final int idx) {
-            instructions.set(idx);
-        }
-
-        public boolean ownsInstruction(final int idx) {
-            return instructions.get(idx);
-        }
-
-        public String toString() {
-            return "Subroutine: " + instructions;
-        }
     }
 
     /**
@@ -552,7 +583,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
      * original labels of the program to the labels appropriate for this
      * instantiation, and finally a label to return to.
      */
-    private class Instantiation extends AbstractMap {
+    private class Instantiation extends AbstractMap<LabelNode, LabelNode> {
 
         /**
          * Previous instantiations; the stack must be statically predictable to
@@ -563,7 +594,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
         /**
          * The subroutine this is an instantiation of.
          */
-        public final Subroutine subroutine;
+        public final BitSet subroutine;
 
         /**
          * This table maps Labels from the original source to Labels pointing at
@@ -579,14 +610,14 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
          * 
          * @see #findOwner(int)
          */
-        public final Map rangeTable = new HashMap();
+        public final Map<LabelNode, LabelNode> rangeTable = new HashMap<LabelNode, LabelNode>();
 
         /**
          * All returns for this instantiation will be mapped to this label
          */
         public final LabelNode returnLabel;
 
-        public Instantiation(final Instantiation prev, final Subroutine sub) {
+        Instantiation(final Instantiation prev, final BitSet sub) {
             previous = prev;
             subroutine = sub;
             for (Instantiation p = prev; p != null; p = p.previous) {
@@ -643,8 +674,8 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
          * Typically, the return value is either <code>this</code> or
          * <code>null</code>. <code>this</code> indicates that this
          * instantiation will generate the version of this instruction that we
-         * will execute, and <code>null</code> indicates that this
-         * instantiation never executes the given instruction.
+         * will execute, and <code>null</code> indicates that this instantiation
+         * never executes the given instruction.
          * 
          * Sometimes, however, an instruction can belong to multiple
          * subroutines; this is called a "dual citizen" instruction (though it
@@ -653,12 +684,13 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
          * owner is the subroutine that appears lowest on the stack, and which
          * also owns the instruction in question.
          * 
-         * @param i the index of the instruction in the original code
+         * @param i
+         *            the index of the instruction in the original code
          * @return the "owner" of a particular instruction relative to this
          *         instantiation.
          */
         public Instantiation findOwner(final int i) {
-            if (!subroutine.ownsInstruction(i)) {
+            if (!subroutine.get(i)) {
                 return null;
             }
             if (!dualCitizens.get(i)) {
@@ -666,7 +698,7 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
             }
             Instantiation own = this;
             for (Instantiation p = previous; p != null; p = p.previous) {
-                if (p.subroutine.ownsInstruction(i)) {
+                if (p.subroutine.get(i)) {
                     own = p;
                 }
             }
@@ -674,20 +706,21 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
         }
 
         /**
-         * Looks up the label <code>l</code> in the <code>gotoTable</code>,
-         * thus translating it from a Label in the original code, to a Label in
-         * the inlined code that is appropriate for use by an instruction that
+         * Looks up the label <code>l</code> in the <code>gotoTable</code>, thus
+         * translating it from a Label in the original code, to a Label in the
+         * inlined code that is appropriate for use by an instruction that
          * branched to the original label.
          * 
-         * @param l The label we will be translating
+         * @param l
+         *            The label we will be translating
          * @return a label for use by a branch instruction in the inlined code
-         * @see #gotoTable
+         * @see #rangeLabel
          */
         public LabelNode gotoLabel(final LabelNode l) {
             // owner should never be null, because owner is only null
             // if an instruction cannot be reached from this subroutine
             Instantiation owner = findOwner(instructions.indexOf(l));
-            return (LabelNode) owner.rangeTable.get(l);
+            return owner.rangeTable.get(l);
         }
 
         /**
@@ -696,22 +729,25 @@ public class JSRInlinerAdapter extends MethodNode implements Opcodes {
          * the inlined code that is appropriate for use by an try/catch or
          * variable use annotation.
          * 
-         * @param l The label we will be translating
+         * @param l
+         *            The label we will be translating
          * @return a label for use by a try/catch or variable annotation in the
          *         original code
          * @see #rangeTable
          */
         public LabelNode rangeLabel(final LabelNode l) {
-            return (LabelNode) rangeTable.get(l);
+            return rangeTable.get(l);
         }
 
         // AbstractMap implementation
 
-        public Set entrySet() {
+        @Override
+        public Set<Map.Entry<LabelNode, LabelNode>> entrySet() {
             return null;
         }
 
-        public Object get(final Object o) {
+        @Override
+        public LabelNode get(final Object o) {
             return gotoLabel((LabelNode) o);
         }
     }

@@ -1,7 +1,7 @@
 package rr.loader;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassWriter;
 
 import rr.meta.ClassInfo;
 import rr.meta.FieldInfo;

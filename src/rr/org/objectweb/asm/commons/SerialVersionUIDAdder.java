@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.commons;
+package rr.org.objectweb.asm.commons;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -37,14 +38,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.commons.SerialVersionUIDAdder;
 
 /**
- * A {@link ClassAdapter} that adds a serial version unique identifier to a
+ * A {@link ClassVisitor} that adds a serial version unique identifier to a
  * class if missing. Here is typical usage of this class:
  * 
  * <pre>
@@ -66,9 +67,9 @@ import org.objectweb.asm.Opcodes;
  * 64-bit hash. A java.lang.DataOutputStream is used to convert primitive data
  * types to a sequence of bytes. The values input to the stream are defined by
  * the Java Virtual Machine (VM) specification for classes.
- *
+ * 
  * The sequence of items in the stream is as follows:
- *
+ * 
  * 1. The class name written using UTF encoding.
  * 2. The class modifiers written as a 32-bit integer.
  * 3. The name of each interface sorted by name written using UTF encoding.
@@ -92,12 +93,12 @@ import org.objectweb.asm.Opcodes;
  * 3. The descriptor of the method in UTF encoding.
  * 8. The SHA-1 algorithm is executed on the stream of bytes produced by
  * DataOutputStream and produces five 32-bit values sha[0..4].
- *
- * 9. The hash value is assembled from the first and second 32-bit values of 
+ * 
+ * 9. The hash value is assembled from the first and second 32-bit values of
  * the SHA-1 message digest. If the result of the message digest, the five
- * 32-bit words H0 H1 H2 H3 H4, is in an target of five int values named 
+ * 32-bit words H0 H1 H2 H3 H4, is in an array of five int values named
  * sha, the hash value would be computed as follows:
- *
+ * 
  * long hash = ((sha[0] &gt;&gt;&gt; 24) &amp; 0xFF) |
  * ((sha[0] &gt;&gt;&gt; 16) &amp; 0xFF) &lt;&lt; 8 |
  * ((sha[0] &gt;&gt;&gt; 8) &amp; 0xFF) &lt;&lt; 16 |
@@ -110,89 +111,109 @@ import org.objectweb.asm.Opcodes;
  * 
  * @author Rajendra Inamdar, Vishal Vishnoi
  */
-public class SerialVersionUIDAdder extends ClassAdapter {
+public class SerialVersionUIDAdder extends ClassVisitor {
 
     /**
      * Flag that indicates if we need to compute SVUID.
      */
-    protected boolean computeSVUID;
+    private boolean computeSVUID;
 
     /**
      * Set to true if the class already has SVUID.
      */
-    protected boolean hasSVUID;
+    private boolean hasSVUID;
 
     /**
      * Classes access flags.
      */
-    protected int access;
+    private int access;
 
     /**
      * Internal name of the class
      */
-    protected String name;
+    private String name;
 
     /**
      * Interfaces implemented by the class.
      */
-    protected String[] interfaces;
+    private String[] interfaces;
 
     /**
      * Collection of fields. (except private static and private transient
      * fields)
      */
-    protected Collection svuidFields;
+    private Collection<Item> svuidFields;
 
     /**
      * Set to true if the class has static initializer.
      */
-    protected boolean hasStaticInitializer;
+    private boolean hasStaticInitializer;
 
     /**
      * Collection of non-private constructors.
      */
-    protected Collection svuidConstructors;
+    private Collection<Item> svuidConstructors;
 
     /**
      * Collection of non-private methods.
      */
-    protected Collection svuidMethods;
+    private Collection<Item> svuidMethods;
+
+    /**
+     * Creates a new {@link SerialVersionUIDAdder}. <i>Subclasses must not use
+     * this constructor</i>. Instead, they must use the
+     * {@link #SerialVersionUIDAdder(int, ClassVisitor)} version.
+     * 
+     * @param cv
+     *            a {@link ClassVisitor} to which this visitor will delegate
+     *            calls.
+     * @throws IllegalStateException
+     *             If a subclass calls this constructor.
+     */
+    public SerialVersionUIDAdder(final ClassVisitor cv) {
+        this(Opcodes.ASM5, cv);
+        if (getClass() != SerialVersionUIDAdder.class) {
+            throw new IllegalStateException();
+        }
+    }
 
     /**
      * Creates a new {@link SerialVersionUIDAdder}.
      * 
-     * @param cv a {@link ClassVisitor} to which this visitor will delegate
-     *        calls.
+     * @param api
+     *            the ASM API version implemented by this visitor. Must be one
+     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
+     * @param cv
+     *            a {@link ClassVisitor} to which this visitor will delegate
+     *            calls.
      */
-    public SerialVersionUIDAdder(final ClassVisitor cv) {
-        super(cv);
-        svuidFields = new ArrayList();
-        svuidConstructors = new ArrayList();
-        svuidMethods = new ArrayList();
+    protected SerialVersionUIDAdder(final int api, final ClassVisitor cv) {
+        super(api, cv);
+        svuidFields = new ArrayList<Item>();
+        svuidConstructors = new ArrayList<Item>();
+        svuidMethods = new ArrayList<Item>();
     }
 
     // ------------------------------------------------------------------------
-    // Overriden methods
+    // Overridden methods
     // ------------------------------------------------------------------------
 
     /*
-     * Visit class header and get class name, access , and intefraces
-     * informatoin (step 1,2, and 3) for SVUID computation.
+     * Visit class header and get class name, access , and interfaces
+     * information (step 1,2, and 3) for SVUID computation.
      */
-    public void visit(
-        final int version,
-        final int access,
-        final String name,
-        final String signature,
-        final String superName,
-        final String[] interfaces)
-    {
+    @Override
+    public void visit(final int version, final int access, final String name,
+            final String signature, final String superName,
+            final String[] interfaces) {
         computeSVUID = (access & Opcodes.ACC_INTERFACE) == 0;
 
         if (computeSVUID) {
             this.name = name;
             this.access = access;
-            this.interfaces = interfaces;
+            this.interfaces = new String[interfaces.length];
+            System.arraycopy(interfaces, 0, this.interfaces, 0,
+                    interfaces.length);
         }
 
         super.visit(version, access, name, signature, superName, interfaces);
@@ -200,17 +221,13 @@ public class SerialVersionUIDAdder extends ClassAdapter {
 
     /*
      * Visit the methods and get constructor and method information (step 5 and
-     * 7). Also determince if there is a class initializer (step 6).
+     * 7). Also determine if there is a class initializer (step 6).
      */
-    public MethodVisitor visitMethod(
-        final int access,
-        final String name,
-        final String desc,
-        final String signature,
-        final String[] exceptions)
-    {
+    @Override
+    public MethodVisitor visitMethod(final int access, final String name,
+            final String desc, final String signature, final String[] exceptions) {
         if (computeSVUID) {
-            if (name.equals("<clinit>")) {
+            if ("<clinit>".equals(name)) {
                 hasStaticInitializer = true;
             }
             /*
@@ -228,30 +245,26 @@ public class SerialVersionUIDAdder extends ClassAdapter {
 
             // all non private methods
             if ((access & Opcodes.ACC_PRIVATE) == 0) {
-                if (name.equals("<init>")) {
+                if ("<init>".equals(name)) {
                     svuidConstructors.add(new Item(name, mods, desc));
-                } else if (!name.equals("<clinit>")) {
+                } else if (!"<clinit>".equals(name)) {
                     svuidMethods.add(new Item(name, mods, desc));
                 }
             }
         }
 
-        return cv.visitMethod(access, name, desc, signature, exceptions);
+        return super.visitMethod(access, name, desc, signature, exceptions);
     }
 
     /*
-     * Gets class field information for step 4 of the alogrithm. Also determines
+     * Gets class field information for step 4 of the algorithm. Also determines
      * if the class already has a SVUID.
      */
-    public FieldVisitor visitField(
-        final int access,
-        final String name,
-        final String desc,
-        final String signature,
-        final Object value)
-    {
+    @Override
+    public FieldVisitor visitField(final int access, final String name,
+            final String desc, final String signature, final Object value) {
         if (computeSVUID) {
-            if (name.equals("serialVersionUID")) {
+            if ("serialVersionUID".equals(name)) {
                 // since the class already has SVUID, we won't be computing it.
                 computeSVUID = false;
                 hasSVUID = true;
@@ -262,14 +275,12 @@ public class SerialVersionUIDAdder extends ClassAdapter {
              * ACC_FINAL, ACC_VOLATILE, and ACC_TRANSIENT flags are used when
              * computing serialVersionUID values.
              */
-            int mods = access
-                    & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE
-                            | Opcodes.ACC_PROTECTED | Opcodes.ACC_STATIC
-                            | Opcodes.ACC_FINAL | Opcodes.ACC_VOLATILE | Opcodes.ACC_TRANSIENT);
-
             if ((access & Opcodes.ACC_PRIVATE) == 0
-                    || (access & (Opcodes.ACC_STATIC | Opcodes.ACC_TRANSIENT)) == 0)
-            {
+                    || (access & (Opcodes.ACC_STATIC | Opcodes.ACC_TRANSIENT)) == 0) {
+                int mods = access
+                        & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE
+                                | Opcodes.ACC_PROTECTED | Opcodes.ACC_STATIC
+                                | Opcodes.ACC_FINAL | Opcodes.ACC_VOLATILE | Opcodes.ACC_TRANSIENT);
                 svuidFields.add(new Item(name, mods, desc));
             }
         }
@@ -277,18 +288,31 @@ public class SerialVersionUIDAdder extends ClassAdapter {
         return super.visitField(access, name, desc, signature, value);
     }
 
+    /**
+     * Handle a bizarre special case. Nested classes (static classes declared
+     * inside another class) that are protected have their access bit set to
+     * public in their class files to deal with some odd reflection situation.
+     * Our SVUID computation must do as the JVM does and ignore access bits in
+     * the class file in favor of the access bits InnerClass attribute.
+     */
+    @Override
+    public void visitInnerClass(final String aname, final String outerName,
+            final String innerName, final int attr_access) {
+        if ((name != null) && name.equals(aname)) {
+            this.access = attr_access;
+        }
+        super.visitInnerClass(aname, outerName, innerName, attr_access);
+    }
+
     /*
      * Add the SVUID if class doesn't have one
      */
+    @Override
     public void visitEnd() {
         // compute SVUID and add it to the class
         if (computeSVUID && !hasSVUID) {
             try {
-                cv.visitField(Opcodes.ACC_FINAL + Opcodes.ACC_STATIC,
-                        "serialVersionUID",
-                        "J",
-                        null,
-                        new Long(computeSVUID()));
+                addSVUID(computeSVUID());
             } catch (Throwable e) {
                 throw new RuntimeException("Error while computing SVUID for "
                         + name, e);
@@ -303,15 +327,33 @@ public class SerialVersionUIDAdder extends ClassAdapter {
     // ------------------------------------------------------------------------
 
     /**
-     * Returns the value of SVUID if the class doesn't have one already. Please
-     * note that 0 is returned if the class already has SVUID, thus use
-     * <code>isHasSVUID</code> to determine if the class already had an SVUID.
+     * Returns true if the class already has a SVUID field. The result of this
+     * method is only valid when visitEnd is or has been called.
+     * 
+     * @return true if the class already has a SVUID field.
+     */
+    public boolean hasSVUID() {
+        return hasSVUID;
+    }
+
+    protected void addSVUID(long svuid) {
+        FieldVisitor fv = super.visitField(Opcodes.ACC_FINAL
+                + Opcodes.ACC_STATIC, "serialVersionUID", "J", null, new Long(
+                svuid));
+        if (fv != null) {
+            fv.visitEnd();
+        }
+    }
+
+    /**
+     * Computes and returns the value of SVUID.
      * 
      * @return Returns the serial version UID
      * @throws IOException
+     *             if an I/O error occurs
      */
     protected long computeSVUID() throws IOException {
-        ByteArrayOutputStream bos = null;
+        ByteArrayOutputStream bos;
         DataOutputStream dos = null;
         long svuid = 0;
 
@@ -348,7 +390,7 @@ public class SerialVersionUIDAdder extends ClassAdapter {
              * field written as a 32-bit integer. 3. The descriptor of the field
              * in UTF encoding
              * 
-             * Note that field signatutes are not dot separated. Method and
+             * Note that field signatures are not dot separated. Method and
              * constructor signatures are dot separated. Go figure...
              */
             writeItems(svuidFields, dos, false);
@@ -394,12 +436,12 @@ public class SerialVersionUIDAdder extends ClassAdapter {
             /*
              * 9. The hash value is assembled from the first and second 32-bit
              * values of the SHA-1 message digest. If the result of the message
-             * digest, the five 32-bit words H0 H1 H2 H3 H4, is in an target of
+             * digest, the five 32-bit words H0 H1 H2 H3 H4, is in an array of
              * five int values named sha, the hash value would be computed as
              * follows:
              * 
-             * long hash = ((sha[0] >>> 24) & 0xFF) | ((sha[0] >>> 16) & 0xFF) <<
-             * 8 | ((sha[0] >>> 8) & 0xFF) << 16 | ((sha[0] >>> 0) & 0xFF) <<
+             * long hash = ((sha[0] >>> 24) & 0xFF) | ((sha[0] >>> 16) & 0xFF)
+             * << 8 | ((sha[0] >>> 8) & 0xFF) << 16 | ((sha[0] >>> 0) & 0xFF) <<
              * 24 | ((sha[1] >>> 24) & 0xFF) << 32 | ((sha[1] >>> 16) & 0xFF) <<
              * 40 | ((sha[1] >>> 8) & 0xFF) << 48 | ((sha[1] >>> 0) & 0xFF) <<
              * 56;
@@ -420,38 +462,39 @@ public class SerialVersionUIDAdder extends ClassAdapter {
     /**
      * Returns the SHA-1 message digest of the given value.
      * 
-     * @param value the value whose SHA message digest must be computed.
+     * @param value
+     *            the value whose SHA message digest must be computed.
      * @return the SHA-1 message digest of the given value.
      */
     protected byte[] computeSHAdigest(final byte[] value) {
         try {
             return MessageDigest.getInstance("SHA").digest(value);
         } catch (Exception e) {
-            throw new UnsupportedOperationException(e);
+            throw new UnsupportedOperationException(e.toString());
         }
     }
 
     /**
      * Sorts the items in the collection and writes it to the data output stream
      * 
-     * @param itemCollection collection of items
-     * @param dos a <code>DataOutputStream</code> value
-     * @param dotted a <code>boolean</code> value
-     * @exception IOException if an error occurs
+     * @param itemCollection
+     *            collection of items
+     * @param dos
+     *            a <code>DataOutputStream</code> value
+     * @param dotted
+     *            a <code>boolean</code> value
+     * @exception IOException
+     *                if an error occurs
      */
-    private void writeItems(
-        final Collection itemCollection,
-        final DataOutputStream dos,
-        final boolean dotted) throws IOException
-    {
+    private static void writeItems(final Collection<Item> itemCollection,
+            final DataOutput dos, final boolean dotted) throws IOException {
         int size = itemCollection.size();
-        Item items[] = (Item[]) itemCollection.toArray(new Item[size]);
+        Item[] items = itemCollection.toArray(new Item[size]);
         Arrays.sort(items);
         for (int i = 0; i < size; i++) {
             dos.writeUTF(items[i].name);
             dos.writeInt(items[i].access);
-            dos.writeUTF(dotted
-                    ? items[i].desc.replace('/', '.')
+            dos.writeUTF(dotted ? items[i].desc.replace('/', '.')
                     : items[i].desc);
         }
     }
@@ -460,13 +503,13 @@ public class SerialVersionUIDAdder extends ClassAdapter {
     // Inner classes
     // ------------------------------------------------------------------------
 
-    static class Item implements Comparable {
+    private static class Item implements Comparable<Item> {
 
-        String name;
+        final String name;
 
-        int access;
+        final int access;
 
-        String desc;
+        final String desc;
 
         Item(final String name, final int access, final String desc) {
             this.name = name;
@@ -474,13 +517,25 @@ public class SerialVersionUIDAdder extends ClassAdapter {
             this.desc = desc;
         }
 
-        public int compareTo(final Object o) {
-            Item other = (Item) o;
+        public int compareTo(final Item other) {
             int retVal = name.compareTo(other.name);
             if (retVal == 0) {
                 retVal = desc.compareTo(other.desc);
             }
             return retVal;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (o instanceof Item) {
+                return compareTo((Item) o) == 0;
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return (name + desc).hashCode();
         }
     }
 }

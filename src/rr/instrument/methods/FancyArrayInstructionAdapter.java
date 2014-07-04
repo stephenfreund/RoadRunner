@@ -40,11 +40,10 @@ package rr.instrument.methods;
 
 import java.util.HashMap;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
-import org.objectweb.asm.tree.analysis.Frame;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.tree.analysis.Frame;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -55,6 +54,7 @@ import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.ArrayAccessInfo;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import rr.state.AbstractArrayState;
 import rr.state.AbstractArrayStateCache;
 import rr.state.ArrayStateCache;

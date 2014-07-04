@@ -40,11 +40,11 @@ package rr.instrument.hooks;
 
 import java.util.Vector;
 
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.GeneratorAdapter;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.GeneratorAdapter;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -145,7 +145,7 @@ public class SpecialMethods implements Opcodes {
 			mv = new GeneratorAdapter(cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null), ACC_PUBLIC, "<init>",  "()V");
 			mv.visitCode();
 			mv.visitVarInsn(ALOAD, 0);
-			mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
+			mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
 			mv.visitInsn(RETURN);
 			mv.visitMaxs(1, 1);
 			mv.visitEnd();
@@ -196,8 +196,8 @@ public class SpecialMethods implements Opcodes {
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC,
 							Constants.THREAD_STATE_TYPE.getInternalName(),
 							Constants.CURRENT_THREAD_METHOD.getName(),
-							Constants.CURRENT_THREAD_METHOD.getDescriptor());
-		mv.visitMethodInsn(INVOKESTATIC, "rr/instrument/hooks/SpecialMethods", "invoke", descriptors[args.length]);
+							Constants.CURRENT_THREAD_METHOD.getDescriptor(), false);
+		mv.visitMethodInsn(INVOKESTATIC, "rr/instrument/hooks/SpecialMethods", "invoke", descriptors[args.length], false);
 	}
 	
 }

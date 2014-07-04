@@ -42,13 +42,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.EmptyVisitor;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.loader.InstrumentingDefineClassLoader;
 import rr.loader.NonInstrumentingPreDefineClassLoader;
@@ -91,12 +89,12 @@ public class ThreadStateExtensionAgent {
 
 
 
-	private static class ToolClassVisitor extends ClassAdapter implements Opcodes {
+	private static class ToolClassVisitor extends ClassVisitor implements Opcodes {
 
 		String owner;
 
 		public ToolClassVisitor(ClassVisitor cv, String owner) {
-			super(cv);
+			super(ASM5, cv);
 			this.owner = owner;
 		}
 
@@ -126,7 +124,7 @@ public class ThreadStateExtensionAgent {
 				public void run() throws Exception {
 					ClassReader cr;
 					cr = new ClassReader(in);
-					ClassVisitor cv = new ToolClassVisitor(new EmptyVisitor(), name);
+					ClassVisitor cv = new ToolClassVisitor(new ClassVisitor(Opcodes.ASM5) { }, name);
 					cr.accept(cv, 0);
 				}
 			});	

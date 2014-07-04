@@ -41,7 +41,7 @@ package rr.instrument.hooks;
 import java.util.Vector;
 import java.util.regex.Pattern;
 
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.meta.MetaDataInfoKeys;
 import rr.state.ShadowThread;

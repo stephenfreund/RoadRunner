@@ -40,7 +40,7 @@ package rr.instrument;
 
 import java.io.Serializable;
 
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.Type;
 
 import acme.util.Assert;
 

@@ -45,13 +45,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.loader.Loader;
 import acme.util.Assert;
@@ -95,12 +93,12 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 		fields.add(f);
 	}
 
-	private class ThreadStateClassVisitor extends ClassAdapter implements Opcodes {
+	private class ThreadStateClassVisitor extends ClassVisitor implements Opcodes {
 
 		final String className;
 
 		public ThreadStateClassVisitor(ClassVisitor cv, String className) {
-			super(cv);
+			super(ASM5, cv);
 			this.className = className;
 		}
 
@@ -141,17 +139,17 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 		classesToTransform.add(name);
 	}
 
-	private class WatchedClassMethodVisitor extends MethodAdapter implements Opcodes {
+	private class WatchedClassMethodVisitor extends MethodVisitor implements Opcodes {
 
 		String className;
 
 		public WatchedClassMethodVisitor(MethodVisitor mv, String className) {
-			super(mv);
+			super(ASM5, mv);
 			this.className = className;
 		}
 
 		@Override
-		public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+		public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 			if (owner.equals(className)) {
 				for (ThreadStateFieldExtension f : fields) {
 					if (f.origin.equals(className)) {
@@ -165,16 +163,16 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 					}
 				}
 			}
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 
-	private class WatchedClassVisitor extends ClassAdapter implements Opcodes {
+	private class WatchedClassVisitor extends ClassVisitor implements Opcodes {
 
 		final String className;
 
 		public WatchedClassVisitor(ClassVisitor cv, String className) {
-			super(cv);
+			super(ASM5, cv);
 			this.className = className;
 		}
 

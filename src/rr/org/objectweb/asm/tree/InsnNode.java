@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.Map;
 
-import org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.InsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
 
 /**
  * A node that represents a zero operand instruction.
@@ -40,37 +43,31 @@ import org.objectweb.asm.MethodVisitor;
  */
 public class InsnNode extends AbstractInsnNode {
 
-    private final static InsnNode[] INSNS;
-
-    static {
-        INSNS = new InsnNode[255];
-        for (int i = 0; i < INSNS.length; ++i) {
-            INSNS[i] = new InsnNode(i);
-        }
-    }
-
     /**
      * Constructs a new {@link InsnNode}.
      * 
-     * @param opcode the opcode of the instruction to be constructed. This
-     *        opcode must be NOP, ACONST_NULL, ICONST_M1, ICONST_0, ICONST_1,
-     *        ICONST_2, ICONST_3, ICONST_4, ICONST_5, LCONST_0, LCONST_1,
-     *        FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1, IALOAD, LALOAD,
-     *        FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD, IASTORE, LASTORE,
-     *        FASTORE, DASTORE, AASTORE, BASTORE, CASTORE, SASTORE, POP, POP2,
-     *        DUP, DUP_X1, DUP_X2, DUP2, DUP2_X1, DUP2_X2, SWAP, IADD, LADD,
-     *        FADD, DADD, ISUB, LSUB, FSUB, DSUB, IMUL, LMUL, FMUL, DMUL, IDIV,
-     *        LDIV, FDIV, DDIV, IREM, LREM, FREM, DREM, INEG, LNEG, FNEG, DNEG,
-     *        ISHL, LSHL, ISHR, LSHR, IUSHR, LUSHR, IAND, LAND, IOR, LOR, IXOR,
-     *        LXOR, I2L, I2F, I2D, L2I, L2F, L2D, F2I, F2L, F2D, D2I, D2L, D2F,
-     *        I2B, I2C, I2S, LCMP, FCMPL, FCMPG, DCMPL, DCMPG, IRETURN, LRETURN,
-     *        FRETURN, DRETURN, ARETURN, RETURN, ARRAYLENGTH, ATHROW,
-     *        MONITORENTER, or MONITOREXIT.
+     * @param opcode
+     *            the opcode of the instruction to be constructed. This opcode
+     *            must be NOP, ACONST_NULL, ICONST_M1, ICONST_0, ICONST_1,
+     *            ICONST_2, ICONST_3, ICONST_4, ICONST_5, LCONST_0, LCONST_1,
+     *            FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1, IALOAD,
+     *            LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD,
+     *            IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE,
+     *            SASTORE, POP, POP2, DUP, DUP_X1, DUP_X2, DUP2, DUP2_X1,
+     *            DUP2_X2, SWAP, IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB,
+     *            IMUL, LMUL, FMUL, DMUL, IDIV, LDIV, FDIV, DDIV, IREM, LREM,
+     *            FREM, DREM, INEG, LNEG, FNEG, DNEG, ISHL, LSHL, ISHR, LSHR,
+     *            IUSHR, LUSHR, IAND, LAND, IOR, LOR, IXOR, LXOR, I2L, I2F, I2D,
+     *            L2I, L2F, L2D, F2I, F2L, F2D, D2I, D2L, D2F, I2B, I2C, I2S,
+     *            LCMP, FCMPL, FCMPG, DCMPL, DCMPG, IRETURN, LRETURN, FRETURN,
+     *            DRETURN, ARETURN, RETURN, ARRAYLENGTH, ATHROW, MONITORENTER,
+     *            or MONITOREXIT.
      */
     public InsnNode(final int opcode) {
         super(opcode);
     }
 
+    @Override
     public int getType() {
         return INSN;
     }
@@ -78,13 +75,17 @@ public class InsnNode extends AbstractInsnNode {
     /**
      * Makes the given visitor visit this instruction.
      * 
-     * @param mv a method visitor.
+     * @param mv
+     *            a method visitor.
      */
+    @Override
     public void accept(final MethodVisitor mv) {
         mv.visitInsn(opcode);
+        acceptAnnotations(mv);
     }
 
-    public AbstractInsnNode clone(final Map labels) {
-        return new InsnNode(opcode);
+    @Override
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
+        return new InsnNode(opcode).cloneAnnotations(this);
     }
 }

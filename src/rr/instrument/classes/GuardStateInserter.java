@@ -38,12 +38,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -54,12 +53,12 @@ import rr.meta.FieldInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import rr.tool.RR;
 
 public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 	protected boolean alreadyAddedPerObjectGuard = false;
-	protected boolean volatileAtomic = Instrumentor.nonAtomicVolatileOption.get();
 	
 	public GuardStateInserter(final ClassVisitor cv) {
 		super(cv);
@@ -95,7 +94,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		ClassInfo rrClass = this.getCurrentClass();
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, true);
+		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		final int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
@@ -149,7 +148,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		ClassInfo rrClass = this.getCurrentClass();
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		if ((access & ACC_FINAL) == 0) {
@@ -196,7 +195,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		ClassInfo rrClass = this.getCurrentClass();
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic? ACC_SYNCHRONIZED : 0), name, desc, true);
+		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
@@ -240,7 +239,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		ClassInfo rrClass = this.getCurrentClass();
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		Label l0 = new Label();

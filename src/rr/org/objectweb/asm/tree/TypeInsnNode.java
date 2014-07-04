@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.Map;
 
-import org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.TypeInsnNode;
 
 /**
  * A node that represents a type instruction. A type instruction is an
@@ -42,7 +45,7 @@ import org.objectweb.asm.MethodVisitor;
 public class TypeInsnNode extends AbstractInsnNode {
 
     /**
-     * The operand of this instruction. This operand is a type descriptor (see
+     * The operand of this instruction. This operand is an internal name (see
      * {@link org.objectweb.asm.Type}).
      */
     public String desc;
@@ -50,10 +53,12 @@ public class TypeInsnNode extends AbstractInsnNode {
     /**
      * Constructs a new {@link TypeInsnNode}.
      * 
-     * @param opcode the opcode of the type instruction to be constructed. This
-     *        opcode must be NEW, ANEWARRAY, CHECKCAST or INSTANCEOF.
-     * @param desc the operand of the instruction to be constructed. This
-     *        operand is a type descriptor (see {@link org.objectweb.asm.Type}).
+     * @param opcode
+     *            the opcode of the type instruction to be constructed. This
+     *            opcode must be NEW, ANEWARRAY, CHECKCAST or INSTANCEOF.
+     * @param desc
+     *            the operand of the instruction to be constructed. This operand
+     *            is an internal name (see {@link org.objectweb.asm.Type}).
      */
     public TypeInsnNode(final int opcode, final String desc) {
         super(opcode);
@@ -63,22 +68,27 @@ public class TypeInsnNode extends AbstractInsnNode {
     /**
      * Sets the opcode of this instruction.
      * 
-     * @param opcode the new instruction opcode. This opcode must be NEW,
-     *        ANEWARRAY, CHECKCAST or INSTANCEOF.
+     * @param opcode
+     *            the new instruction opcode. This opcode must be NEW,
+     *            ANEWARRAY, CHECKCAST or INSTANCEOF.
      */
     public void setOpcode(final int opcode) {
         this.opcode = opcode;
     }
 
+    @Override
     public int getType() {
         return TYPE_INSN;
     }
 
+    @Override
     public void accept(final MethodVisitor mv) {
         mv.visitTypeInsn(opcode, desc);
+        acceptAnnotations(mv);
     }
 
-    public AbstractInsnNode clone(final Map labels) {
-        return new TypeInsnNode(opcode, desc);
+    @Override
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
+        return new TypeInsnNode(opcode, desc).cloneAnnotations(this);
     }
 }

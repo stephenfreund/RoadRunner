@@ -41,8 +41,8 @@ package rr.instrument.methods;
 
 import java.util.List;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.loader.LoaderContext;
 import acme.util.Assert;

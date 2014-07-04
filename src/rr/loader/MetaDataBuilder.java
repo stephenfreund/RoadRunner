@@ -40,15 +40,12 @@ package rr.loader;
 
 import java.util.Stack;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.EmptyVisitor;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.instrument.Instrumentor;
 import rr.meta.ClassInfo;
@@ -56,19 +53,20 @@ import rr.meta.FieldInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
 import rr.meta.ClassInfo.State;
+import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 
 public class MetaDataBuilder {
 
 	static private Stack<String> preLoad = new Stack<String>();
 
-	private static class MetaDataClassVisitor extends ClassAdapter {
+	private static class MetaDataClassVisitor extends ClassVisitor {
 
 		protected final boolean sigsOnly;
 		protected ClassInfo current;
 
 		public MetaDataClassVisitor(boolean sigsOnly) {
-			super(new EmptyVisitor());
+			super(Opcodes.ASM5);
 			this.sigsOnly = sigsOnly;
 		}
 
@@ -134,12 +132,12 @@ public class MetaDataBuilder {
 
 	}
 
-	private static class MetaDataMethodVisitor extends MethodAdapter {
+	private static class MetaDataMethodVisitor extends MethodVisitor {
 
 		protected final MethodInfo method;
 
 		public MetaDataMethodVisitor(MethodInfo method, MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 			this.method = method;
 		}
 
@@ -159,13 +157,13 @@ public class MetaDataBuilder {
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name,
-				String desc) {
+				String desc, boolean isInterface) {
 			preLoadRec(owner);
 			visitType(Type.getReturnType(desc));
 			for (Type t : Type.getArgumentTypes(desc)) {
 				visitType(t);
 			}
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, opcode == Opcodes.INVOKEINTERFACE);
 		}
 
 		@Override

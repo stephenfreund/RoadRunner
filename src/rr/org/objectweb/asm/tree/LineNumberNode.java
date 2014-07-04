@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.Map;
 
-import org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.LineNumberNode;
 
 /**
  * A node that represents a line number declaration. These nodes are pseudo
@@ -55,9 +58,11 @@ public class LineNumberNode extends AbstractInsnNode {
     /**
      * Constructs a new {@link LineNumberNode}.
      * 
-     * @param line a line number. This number refers to the source file from
-     *        which the class was compiled.
-     * @param start the first instruction corresponding to this line number.
+     * @param line
+     *            a line number. This number refers to the source file from
+     *            which the class was compiled.
+     * @param start
+     *            the first instruction corresponding to this line number.
      */
     public LineNumberNode(final int line, final LabelNode start) {
         super(-1);
@@ -65,15 +70,18 @@ public class LineNumberNode extends AbstractInsnNode {
         this.start = start;
     }
 
+    @Override
     public int getType() {
         return LINE;
     }
 
+    @Override
     public void accept(final MethodVisitor mv) {
         mv.visitLineNumber(line, start.getLabel());
     }
 
-    public AbstractInsnNode clone(final Map labels) {
+    @Override
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
         return new LineNumberNode(line, clone(start, labels));
     }
 }

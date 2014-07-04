@@ -38,30 +38,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.analysis;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
 import java.util.List;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.LocalVariableNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.Interpreter;
+import rr.org.objectweb.asm.AnnotationVisitor;
+import rr.org.objectweb.asm.Attribute;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.AnnotationNode;
+import rr.org.objectweb.asm.tree.LocalVariableNode;
+import rr.org.objectweb.asm.tree.MethodNode;
+import rr.org.objectweb.asm.tree.TryCatchBlockNode;
+import rr.org.objectweb.asm.tree.analysis.Analyzer;
+import rr.org.objectweb.asm.tree.analysis.AnalyzerException;
+import rr.org.objectweb.asm.tree.analysis.Frame;
+import rr.org.objectweb.asm.tree.analysis.Interpreter;
 
 import acme.util.Assert;
+import acme.util.Util;
 
 public abstract class AnalyzedMethodNode extends MethodNode implements MethodVisitorWithAnalysisFrames {
 
-	protected MethodVisitorWithAnalysisFrames mv;
+	protected MethodVisitor mv;
 	protected final String owner;
 
-	public AnalyzedMethodNode(MethodVisitorWithAnalysisFrames mv, String owner, int access, String name, String desc,
+	
+	public AnalyzedMethodNode(MethodVisitor mv, String owner, int access, String name, String desc,
 			String signature, String[] exceptions) {
-		super(access, name, desc, signature, exceptions);
+		super(mv, access, name, desc, signature, exceptions);
+		Assert.assertTrue(mv instanceof MethodVisitorWithAnalysisFrames);
 		this.mv = mv;
 		this.owner = owner;
 	}
@@ -73,7 +78,7 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 	}
 
 	public void visitAnalysisFrame(Frame f) {
-		mv.visitAnalysisFrame(f);
+		((MethodVisitorWithAnalysisFrames)mv).visitAnalysisFrame(f);
 	}
 
 	protected Analyzer makeAnalyzer(Interpreter interp) {
@@ -135,6 +140,7 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 		}
 		// visits the method's code
 		if (instructions.size() > 0) {
+			//System.out.println("XXX" + mv);
 			mv.visitCode();
 			// visits try catch blocks
 			for (i = 0; i < tryCatchBlocks.size(); ++i) {
@@ -147,14 +153,17 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 			try {
 				frames = analysis.analyze(owner, this);
 			} catch (AnalyzerException e) {
+				e.printStackTrace();
 				exc = e;
 				frames = analysis.getFrames();
 			}
 
-			if (exc != null) {
+			if (exc != null) 
+			{
 				// visits instructions
 				int m = instructions.size();
-				TraceMethodVisitorWithAnalysisFrames t = new TraceMethodVisitorWithAnalysisFrames();
+				Textifier tt = new Textifier();
+				TraceMethodVisitor t = new TraceMethodVisitor(tt);
 				for (int k = 0; k < m; k++) {
 					//Util.logf("INSTR %d", k);
 					if (frames[k] != null) {
@@ -162,6 +171,15 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 					}
 					instructions.get(k).accept(t);
 				}
+				ByteArrayOutputStream out = new ByteArrayOutputStream(); 
+				t.visitEnd();
+				String s = "";
+				int ik = 0;
+				for (Object o : tt.getText()) {
+					s += o + "\n";
+					ik++;
+				}
+				Util.log(s);
 				Assert.panic(exc);
 			}
 			

@@ -38,12 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -53,6 +51,7 @@ import rr.meta.ClassInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import rr.tool.RR;
 
 public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcodes {
@@ -126,7 +125,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 		}
 	}
 
-	class ThunkMethodVisitor extends MethodAdapter {
+	class ThunkMethodVisitor extends MethodVisitor {
 		protected String owner;
 		protected int access;
 		protected String name;
@@ -137,7 +136,7 @@ public class SyncAndMethodThunkInserter extends RRClassAdapter implements Opcode
 		protected int startLine = -1, endLine = -1;
 
 		public ThunkMethodVisitor(MethodVisitor mv, String owner, int access, String name, String desc, String signature, String[] exceptions) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 			this.owner = owner;
 			this.access = access;
 			this.name = name;

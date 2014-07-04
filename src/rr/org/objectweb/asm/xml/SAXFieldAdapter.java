@@ -1,6 +1,6 @@
 /***
  * ASM XML Adapter
- * Copyright (c) 2004, Eugene Kuleshov
+ * Copyright (c) 2004-2011, Eugene Kuleshov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,42 +27,47 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.xml;
+package rr.org.objectweb.asm.xml;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.FieldVisitor;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.helpers.AttributesImpl;
+import rr.org.objectweb.asm.AnnotationVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.TypePath;
+import rr.org.objectweb.asm.xml.SAXAdapter;
+import rr.org.objectweb.asm.xml.SAXAnnotationAdapter;
+import org.xml.sax.Attributes;
 
 /**
  * SAXFieldAdapter
  * 
  * @author Eugene Kuleshov
  */
-public class SAXFieldAdapter extends SAXAdapter implements FieldVisitor {
+public final class SAXFieldAdapter extends FieldVisitor {
 
-    public SAXFieldAdapter(final ContentHandler h, final AttributesImpl att) {
-        super(h);
-        addStart("field", att);
+    SAXAdapter sa;
+
+    public SAXFieldAdapter(final SAXAdapter sa, final Attributes att) {
+        super(Opcodes.ASM5);
+        this.sa = sa;
+        sa.addStart("field", att);
     }
 
-    public AnnotationVisitor visitAnnotation(
-        final String desc,
-        final boolean visible)
-    {
-        return new SAXAnnotationAdapter(getContentHandler(),
-                "annotation",
-                visible ? 1 : -1,
-                null,
-                desc);
+    @Override
+    public AnnotationVisitor visitAnnotation(final String desc,
+            final boolean visible) {
+        return new SAXAnnotationAdapter(sa, "annotation", visible ? 1 : -1,
+                null, desc);
     }
 
-    public void visitAttribute(final Attribute attr) {
-        // TODO Auto-generated method stub
+    @Override
+    public AnnotationVisitor visitTypeAnnotation(int typeRef,
+            TypePath typePath, String desc, boolean visible) {
+        return new SAXAnnotationAdapter(sa, "typeAnnotation", visible ? 1 : -1,
+                null, desc, typeRef, typePath);
     }
 
+    @Override
     public void visitEnd() {
-        addEnd("field");
+        sa.addEnd("field");
     }
 }

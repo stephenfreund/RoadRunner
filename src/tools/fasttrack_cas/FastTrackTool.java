@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package tools.fasttrack_cas;
 
 
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.annotations.Abbrev;
 import rr.barrier.BarrierEvent;

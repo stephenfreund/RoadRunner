@@ -38,10 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -53,6 +52,7 @@ import rr.meta.InstrumentationFilter;
 import rr.meta.InvokeInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.option.CommandLine;
@@ -103,7 +103,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 
 		if (callSitesOption.get()) {
 			try {
@@ -128,16 +128,16 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 				} else if (InstrumentationFilter.supportsThreadStateParam(m)) {
 					String newDesc = ASMUtil.addThreadDataToDescriptor(desc);
 					this.visitVarInsn(ALOAD, threadDataLoc);
-					super.visitMethodInsn(opcode, owner, Constants.getThreadLocalName(name), newDesc);
+					super.visitMethodInsn(opcode, owner, Constants.getThreadLocalName(name), newDesc, isInterface);
 				} else {
-					super.visitMethodInsn(opcode, owner, name, desc);
+					super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 				}
 			} catch (MethodResolutionException e) {
 				Assert.warn("Can't find method in Thread Data Instruction Adapter: " + e);
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} else {
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 

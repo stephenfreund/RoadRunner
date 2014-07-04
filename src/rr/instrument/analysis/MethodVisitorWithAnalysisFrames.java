@@ -38,11 +38,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.analysis;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.tree.analysis.Frame;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.tree.MethodNode;
+import rr.org.objectweb.asm.tree.analysis.Frame;
 
-public interface MethodVisitorWithAnalysisFrames extends MethodVisitor {
-
+public interface MethodVisitorWithAnalysisFrames {
 	public void visitAnalysisFrame(Frame f);
-	
 }
+
+//	public MethodVisitorWithAnalysisFrames(MethodVisitor mv) {
+//		super(Opcodes.ASM5, mv);
+//	}
+//
+//	public void visitAnalysisFrame(Frame f) {
+//		if (mv != null && mv instanceof MethodVisitorWithAnalysisFrames) ((MethodVisitorWithAnalysisFrames)mv).visitAnalysisFrame(f);
+//	}
+//	
+//}

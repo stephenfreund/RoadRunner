@@ -40,10 +40,9 @@ package rr.instrument.classes;
 
 import java.lang.reflect.Field;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.Constants;
 import rr.loader.LoaderContext;
@@ -59,15 +58,15 @@ public class CloneFixer extends RRClassAdapter {
 
 	public static final CommandLineOption<Boolean> noCloneOption = CommandLine.makeBoolean("noClone", false, CommandLineOption.Kind.STABLE, "turn off special handling of clone");
 
-	private class CloneMethodVisitor extends MethodAdapter {
+	private class CloneMethodVisitor extends MethodVisitor {
 
 		public CloneMethodVisitor(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 		}
 
 		@Override
-		public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-			super.visitMethodInsn(opcode, owner, name, desc);
+		public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			if (!noCloneOption.get()) {
 				if (name.equals("clone") && desc.equals("()Ljava/lang/Object;")) {
 					try {
@@ -75,7 +74,7 @@ public class CloneFixer extends RRClassAdapter {
 					} catch (ClassNotFoundException e) {
 						Assert.panic(e);
 					}
-					super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/CloneFixer", "__$rr_fixClone", "(Ljava/lang/Object;)Ljava/lang/Object;");
+					super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/CloneFixer", "__$rr_fixClone", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
 				} 
 			}
 		}

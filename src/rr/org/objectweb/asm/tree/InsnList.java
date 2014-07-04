@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,26 +27,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
-import org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.InsnList;
+import rr.org.objectweb.asm.tree.LabelNode;
 
 /**
  * A doubly linked list of {@link AbstractInsnNode} objects. <i>This
  * implementation is not thread safe</i>.
  */
 public class InsnList {
-
-    /**
-     * Indicates if preconditions of methods of this class must be checked.
-     * <i>Checking preconditions causes the {@link #indexOf indexOf},
-     * {@link #set set}, {@link #insert(AbstractInsnNode, AbstractInsnNode)},
-     * {@link #insert(AbstractInsnNode, InsnList)}, {@link #remove remove} and
-     * {@link #clear} methods to execute in O(n) time instead of O(1)</i>.
-     */
-    public static boolean check;
 
     /**
      * The number of instructions in this list.
@@ -67,7 +62,7 @@ public class InsnList {
      * A cache of the instructions of this list. This cache is used to improve
      * the performance of the {@link #get} method.
      */
-    private AbstractInsnNode[] cache;
+    AbstractInsnNode[] cache;
 
     /**
      * Returns the number of instructions in this list.
@@ -81,8 +76,8 @@ public class InsnList {
     /**
      * Returns the first instruction in this list.
      * 
-     * @return the first instruction in this list, or <tt>null</tt> if the
-     *         list is empty.
+     * @return the first instruction in this list, or <tt>null</tt> if the list
+     *         is empty.
      */
     public AbstractInsnNode getFirst() {
         return first;
@@ -104,9 +99,11 @@ public class InsnList {
      * time it is called. Once the cache is built, this method run in constant
      * time. This cache is invalidated by all the methods that modify the list.
      * 
-     * @param index the index of the instruction that must be returned.
+     * @param index
+     *            the index of the instruction that must be returned.
      * @return the instruction whose index is given.
-     * @throws IndexOutOfBoundsException if (index < 0 || index >= size()).
+     * @throws IndexOutOfBoundsException
+     *             if (index &lt; 0 || index &gt;= size()).
      */
     public AbstractInsnNode get(final int index) {
         if (index < 0 || index >= size) {
@@ -119,11 +116,12 @@ public class InsnList {
     }
 
     /**
-     * Returns <tt>true</tt> if the given instruction belongs to this list.
-     * This method always scans the instructions of this list until it finds the
+     * Returns <tt>true</tt> if the given instruction belongs to this list. This
+     * method always scans the instructions of this list until it finds the
      * given instruction or reaches the end of the list.
      * 
-     * @param insn an instruction.
+     * @param insn
+     *            an instruction.
      * @return <tt>true</tt> if the given instruction belongs to this list.
      */
     public boolean contains(final AbstractInsnNode insn) {
@@ -141,18 +139,14 @@ public class InsnList {
      * constant time. The cache is invalidated by all the methods that modify
      * the list.
      * 
-     * @param insn an instruction <i>of this list</i>.
+     * @param insn
+     *            an instruction <i>of this list</i>.
      * @return the index of the given instruction in this list. <i>The result of
      *         this method is undefined if the given instruction does not belong
      *         to this list</i>. Use {@link #contains contains} to test if an
      *         instruction belongs to an instruction list or not.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt> and
-     *         if insn does not belong to this list.
      */
     public int indexOf(final AbstractInsnNode insn) {
-        if (check && !contains(insn)) {
-            throw new IllegalArgumentException();
-        }
         if (cache == null) {
             cache = toArray();
         }
@@ -162,7 +156,8 @@ public class InsnList {
     /**
      * Makes the given visitor visit all of the instructions in this list.
      * 
-     * @param mv the method visitor that must visit the instructions.
+     * @param mv
+     *            the method visitor that must visit the instructions.
      */
     public void accept(final MethodVisitor mv) {
         AbstractInsnNode insn = first;
@@ -177,7 +172,7 @@ public class InsnList {
      * 
      * @return an iterator over the instructions in this list.
      */
-    public ListIterator iterator() {
+    public ListIterator<AbstractInsnNode> iterator() {
         return iterator(0);
     }
 
@@ -186,14 +181,15 @@ public class InsnList {
      * 
      * @return an iterator over the instructions in this list.
      */
-    public ListIterator iterator(int index) {
+    @SuppressWarnings("unchecked")
+    public ListIterator<AbstractInsnNode> iterator(int index) {
         return new InsnListIterator(index);
     }
-    
+
     /**
-     * Returns an target containing all of the instructions in this list.
+     * Returns an array containing all of the instructions in this list.
      * 
-     * @return an target containing all of the instructions in this list.
+     * @return an array containing all of the instructions in this list.
      */
     public AbstractInsnNode[] toArray() {
         int i = 0;
@@ -210,17 +206,13 @@ public class InsnList {
     /**
      * Replaces an instruction of this list with another instruction.
      * 
-     * @param location an instruction <i>of this list</i>.
-     * @param insn another instruction, <i>which must not belong to any
-     *        {@link InsnList}</i>.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if i does not belong to this list or if insn belongs to an
-     *         instruction list.
+     * @param location
+     *            an instruction <i>of this list</i>.
+     * @param insn
+     *            another instruction, <i>which must not belong to any
+     *            {@link InsnList}</i>.
      */
     public void set(final AbstractInsnNode location, final AbstractInsnNode insn) {
-        if (check && !(contains(location) && insn.index == -1)) {
-            throw new IllegalArgumentException();
-        }
         AbstractInsnNode next = location.next;
         insn.next = next;
         if (next != null) {
@@ -250,15 +242,11 @@ public class InsnList {
     /**
      * Adds the given instruction to the end of this list.
      * 
-     * @param insn an instruction, <i>which must not belong to any
-     *        {@link InsnList}</i>.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if insn belongs to an instruction list.
+     * @param insn
+     *            an instruction, <i>which must not belong to any
+     *            {@link InsnList}</i>.
      */
     public void add(final AbstractInsnNode insn) {
-        if (check && insn.index != -1) {
-            throw new IllegalArgumentException();
-        }
         ++size;
         if (last == null) {
             first = insn;
@@ -275,14 +263,11 @@ public class InsnList {
     /**
      * Adds the given instructions to the end of this list.
      * 
-     * @param insns an instruction list, which is cleared during the process.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if insn == this.
+     * @param insns
+     *            an instruction list, which is cleared during the process. This
+     *            list must be different from 'this'.
      */
     public void add(final InsnList insns) {
-        if (check && insns == this) {
-            throw new IllegalArgumentException();
-        }
         if (insns.size == 0) {
             return;
         }
@@ -303,15 +288,11 @@ public class InsnList {
     /**
      * Inserts the given instruction at the begining of this list.
      * 
-     * @param insn an instruction, <i>which must not belong to any
-     *        {@link InsnList}</i>.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if insn belongs to an instruction list.
+     * @param insn
+     *            an instruction, <i>which must not belong to any
+     *            {@link InsnList}</i>.
      */
     public void insert(final AbstractInsnNode insn) {
-        if (check && insn.index != -1) {
-            throw new IllegalArgumentException();
-        }
         ++size;
         if (first == null) {
             first = insn;
@@ -328,14 +309,11 @@ public class InsnList {
     /**
      * Inserts the given instructions at the begining of this list.
      * 
-     * @param insns an instruction list, which is cleared during the process.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if insn == this.
+     * @param insns
+     *            an instruction list, which is cleared during the process. This
+     *            list must be different from 'this'.
      */
     public void insert(final InsnList insns) {
-        if (check && insns == this) {
-            throw new IllegalArgumentException();
-        }
         if (insns.size == 0) {
             return;
         }
@@ -356,18 +334,15 @@ public class InsnList {
     /**
      * Inserts the given instruction after the specified instruction.
      * 
-     * @param location an instruction <i>of this list</i> after which insn must be
-     *        inserted.
-     * @param insn the instruction to be inserted, <i>which must not belong to
-     *        any {@link InsnList}</i>.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if i does not belong to this list or if insn belongs to an
-     *         instruction list.
+     * @param location
+     *            an instruction <i>of this list</i> after which insn must be
+     *            inserted.
+     * @param insn
+     *            the instruction to be inserted, <i>which must not belong to
+     *            any {@link InsnList}</i>.
      */
-    public void insert(final AbstractInsnNode location, final AbstractInsnNode insn) {
-        if (check && !(contains(location) && insn.index == -1)) {
-            throw new IllegalArgumentException();
-        }
+    public void insert(final AbstractInsnNode location,
+            final AbstractInsnNode insn) {
         ++size;
         AbstractInsnNode next = location.next;
         if (next == null) {
@@ -385,17 +360,14 @@ public class InsnList {
     /**
      * Inserts the given instructions after the specified instruction.
      * 
-     * @param location an instruction <i>of this list</i> after which the instructions
-     *        must be inserted.
-     * @param insns the instruction list to be inserted, which is cleared during
-     *        the process.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if i does not belong to this list or if insns == this.
+     * @param location
+     *            an instruction <i>of this list</i> after which the
+     *            instructions must be inserted.
+     * @param insns
+     *            the instruction list to be inserted, which is cleared during
+     *            the process. This list must be different from 'this'.
      */
     public void insert(final AbstractInsnNode location, final InsnList insns) {
-        if (check && !(contains(location) && insns != this)) {
-            throw new IllegalArgumentException();
-        }
         if (insns.size == 0) {
             return;
         }
@@ -414,22 +386,19 @@ public class InsnList {
         cache = null;
         insns.removeAll(false);
     }
-    
+
     /**
      * Inserts the given instruction before the specified instruction.
      * 
-     * @param location an instruction <i>of this list</i> before which insn must be
-     *        inserted.
-     * @param insn the instruction to be inserted, <i>which must not belong to
-     *        any {@link InsnList}</i>.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if i does not belong to this list or if insn belongs to an
-     *         instruction list.
+     * @param location
+     *            an instruction <i>of this list</i> before which insn must be
+     *            inserted.
+     * @param insn
+     *            the instruction to be inserted, <i>which must not belong to
+     *            any {@link InsnList}</i>.
      */
-    public void insertBefore(final AbstractInsnNode location, final AbstractInsnNode insn) {
-        if (check && !(contains(location) && insn.index == -1)) {
-            throw new IllegalArgumentException();
-        }
+    public void insertBefore(final AbstractInsnNode location,
+            final AbstractInsnNode insn) {
         ++size;
         AbstractInsnNode prev = location.prev;
         if (prev == null) {
@@ -443,53 +412,45 @@ public class InsnList {
         cache = null;
         insn.index = 0; // insn now belongs to an InsnList
     }
-    
+
     /**
      * Inserts the given instructions before the specified instruction.
      * 
-     * @param location  an instruction <i>of this list</i> before which the instructions
-     *        must be inserted.
-     * @param insns the instruction list to be inserted, which is cleared during
-     *        the process.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if i does not belong to this list or if insns == this.
+     * @param location
+     *            an instruction <i>of this list</i> before which the
+     *            instructions must be inserted.
+     * @param insns
+     *            the instruction list to be inserted, which is cleared during
+     *            the process. This list must be different from 'this'.
      */
-    public void insertBefore(final AbstractInsnNode location, final InsnList insns) {
-        if (check && !(contains(location ) && insns != this)) {
-            throw new IllegalArgumentException();
-        }
+    public void insertBefore(final AbstractInsnNode location,
+            final InsnList insns) {
         if (insns.size == 0) {
             return;
         }
         size += insns.size;
         AbstractInsnNode ifirst = insns.first;
         AbstractInsnNode ilast = insns.last;
-        AbstractInsnNode prev = location .prev;
+        AbstractInsnNode prev = location.prev;
         if (prev == null) {
             first = ifirst;
         } else {
             prev.next = ifirst;
         }
-        location .prev = ilast;
-        ilast.next = location ;
+        location.prev = ilast;
+        ilast.next = location;
         ifirst.prev = prev;
         cache = null;
         insns.removeAll(false);
     }
-    
-    
 
     /**
      * Removes the given instruction from this list.
      * 
-     * @param insn the instruction <i>of this list</i> that must be removed.
-     * @throws IllegalArgumentException if {@link #check} is <tt>true</tt>,
-     *         and if insn does not belong to this list.
+     * @param insn
+     *            the instruction <i>of this list</i> that must be removed.
      */
     public void remove(final AbstractInsnNode insn) {
-        if (check && !contains(insn)) {
-            throw new IllegalArgumentException();
-        }
         --size;
         AbstractInsnNode next = insn.next;
         AbstractInsnNode prev = insn.prev;
@@ -519,10 +480,11 @@ public class InsnList {
     /**
      * Removes all of the instructions of this list.
      * 
-     * @param mark if the instructions must be marked as no longer belonging to
-     *        any {@link InsnList}.
+     * @param mark
+     *            if the instructions must be marked as no longer belonging to
+     *            any {@link InsnList}.
      */
-    private void removeAll(final boolean mark) {
+    void removeAll(final boolean mark) {
         if (mark) {
             AbstractInsnNode insn = first;
             while (insn != null) {
@@ -543,16 +505,35 @@ public class InsnList {
      * Removes all of the instructions of this list.
      */
     public void clear() {
-        removeAll(check);
+        removeAll(false);
     }
 
-    
+    /**
+     * Reset all labels in the instruction list. This method should be called
+     * before reusing same instructions list between several
+     * <code>ClassWriter</code>s.
+     */
+    public void resetLabels() {
+        AbstractInsnNode insn = first;
+        while (insn != null) {
+            if (insn instanceof LabelNode) {
+                ((LabelNode) insn).resetLabel();
+            }
+            insn = insn.next;
+        }
+    }
+
+    // this class is not generified because it will create bridges
     private final class InsnListIterator implements ListIterator {
+
         AbstractInsnNode next;
+
         AbstractInsnNode prev;
 
-        public InsnListIterator(int index) {
-            if(index==size()) {
+        AbstractInsnNode remove;
+
+        InsnListIterator(int index) {
+            if (index == size()) {
                 next = null;
                 prev = getLast();
             } else {
@@ -566,15 +547,28 @@ public class InsnList {
         }
 
         public Object next() {
+            if (next == null) {
+                throw new NoSuchElementException();
+            }
             AbstractInsnNode result = next;
             prev = result;
             next = result.next;
+            remove = result;
             return result;
         }
 
         public void remove() {
-            InsnList.this.remove(prev);
-            prev = prev.prev;
+            if (remove != null) {
+                if (remove == next) {
+                    next = next.next;
+                } else {
+                    prev = prev.prev;
+                }
+                InsnList.this.remove(remove);
+                remove = null;
+            } else {
+                throw new IllegalStateException();
+            }
         }
 
         public boolean hasPrevious() {
@@ -585,6 +579,7 @@ public class InsnList {
             AbstractInsnNode result = prev;
             next = result;
             prev = result.prev;
+            remove = result;
             return result;
         }
 
@@ -611,6 +606,7 @@ public class InsnList {
         public void add(Object o) {
             InsnList.this.insertBefore(next, (AbstractInsnNode) o);
             prev = (AbstractInsnNode) o;
+            remove = null;
         }
 
         public void set(Object o) {
@@ -618,5 +614,4 @@ public class InsnList {
             prev = (AbstractInsnNode) o;
         }
     }
-
 }

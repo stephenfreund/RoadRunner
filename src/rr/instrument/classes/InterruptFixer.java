@@ -42,13 +42,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.loader.LoaderContext;
+import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 import acme.util.count.Counter;
 import acme.util.option.CommandLine;
@@ -62,12 +61,12 @@ public class InterruptFixer extends RRClassAdapter implements Opcodes {
 
 	static private final List<String> types = Arrays.asList(new String[] { "java/lang/InterruptedException", "java/lang/Exception", "java/lang/Throwable" });
 
-	private class InterruptMethodAdapter extends MethodAdapter {
+	private class InterruptMethodAdapter extends MethodVisitor {
 
 		protected Vector<Label> handlers = new Vector<Label>();
 
 		public InterruptMethodAdapter(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 		}
 
 		@Override
@@ -89,13 +88,13 @@ public class InterruptFixer extends RRClassAdapter implements Opcodes {
 					Assert.panic(e);
 				}
 				visitInsn(DUP);
-				visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleException", "(Ljava/lang/Throwable;)V");
+				visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleException", "(Ljava/lang/Throwable;)V", false);
 			} 
 		}
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name,
-				String desc) {
+				String desc, boolean isInterface) {
 			if (!noInterruptOption.get() && owner.equals("java/lang/Thread")) {
 				if (opcode == Opcodes.INVOKEVIRTUAL && name.equals("isInterrupted") && desc.equals("()Z")) {
 					try {
@@ -103,19 +102,19 @@ public class InterruptFixer extends RRClassAdapter implements Opcodes {
 					} catch (ClassNotFoundException e) {
 						Assert.panic(e);
 					}
-					visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleIsInterrupted", "(Ljava/lang/Thread;)Z");
+					visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleIsInterrupted", "(Ljava/lang/Thread;)Z", false);
 				} else if (opcode == Opcodes.INVOKESTATIC && name.equals("interrupted") && desc.equals("()Z")) {
 					try {
 						LoaderContext.bootLoaderContext.getRRClass("rr/instrument/classes/InterruptFixer");
 					} catch (ClassNotFoundException e) {
 						Assert.panic(e);
 					}
-					visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleInterrupted", "()Z");
+					visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/InterruptFixer", "__$rr_handleInterrupted", "()Z", false);
 				} else {
-					super.visitMethodInsn(opcode, owner, name, desc);
+					super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 				}
 			} else {
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 
 		}

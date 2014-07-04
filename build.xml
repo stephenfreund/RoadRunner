@@ -175,7 +175,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	<target name="bootstrap-loader">
 		<mkdir dir="${classes.dir}"/>
 		<javac srcdir="${src.dir}/acme" destdir="${classes.dir}" debug="true"/>
-		<javac srcdir="${src.dir}/org" destdir="${classes.dir}" debug="true"/>
 		<javac srcdir="${src.dir}" includes="rr/loader/ClassLoaderTransformer.java" destdir="${classes.dir}" debug="true"/>
 		<java classname="rr.loader.ClassLoaderTransformer" classpath="${classes.dir}"/>
 		<copy file="/tmp/RR_ClassLoader.class" tofile="${classes.dir}/java/lang/ClassLoader.class"/>

@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.Map;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
+import rr.org.objectweb.asm.tree.LdcInsnNode;
 
 /**
  * A node that represents an LDC instruction.
@@ -51,24 +54,29 @@ public class LdcInsnNode extends AbstractInsnNode {
     /**
      * Constructs a new {@link LdcInsnNode}.
      * 
-     * @param cst the constant to be loaded on the stack. This parameter must be
-     *        a non null {@link Integer}, a {@link Float}, a {@link Long}, a
-     *        {@link Double} or a {@link String}.
+     * @param cst
+     *            the constant to be loaded on the stack. This parameter must be
+     *            a non null {@link Integer}, a {@link Float}, a {@link Long}, a
+     *            {@link Double} or a {@link String}.
      */
     public LdcInsnNode(final Object cst) {
         super(Opcodes.LDC);
         this.cst = cst;
     }
 
+    @Override
     public int getType() {
         return LDC_INSN;
     }
 
+    @Override
     public void accept(final MethodVisitor mv) {
         mv.visitLdcInsn(cst);
+        acceptAnnotations(mv);
     }
 
-    public AbstractInsnNode clone(final Map labels) {
-        return new LdcInsnNode(cst);
+    @Override
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
+        return new LdcInsnNode(cst).cloneAnnotations(this);
     }
 }

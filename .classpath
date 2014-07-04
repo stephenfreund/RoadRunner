@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry exported="true" kind="lib" path="build/jar/ClassLoaderWithListener.jar"/>
 	<classpathentry excluding="api.txt" kind="src" path="src"/>
+	<classpathentry exported="true" kind="lib" path="build/jar/ClassLoaderWithListener.jar" sourcepath="src/"/>
 	<classpathentry kind="src" path="auto"/>
 	<classpathentry exported="true" kind="lib" path="jars/java-cup-11a.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/JFlex.jar"/>

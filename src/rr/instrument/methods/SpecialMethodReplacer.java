@@ -38,8 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.hooks.SpecialMethods;
 import rr.loader.MethodResolutionException;
@@ -54,16 +54,16 @@ public class SpecialMethodReplacer extends RRMethodAdapter implements Opcodes {
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		MethodInfo m;
 		try {
 			m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
 			if (!SpecialMethods.tryReplace(this, opcode, m, this.getMethod())) {
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} catch (MethodResolutionException e) {
 			Assert.warn("Can't find method in Special Method Replacer: " + e);
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 }

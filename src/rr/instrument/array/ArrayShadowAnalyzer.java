@@ -69,10 +69,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package rr.instrument.array;
 
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.Interpreter;
+import rr.org.objectweb.asm.tree.MethodNode;
+import rr.org.objectweb.asm.tree.analysis.Analyzer;
+import rr.org.objectweb.asm.tree.analysis.Frame;
+import rr.org.objectweb.asm.tree.analysis.Interpreter;
 
 /**
  * A semantic bytecode analyzer. <i>This class does not fully check that JSR and

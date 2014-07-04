@@ -38,10 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.methods.RRMethodAdapter;
 import rr.instrument.tools.ArrayFilterTool;
@@ -50,6 +49,7 @@ import rr.loader.RRTypeInfo;
 import rr.meta.ClassInfo;
 import rr.meta.MethodInfo;
 import rr.meta.SourceLocation;
+import rr.org.objectweb.asm.Label;
 import rr.state.ArrayStateFactory;
 import acme.util.Assert;
 import acme.util.StringMatchResult;
@@ -79,7 +79,7 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 				super.visitInsn(Opcodes.DUP);
 				super.visitLdcInsn(this.getFileLine());
 				super.visitLdcInsn(this.getFileName());
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ArrayAllocSiteTracker", "__$rr_array", "(Ljava/lang/Object;ILjava/lang/String;)V");
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ArrayAllocSiteTracker", "__$rr_array", "(Ljava/lang/Object;ILjava/lang/String;)V", false);
 			} else {
 //				Util.log("Skipping array allocs at " + loc);
 			}

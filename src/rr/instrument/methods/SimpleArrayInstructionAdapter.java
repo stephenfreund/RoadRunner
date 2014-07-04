@@ -38,11 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -50,6 +49,7 @@ import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.ArrayAccessInfo;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import rr.state.AbstractArrayState;
 import rr.tool.RR;
 import acme.util.Assert;

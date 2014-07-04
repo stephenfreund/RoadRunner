@@ -1,6 +1,6 @@
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.objectweb.asm.tree;
+package rr.org.objectweb.asm.tree;
 
 import java.util.Map;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.IincInsnNode;
+import rr.org.objectweb.asm.tree.LabelNode;
 
 /**
  * A node that represents an IINC instruction.
@@ -54,8 +57,10 @@ public class IincInsnNode extends AbstractInsnNode {
     /**
      * Constructs a new {@link IincInsnNode}.
      * 
-     * @param var index of the local variable to be incremented.
-     * @param incr increment amount to increment the local variable by.
+     * @param var
+     *            index of the local variable to be incremented.
+     * @param incr
+     *            increment amount to increment the local variable by.
      */
     public IincInsnNode(final int var, final int incr) {
         super(Opcodes.IINC);
@@ -63,15 +68,19 @@ public class IincInsnNode extends AbstractInsnNode {
         this.incr = incr;
     }
 
+    @Override
     public int getType() {
         return IINC_INSN;
     }
 
+    @Override
     public void accept(final MethodVisitor mv) {
         mv.visitIincInsn(var, incr);
+        acceptAnnotations(mv);
     }
 
-    public AbstractInsnNode clone(final Map labels) {
-        return new IincInsnNode(var, incr);
+    @Override
+    public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
+        return new IincInsnNode(var, incr).cloneAnnotations(this);
     }
 }

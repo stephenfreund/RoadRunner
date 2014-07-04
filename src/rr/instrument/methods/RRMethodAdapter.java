@@ -73,22 +73,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.LocalVariablesSorter;
-import org.objectweb.asm.commons.Method;
-import org.objectweb.asm.commons.TableSwitchGenerator;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.LocalVariablesSorter;
+import rr.org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.commons.TableSwitchGenerator;
 
 import rr.instrument.Instrumentor;
 import rr.instrument.MethodContext;
 import rr.meta.SourceLocation;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 
 
-public class RRMethodAdapter extends MethodAdapter implements Opcodes {
+public class RRMethodAdapter extends MethodVisitor implements Opcodes {
 
     private final static Type BYTE_TYPE = Type.getObjectType("java/lang/Byte");
     private final static Type BOOLEAN_TYPE = Type.getObjectType("java/lang/Boolean");
@@ -225,7 +224,7 @@ public class RRMethodAdapter extends MethodAdapter implements Opcodes {
     }
     
     public RRMethodAdapter(final MethodVisitor mv, final MethodContext context) {
-            super(mv);
+            super(ASM5, mv);
             this.access = context.getAccess();
             this.returnType = Type.getReturnType(context.getMethod().getDescriptor());
             this.argumentTypes = Type.getArgumentTypes(context.getMethod().getDescriptor());
@@ -1129,7 +1128,7 @@ public class RRMethodAdapter extends MethodAdapter implements Opcodes {
         mv.visitMethodInsn(opcode,
                 owner,
                 method.getName(),
-                method.getDescriptor());
+                method.getDescriptor(), opcode == Opcodes.INVOKEINTERFACE);
     }
 
     /**

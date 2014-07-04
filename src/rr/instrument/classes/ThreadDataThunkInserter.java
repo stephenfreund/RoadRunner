@@ -38,19 +38,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.JSRInlinerAdapter;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.JSRInlinerAdapter;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
-import rr.instrument.analysis.MethodAdapterWithAnalysisFrames;
 import rr.instrument.analysis.MethodVisitorWithAnalysisFrames;
 import rr.instrument.analysis.PrintingAnalyzerAdapter;
-import rr.instrument.analysis.TraceMethodVisitorWithAnalysisFrames;
+import rr.instrument.analysis.TraceMethodVisitor;
 import rr.instrument.array.ArrayAnalysis;
 import rr.instrument.methods.ArrayTypeExtractor;
 import rr.instrument.methods.FancyArrayInstructionAdapter;
@@ -68,7 +67,9 @@ import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
 import rr.state.ArrayStateFactory;
 import rr.tool.RR;
+import acme.util.Assert;
 import acme.util.Debug;
+import acme.util.Util;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -135,19 +136,21 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 						mv2.setTypeAnalyzer(mv3);
 						mv = mv3;
 						if (Debug.debugOn("analysis")) {
-							mv = new PrintingAnalyzerAdapter(owner.getName(), access, newName, newDesc, mv);
-							mv = new MethodAdapterWithAnalysisFrames(mv);
-							mv = new TraceMethodVisitorWithAnalysisFrames((MethodVisitorWithAnalysisFrames)mv, owner.getName(), newName, newDesc);
+							Assert.fail("Analysis not supported right now.");
+//							mv = new PrintingAnalyzerAdapter(owner.getName(), access, newName, newDesc, mv);
+//							mv = new MethodAdapterWithAnalysisFrames(mv);
+//							mv = new TraceMethodVisitorWithAnalysisFrames((MethodVisitorWithAnalysisFrames)mv, owner.getName(), newName, newDesc);
 						}
 					} else if (!Instrumentor.fancyOption.get()) {
 						mv = new SimpleArrayInstructionAdapter(mv, newMethod);
 					} else {
 						mv = new FancyArrayInstructionAdapter(mv, newMethod);
-						mv = new MethodAdapterWithAnalysisFrames(mv);
+				//		mv = new MethodVisitorWithAnalysisFrames(mv, access, newName, desc, signature, exceptions);
 						if (Debug.debugOn("analysis")) {
-							mv = new TraceMethodVisitorWithAnalysisFrames((MethodVisitorWithAnalysisFrames)mv, owner.getName(), newName, newDesc);
+							Assert.fail("Analysis not supported right now.");
+//							mv = new TraceMethodVisitor();
 						}
-						mv = new ArrayAnalysis((MethodVisitorWithAnalysisFrames)mv, owner.getName(), access, newName, desc, signature, exceptions);
+						mv = new ArrayAnalysis(mv, owner.getName(), access, newName, desc, signature, exceptions);
 					}
 				} else {
 					mv = new GuardStateInstructionAdapter(mv, newMethod);
@@ -184,7 +187,7 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 
 			} 
 			mv.invokeStatic(Constants.THREAD_STATE_TYPE, Constants.CURRENT_THREAD_METHOD);
-			mv.visitMethodInsn(((access & Opcodes.ACC_ABSTRACT) == 0) ? INVOKESPECIAL : INVOKEVIRTUAL, owner.getName(), Constants.getThreadLocalName(name), newDesc);
+			mv.visitMethodInsn(((access & Opcodes.ACC_ABSTRACT) == 0) ? INVOKESPECIAL : INVOKEVIRTUAL, owner.getName(), Constants.getThreadLocalName(name), newDesc, false);
 		} else {
 			Type args[] = Type.getArgumentTypes(desc);
 			int localVarIndex = 0;
@@ -194,7 +197,7 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 
 			}
 			mv.invokeStatic(Constants.THREAD_STATE_TYPE, Constants.CURRENT_THREAD_METHOD);
-			mv.visitMethodInsn(INVOKESTATIC, owner.getName(), Constants.getThreadLocalName(name), newDesc);
+			mv.visitMethodInsn(INVOKESTATIC, owner.getName(), Constants.getThreadLocalName(name), newDesc, false);
 		}
 		mv.visitInsn(ASMUtil.returnInstr(Type.getReturnType(newDesc)));
 		mv.visitMaxs(3, 2);

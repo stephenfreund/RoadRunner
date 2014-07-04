@@ -43,8 +43,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Hashtable;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassWriter;
 
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
