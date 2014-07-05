@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state;
 
@@ -139,14 +139,14 @@ public class ShadowLock extends Decoratable {
 	}
 
 
-	private static ResourceManager<Object, ShadowLock> locks = new ResourceManager<Object, ShadowLock>() {
+	private static final ResourceManager<Object, ShadowLock> locks = new ResourceManager<Object, ShadowLock>() {
 
 		@Override
 		protected ShadowLock make(Object k) {
 			return new ShadowLock(k);
 		}
 	};
-  
+
 	public static ShadowLock get(Object o) {
 		return locks.get(o);
 	}
@@ -154,6 +154,6 @@ public class ShadowLock extends Decoratable {
 	public Object getLock() {
 		return lock;
 	}
-	
+
 }
 

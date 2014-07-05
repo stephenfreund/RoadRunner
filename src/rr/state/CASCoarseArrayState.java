@@ -38,22 +38,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import acme.util.Assert;
 import acme.util.Yikes;
 
-public final class FineArrayState extends AbstractArrayState {
+public final class CASCoarseArrayState extends CASAbstractArrayState {
 
-	protected final ShadowVar[] shadowVar;
+	protected ShadowVar state;
 	protected final AbstractArrayState[] nextDimension;
 
-	public FineArrayState(Object array) {
+    private static final long offset;
+    
+    static {
+    	long o = 0;
+		try {
+			o = unsafe.objectFieldOffset(CASCoarseArrayState.class.getDeclaredField("state"));
+		} catch (Exception e) {
+			Assert.panic(e);
+		}
+		offset = o;
+	}
+
+	public CASCoarseArrayState(Object array) {
 		super(array);
 		int n = lengthOf(array);
-		shadowVar = new ShadowVar[n];
 		if (array.getClass().getComponentType().isArray()) {
 			nextDimension = new AbstractArrayState[n];
 			Object[] objArray = (Object[])array;
 			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, false);
+				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.COARSE, false);
 			}
 		} else {
 			nextDimension = null;
@@ -75,22 +87,20 @@ public final class FineArrayState extends AbstractArrayState {
 		nextDimension[i] = s; 
 	}
 
+
 	@Override
-	public final ShadowVar getState(int index) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
-			return shadowVar[0];
-		}
-		return shadowVar[index];
+	public ShadowVar getState(int in) {
+		return state;
 	}
+
+	public void setState(ShadowVar state) {
+		this.state = state;
+	}
+
 
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
-		}
-		shadowVar[index] = v;
-		return true;
+		return unsafe.compareAndSwapObject(this, offset, expected, v);
 	}
 
 

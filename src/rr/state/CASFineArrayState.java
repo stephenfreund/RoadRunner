@@ -38,14 +38,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import sun.misc.Unsafe;
 import acme.util.Yikes;
 
-public final class FineArrayState extends AbstractArrayState {
+public final class CASFineArrayState extends CASAbstractArrayState {
 
 	protected final ShadowVar[] shadowVar;
 	protected final AbstractArrayState[] nextDimension;
 
-	public FineArrayState(Object array) {
+	
+	public CASFineArrayState(Object array) {
 		super(array);
 		int n = lengthOf(array);
 		shadowVar = new ShadowVar[n];
@@ -53,7 +55,7 @@ public final class FineArrayState extends AbstractArrayState {
 			nextDimension = new AbstractArrayState[n];
 			Object[] objArray = (Object[])array;
 			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, false);
+				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, true);
 			}
 		} else {
 			nextDimension = null;
@@ -77,20 +79,19 @@ public final class FineArrayState extends AbstractArrayState {
 
 	@Override
 	public final ShadowVar getState(int index) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
-			return shadowVar[0];
-		}
+//		if (index >= shadowVar.length) {
+//			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
+//			return shadowVar[0];
+//		}
 		return shadowVar[index];
 	}
 
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
-		}
-		shadowVar[index] = v;
-		return true;
+		//if (index >= shadowVar.length) {
+		//	Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
+		//}
+		return cas(shadowVar, index, expected, v);
 	}
 
 

@@ -65,6 +65,7 @@ import rr.meta.MethodInfo;
 import rr.state.update.AbstractArrayUpdater;
 import rr.state.update.Updaters;
 import rr.tool.RR;
+import rr.tool.RREventGenerator;
 import acme.util.Assert;
 import acme.util.AtomicFlag;
 import acme.util.StackDump;
@@ -75,6 +76,8 @@ import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.decorations.DefaultValue;
+import acme.util.option.CommandLine;
+import acme.util.option.CommandLineOption;
 
 /**
  * The shadow state for each Thread object.  Tools should not access of modify
@@ -95,7 +98,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public static <T> Decoration<ShadowThread, T> makeDecoration(String name, DecorationFactory.Type type, DefaultValue<ShadowThread, T> defaultValueMaker) {
 		return decorations.make(name, type, defaultValueMaker);
 	}
-
+	
 	private static ShadowThread tidMap[];
 
 	/** 
@@ -114,10 +117,12 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	protected final ShadowThread parent;
 	
 	/**
-	 * True if the thread has stopped running.
+ 	 * True if the thread has stopped running.  Create new flag each time we start this
+  	 * ShadowThread to avoid issues with reusing ShadowThread structures for new threads when
+  	 * someone may still be waiting to join the old thread.
 	 * @RRInternal
 	 */
-	protected final AtomicFlag isStopped = new AtomicFlag();
+	protected volatile AtomicFlag isStopped = new AtomicFlag();
 
 	/*
 	 * Put here to make efficient for re-entrant locks in RREventGenerator
@@ -181,7 +186,8 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 		for (int i = 0; i < tidMap.length; i++) {
 			if (tidMap[i] == null) {
 				tidMap[i] = newThread;
-				maxCounter.set(i);
+				newThread.isStopped = new AtomicFlag();
+				maxCounter.set(i+1);
 				return i;
 			}
 		}
@@ -250,8 +256,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 		if (ld.inc(this) == 1) {
 			lockDataMap[lockDataCount++] = ld;
 			return ld;
+		} else {
+			return null;
 		}
-		return null;
 	}
 
 	/**
@@ -262,8 +269,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 		if (ld.dec(this) == 0) {
 			lockDataCount--;
 			return ld;
+		} else {
+			return null;
 		}
-		return null;
 	}
 
 
@@ -319,6 +327,14 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 		return threadToThreadDataMap.size();
 	}
 
+	/**
+	 * Returns the max number of threads active at any
+	 * one time.
+	 */
+	public static int maxActiveThreads() {
+		return Integer.parseInt(maxCounter.get());
+	}
+	
 	/**
 	 * Return ThreadStates for all known threads.
 	 */

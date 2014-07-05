@@ -36,62 +36,44 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-package rr.state;
+package rr.state.update;
 
+import java.lang.reflect.Field;
+
+import rr.state.ShadowVar;
+import sun.misc.Unsafe;
+import acme.util.Assert;
+import acme.util.Util;
 import acme.util.Yikes;
 
-public final class FineArrayState extends AbstractArrayState {
+public class CASFieldUpdater extends AbstractFieldUpdater {
 
-	protected final ShadowVar[] shadowVar;
-	protected final AbstractArrayState[] nextDimension;
+    private final long offset;
 
-	public FineArrayState(Object array) {
-		super(array);
-		int n = lengthOf(array);
-		shadowVar = new ShadowVar[n];
-		if (array.getClass().getComponentType().isArray()) {
-			nextDimension = new AbstractArrayState[n];
-			Object[] objArray = (Object[])array;
-			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, false);
-			}
-		} else {
-			nextDimension = null;
+	public CASFieldUpdater(Field f) {
+		offset = unsafe.objectFieldOffset(f);
+	}
+
+    static private final Unsafe unsafe = Unsafe.getUnsafe();
+    
+	private final boolean cas(Object o, ShadowVar expected, ShadowVar newState) {
+		final boolean b = unsafe.compareAndSwapObject(o, offset, expected, newState);
+		if (!b) Yikes.yikes("Atomic updated failed.");
+		return b;
+	}
+
+	public final ShadowVar getState(Object o) {
+		return (ShadowVar) unsafe.getObject(o,  offset);
+	}
+
+	public boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {
+		try {
+			boolean b = (cas(o, expectedGS, newGS));
+			return b;
+		} catch (ClassCastException e) {
+			Util.log(this.getClass() + " " + o.getClass());
+			Assert.fail(e);
+			return true;
 		}
 	}
-
-
-	@Override
-	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
-		if (element != nextDimension[i].getArray()) {
-			Yikes.yikes("Stale array entry for next dim");
-			nextDimension[i] = td.arrayStateFactory.get(element); 
-		} 
-		return nextDimension[i];
-	}
-
-	@Override
-	public void setShadowForNextDim(int i, AbstractArrayState s) {
-		nextDimension[i] = s; 
-	}
-
-	@Override
-	public final ShadowVar getState(int index) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
-			return shadowVar[0];
-		}
-		return shadowVar[index];
-	}
-
-	@Override
-	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
-		}
-		shadowVar[index] = v;
-		return true;
-	}
-
-
 }

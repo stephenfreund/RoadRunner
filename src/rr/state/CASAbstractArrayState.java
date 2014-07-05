@@ -36,29 +36,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************/
 
-package rr.state.update;
+package rr.state;
 
-import acme.util.option.CommandLine;
-import acme.util.option.CommandLineOption;
+import sun.misc.Unsafe;
+import acme.util.Assert;
 
-public class Updaters {
+public abstract class CASAbstractArrayState extends AbstractArrayState {
 
-	public static enum UpdateMode { SAFE, UNSAFE, CAS };
-
-	public static CommandLineOption<UpdateMode> updateOptions = 
-			CommandLine.makeEnumChoice("updaters", UpdateMode.SAFE, CommandLineOption.Kind.EXPERIMENTAL, "Specify whether to use synchronized or unsynchronized updates to shadow locations.  Unsynchronized are faster may cause subtle issues because of the JMM.", UpdateMode.class);
-
-	public static Class<? extends UnsafeFieldUpdater> fieldUpdaterClass() {
-		return (updateOptions.get() == UpdateMode.SAFE) ? SafeFieldUpdater.class : UnsafeFieldUpdater.class;
+	public CASAbstractArrayState(Object array) {
+		super(array);
 	}
 
-	public static Class<? extends AbstractArrayUpdater> arrayUpdaterClass() {
-		switch (updateOptions.get()) {
-			case SAFE : return SafeArrayUpdater.class;
-			case UNSAFE: return UnsafeArrayUpdater.class;
-			case CAS : return CASArrayUpdater.class;
-			default: return null;
-		}
+	static protected final Unsafe unsafe = Unsafe.getUnsafe();
+
+	static private final int base; 
+
+	protected static final int shift;
+
+	protected static long byteOffset(int i) {
+		return ((long) i << shift) + base;
 	}
 
+	static {
+		base = unsafe.arrayBaseOffset(Object[].class);
+		int scale = unsafe.arrayIndexScale(Object[].class);
+		if ((scale & (scale - 1)) != 0)
+			Assert.panic("data type scale not a power of two");
+		shift = 31 - Integer.numberOfLeadingZeros(scale);
+	}
+
+	protected static final boolean cas(ShadowVar[] shadow, int index, ShadowVar expected, ShadowVar newState) {
+		final boolean b = unsafe.compareAndSwapObject(shadow, byteOffset(index), expected, newState);
+		return b;
+	}
 }

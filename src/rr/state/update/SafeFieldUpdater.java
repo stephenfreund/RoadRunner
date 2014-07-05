@@ -58,16 +58,17 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 	 */
 	@Override
 	public final boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {
-		int hash = hashCode(o);
-		synchronized(locks.get(hash)) {
+	//	int hash = hashCode(o);
+	//	synchronized(locks.get(hash)) {
 			try { 
+				if (expectedGS == newGS) return true;
 				set(o, newGS);
 			} catch (ClassCastException e) {
 				// This happens when two different class loaders load files with the exact same name.
 				acme.util.Assert.panic("Bad update cast: from: %s [%s] to %s [%s].\nFix by alpha-renaming one of the classes to be unique.", o.getClass(), loaderChain(o.getClass().getClassLoader()), this.getClass(), loaderChain(this.getClass().getClassLoader()));
 			}
 			return true;
-		}
+	//	}
 	}
 	
 

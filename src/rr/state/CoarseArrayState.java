@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,40 +34,55 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state;
 
+import acme.util.Yikes;
+
 public final class CoarseArrayState extends AbstractArrayState {
 
-	protected ShadowVar state;
+	protected ShadowVar shadowVar;
+	protected final AbstractArrayState[] nextDimension;
 
 	public CoarseArrayState(Object array) {
 		super(array);
-	}
- 	
-	@Override
-	public ShadowVar getState(int in) {
-		return state;
+		int n = lengthOf(array);
+		if (array.getClass().getComponentType().isArray()) {
+			nextDimension = new AbstractArrayState[n];
+			Object[] objArray = (Object[])array;
+			for (int i = 0; i < n; i++) {
+				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.COARSE, false);
+			}
+		} else {
+			nextDimension = null;
+		}
 	}
 
-	public void setState(ShadowVar state) {
-		this.state = state;
-	}
 
 	@Override
-	public AbstractArrayState getShadowForNextDim(ShadowThread td,
-			Object element, int i) {
-		return this;
+	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
+		if (element != nextDimension[i].getArray()) {
+			Yikes.yikes("Stale array entry for next dim");
+			nextDimension[i] = td.arrayStateFactory.get(element); 
+		} 
+		return nextDimension[i];
 	}
-	
+
 	@Override
 	public void setShadowForNextDim(int i, AbstractArrayState s) {
+		nextDimension[i] = s; 
 	}
 
 	@Override
-	public void putState(int index, ShadowVar v) {
-		state = v;
+	public final ShadowVar getState(int index) {
+		return shadowVar;
+	}
+
+	@Override
+	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
+		shadowVar = v;
+		return true;
 	}
 
 

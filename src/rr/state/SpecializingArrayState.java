@@ -61,7 +61,7 @@ public final class SpecializingArrayState extends AbstractArrayState {
 			ShadowVar orig = delegate.getState(0);
 			delegate = new FineArrayState(array);
 			for (int i = 0; i < lengthOf(array); i++) {
-				delegate.putState(i, orig);
+				delegate.putState(i, null, orig);
 			}
 			specialized = true;
 		}
@@ -83,8 +83,8 @@ public final class SpecializingArrayState extends AbstractArrayState {
 	}
 
 	@Override
-	public final void putState(int index, ShadowVar v) {
-		delegate.putState(index, v);
+	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
+		return delegate.putState(index, expected, v);
 	}
 
 }

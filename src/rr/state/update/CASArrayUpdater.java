@@ -36,62 +36,48 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-package rr.state;
+package rr.state.update;
 
+import java.lang.reflect.Field;
+
+import rr.state.AbstractArrayState;
+import rr.state.ShadowVar;
+import sun.misc.Unsafe;
+import acme.util.Assert;
+import acme.util.Util;
 import acme.util.Yikes;
 
-public final class FineArrayState extends AbstractArrayState {
+public class CASArrayUpdater extends AbstractArrayUpdater {
 
-	protected final ShadowVar[] shadowVar;
-	protected final AbstractArrayState[] nextDimension;
-
-	public FineArrayState(Object array) {
-		super(array);
-		int n = lengthOf(array);
-		shadowVar = new ShadowVar[n];
-		if (array.getClass().getComponentType().isArray()) {
-			nextDimension = new AbstractArrayState[n];
-			Object[] objArray = (Object[])array;
-			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, false);
-			}
-		} else {
-			nextDimension = null;
-		}
+	public CASArrayUpdater() {
 	}
 
-
-	@Override
-	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
-		if (element != nextDimension[i].getArray()) {
-			Yikes.yikes("Stale array entry for next dim");
-			nextDimension[i] = td.arrayStateFactory.get(element); 
-		} 
-		return nextDimension[i];
+	public ShadowVar getState(AbstractArrayState o, int index) {
+		return o.getState(index);
+		
+	}
+	public boolean putState(AbstractArrayState o, int index, ShadowVar expectedGS, ShadowVar newGS) {
+		if (expectedGS == newGS) return true;
+		return o.putState(index, expectedGS, newGS);
 	}
 
-	@Override
-	public void setShadowForNextDim(int i, AbstractArrayState s) {
-		nextDimension[i] = s; 
-	}
-
-	@Override
-	public final ShadowVar getState(int index) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
-			return shadowVar[0];
-		}
-		return shadowVar[index];
-	}
-
-	@Override
-	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
-		}
-		shadowVar[index] = v;
-		return true;
-	}
-
-
+//	
+//	public final ShadowVar getState(Object o) {
+//		return (ShadowVar) unsafe.getObject(o,  offset);
+//	}
+//
+//	public boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {
+//		try {
+//			if (expectedGS == newGS) return true;
+//			return (cas(o, expectedGS, newGS)); 
+//			//{
+////				Yikes.yikes("Concurrent update"); // Yikes.yikes("Concurrent update on %s: %s.  current=%s  expected=%s  new=%s", getClass(), Util.objectToIdentityString(o), getState(o), expectedGS, newGS);
+////			}
+////			return true;
+//		} catch (ClassCastException e) {
+//			Util.log(this.getClass() + " " + o.getClass());
+//			Assert.fail(e);
+//			return true;
+//		}
+//	}
 }

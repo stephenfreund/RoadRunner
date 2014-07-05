@@ -66,6 +66,7 @@ public abstract class UnsafeFieldUpdater extends AbstractFieldUpdater {
 	@Override
 	public boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {
 		try {
+			if (expectedGS == newGS) return true;
 			ShadowVar current = get(o);
 			if (current != expectedGS) {
 				Yikes.yikes("Concurrent update on %s: %s.  current=%s  expected=%s  new=%s", getClass(), Util.objectToIdentityString(o), current, expectedGS, newGS);

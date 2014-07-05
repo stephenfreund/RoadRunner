@@ -56,7 +56,7 @@ public abstract class AbstractArrayState {
 		return array;
 	}
 	
-	public abstract void putState(int index, ShadowVar v);
+	public abstract boolean putState(int index, ShadowVar expected, ShadowVar v);
 	public abstract ShadowVar getState(int index);
 
 	/** @RRInternal */

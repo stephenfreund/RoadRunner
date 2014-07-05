@@ -52,12 +52,13 @@ public class UnsafeArrayUpdater extends AbstractArrayUpdater {
 
 	@Override
 	public boolean putState(AbstractArrayState o, int index, ShadowVar expectedGS, ShadowVar newGS) {
+		if (expectedGS == newGS) return true;
 		ShadowVar current = o.getState(index);
 		if (current != expectedGS) {
 			Yikes.yikes("Concurrent update on %s: %s.  current=%s  expected=%s  new=%s", getClass(), Util.objectToIdentityString(o), current, expectedGS, newGS);
 			return false;
 		} else {
-			o.putState(index, newGS);
+			o.putState(index, expectedGS, newGS);
 			return true;
 		}
 	}
