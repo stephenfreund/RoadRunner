@@ -157,7 +157,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		if (gs == null) { \
 			fae.putOriginalShadow(null);\
 			gs = getTool().makeShadowVar(fae);\
-			if (fae.putShadow(gs)) {\
+			if (!fae.putShadow(gs)) {\
 				gs = updater.getState(target);\
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");\
 			}\
@@ -186,7 +186,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		ShadowVar gs = as.getState(index);\
 		if (gs == null) {\
 			aae.putOriginalShadow(null); \
-			if (!aae.putShadow(getTool().makeShadowVar(aae))) {\
+			gs = getTool().makeShadowVar(aae);\
+			if (!aae.putShadow(gs)) {\
 			  gs = as.getState(index); \
 			  Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly"); \
 			}\

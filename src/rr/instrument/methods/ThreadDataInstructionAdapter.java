@@ -41,7 +41,6 @@ package rr.instrument.methods;
 import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.Type;
-
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
@@ -52,6 +51,7 @@ import rr.meta.InstrumentationFilter;
 import rr.meta.InvokeInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.meta.ReleaseInfo;
 import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 import acme.util.Util;
@@ -164,12 +164,6 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			switch(opcode) {
 			case MONITORENTER: {
 				AcquireInfo acquire = MetaDataInfoMaps.makeAcquire(this.getLocation(), method);
-//				Always process all sync ops --- so don't test this anymore
-//				if (!InstrumentationFilter.shouldInstrument(acquire)) {
-//					Util.log("Skipping lock acquire: " + acquire);
-//					super.visitInsn(opcode);
-//					return;
-//				} 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
 					// traget
@@ -213,13 +207,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 				break;
 			}
 			case MONITOREXIT: {
-				rr.meta.ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
-//				Always process all sync ops --- so don't test this anymore
-//				if (!InstrumentationFilter.shouldInstrument(release)) {
-//					Util.log("Skipping lock release: " + release);
-//					super.visitInsn(opcode);
-//					return;
-//				} 
+				ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */

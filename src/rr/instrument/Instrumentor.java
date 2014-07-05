@@ -116,7 +116,7 @@ public class Instrumentor {
 
 		try { 
 
-			ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES) {
+			ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES + ClassWriter.COMPUTE_MAXS) {
 				@Override
 				protected String getCommonSuperClass(final String type1, final String type2) 
 				{

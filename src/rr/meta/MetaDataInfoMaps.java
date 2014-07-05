@@ -255,6 +255,7 @@ public class MetaDataInfoMaps {
 			a = getAcquires().get(MetaDataInfoKeys.getLockKey(loc, true));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc " + loc);
 		}
 		a = new AcquireInfo(getAcquires().size(), loc, enclosing);
 		getAcquires().put(a);
@@ -268,6 +269,7 @@ public class MetaDataInfoMaps {
 			a = getReleases().get(MetaDataInfoKeys.getLockKey(loc, false));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc " + loc);
 		}
 		a = new ReleaseInfo(getReleases().size(), loc, enclosing);
 		getReleases().put(a);

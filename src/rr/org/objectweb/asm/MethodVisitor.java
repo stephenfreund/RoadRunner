@@ -863,6 +863,16 @@ public abstract class MethodVisitor {
     }
 
     /**
+     * Visits the index of the next instruction to be processed.
+     */
+    public void visitByteCodeIndex(int index) {
+        if (mv != null) {
+            mv.visitByteCodeIndex(index);
+        }
+    }
+
+    
+    /**
      * Visits the maximum stack size and the maximum number of local variables
      * of the method.
      * 

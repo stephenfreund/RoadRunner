@@ -52,7 +52,7 @@ public class InstrumentingDefineClassLoader implements DefineClassListener {
 					return bytes2;
 				}
 				try {
-					return Util.eval(new TimedExpr<byte[]>("Instrumenting " + name + " (Loader=" + Util.objectToIdentityString(definingLoader) + ")") {
+					return Util.eval(new TimedExpr<byte[]>("Instrumenting " + name + " (Loader=" + Util.objectToIdentityString(definingLoader) + ":" + definingLoader.getClass() + ")") {
 						@Override
 						public byte[] run() {
 							MetaDataBuilder.preLoadFully(currentLoader, bytes);

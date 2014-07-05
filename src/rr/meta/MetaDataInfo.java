@@ -40,7 +40,7 @@ package rr.meta;
 
 import acme.util.decorations.Decoratable;
 
-public abstract class MetaDataInfo extends Decoratable implements Comparable<MetaDataInfo> {
+public abstract class MetaDataInfo extends Decoratable {
 
 	protected final int id;
 	protected SourceLocation loc;

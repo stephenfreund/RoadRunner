@@ -143,6 +143,11 @@ public abstract class AbstractInsnNode {
     public static final int LINE = 15;
 
     /**
+     * The type of {@link ByteCodeIndexNode} "instructions".
+     */
+    public static final int BYTE_CODE_INDEX = 16;
+
+    /**
      * The opcode of this instruction.
      */
     protected int opcode;

@@ -114,7 +114,8 @@ public abstract class Tool  {
 
 	private boolean hasReadFPMethod;
 	private boolean hasWriteFPMethod;
-
+	private boolean hasArrayReadFPMethod;
+	private boolean hasArrayWriteFPMethod;
 
 	/**
 	 * All tools are created by the RoadRunner infrastructure from the command line, based on @Abbrev("...") annotations.
@@ -139,21 +140,30 @@ public abstract class Tool  {
 			nextEnter = nextExit = nextAcquire = nextRelease = nextAccess = null;
 		}
 
-		try {
-			getClass().getMethod("readFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-			hasReadFPMethod = true;
-		} catch (NoSuchMethodException e) {
-			hasReadFPMethod = false;
-		}
+//		hasReadFPMethod = hasMethod("readFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
+//		hasWriteFPMethod = hasMethod("writeFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
+//		
+//		hasArrayReadFPMethod = hasMethod("arrayReadFastPath", int.class, rr.state.AbstractArrayState.class, rr.state.ShadowThread.class);
+//		hasArrayWriteFPMethod = hasMethod("arrayWriteFastPath", int.class, rr.state.AbstractArrayState.class, rr.state.ShadowThread.class);
 
-		try {
-			getClass().getMethod("writeFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-			hasWriteFPMethod = true;
-		} catch (NoSuchMethodException e) {
-			hasWriteFPMethod = false;
-		}
+		hasReadFPMethod = implementsMethod("readFastPath");
+		hasWriteFPMethod = implementsMethod("writeFastPath");
+		
+		hasArrayReadFPMethod = implementsMethod("arrayReadFastPath");
+		hasArrayWriteFPMethod = implementsMethod("arrayWriteFastPath");
+
+		
+		
 	}
-
+//
+//	protected boolean hasMethod(String name, Class<?>... args) {
+//		try {
+//			getClass().getMethod(name, args);
+//			return true;
+//		} catch (NoSuchMethodException e) {
+//			return false;
+//		}
+//	}
 
 	/**
 	 * Tool-specific initialization.  Called after the entire chain has been constructed but
@@ -409,9 +419,13 @@ public abstract class Tool  {
 		return isWrite ? hasWriteFPMethod : hasReadFPMethod;
 	}
 
+	public boolean hasArrayFPMethod(boolean isWrite) {
+		return isWrite ? hasArrayWriteFPMethod : hasArrayReadFPMethod;
+	}
+
 	/** Add a listener to be notified about class meta data as it is loaded by RoadRunner.
 	 */
-	protected final void addMetaDatListener(MetaDataInfoVisitor visitor) {
+	protected final void addMetaDataListener(MetaDataInfoVisitor visitor) {
 		Loader.addListener(visitor);
 	}
 	

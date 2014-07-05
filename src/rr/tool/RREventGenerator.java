@@ -80,6 +80,9 @@ import acme.util.option.CommandLineOption;
 public class RREventGenerator extends RR {
 
 
+	public static CommandLineOption<Boolean> trackReentrantOption = 
+			CommandLine.makeBoolean("reentrantEvents", false, CommandLineOption.Kind.EXPERIMENTAL, "Notify on reentrant lock ops.");
+
 	public static CommandLineOption<Boolean> noJoinOption  = 
 			CommandLine.makeBoolean("nojoin", false, CommandLineOption.Kind.EXPERIMENTAL, "By default RoadRunner waits for a thread to finishin by joining on it.  This causes problems if the target wait()'s on a Thread object, as is the case in Eclipse.  This option turns on a less efficient polling scheme.");
 
@@ -88,16 +91,16 @@ public class RREventGenerator extends RR {
 
 
 	public final static CommandLineOption<Integer> indicesToWatch  = 
-		CommandLine.makeInteger("indices", Integer.MAX_VALUE, CommandLineOption.Kind.EXPERIMENTAL, "Specifies max array index to watch", new Runnable() {
-			public void run() {
-				maxArrayIndex = indicesToWatch.get();
-			}	
-		});
+			CommandLine.makeInteger("indices", Integer.MAX_VALUE, CommandLineOption.Kind.EXPERIMENTAL, "Specifies max array index to watch", new Runnable() {
+				public void run() {
+					maxArrayIndex = indicesToWatch.get();
+				}	
+			});
 
 	protected static int maxArrayIndex = Integer.MAX_VALUE;
 
 	protected static boolean matches(final int index) {
-		return index <= maxArrayIndex;
+		return true || index <= maxArrayIndex;
 	} 
 
 
@@ -119,12 +122,12 @@ public class RREventGenerator extends RR {
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
 		if (gs == null) {
-			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
-			Assert.assertTrue(fae.getAccessInfo() == fad);
-			if (!fae.putShadow(gs)) {
+			Assert.assertTrue(gs != null);
+			if (!updater.putState(target, null, gs)) {
+				Assert.warn("null gs");
 				gs = updater.getState(target);
-				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
+				if (gs == null) Assert.fail("concurrent updates to new var state not resolved properly: " + fae + " " + fae.getShadow());
 			}
 		}
 
@@ -174,7 +177,7 @@ public class RREventGenerator extends RR {
 		if (gs == null) { 
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
-			if (fae.putShadow(gs)) {
+			if (!fae.putShadow(gs)) {
 				gs = updater.getState(target);
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
 			}
@@ -433,10 +436,12 @@ public class RREventGenerator extends RR {
 			ne.setNotifyAll(all);
 
 			getTool().preNotify(ne);
-			if (all) {
-				lock.notifyAll();
-			} else {
-				lock.notify();
+			synchronized(lock) {
+				if (all) {
+					lock.notifyAll();
+				} else {
+					lock.notify();
+				}
 			}
 			getTool().postNotify(ne);
 		} catch (Throwable e) {
@@ -544,7 +549,8 @@ public class RREventGenerator extends RR {
 		ShadowVar gs = as.getState(index);
 		if (gs == null) {
 			aae.putOriginalShadow(null);
-			if (!aae.putShadow(getTool().makeShadowVar(aae))) {
+			gs = getTool().makeShadowVar(aae);
+			if (!aae.putShadow(gs)) {
 				gs = as.getState(index);
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
 			}
@@ -649,13 +655,9 @@ public class RREventGenerator extends RR {
 					final ClassInfo rrClass = k.getOwner();
 					final String name = k.getName();
 					final boolean isStatic = k.isStatic();
-					final Class guardStateThunk = lc.getGuardStateThunk(rrClass.getName(), name, isStatic);
-					try {
-						return (AbstractFieldUpdater) guardStateThunk.newInstance();
-					} catch (Exception e) {
-						Assert.panic(e);
-						return null;
-					}
+					final boolean isVolatile = k.isVolatile();
+					final AbstractFieldUpdater u = lc.getGuardStateThunkObject(rrClass.getName(), name, isStatic, isVolatile);
+					return u;
 				}
 
 			};
@@ -744,7 +746,7 @@ public class RREventGenerator extends RR {
 		if (gs == null) { 
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
-			if (fae.putShadow(gs)) {
+			if (!fae.putShadow(gs)) {
 				gs = updater.getState(target);
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
 			}

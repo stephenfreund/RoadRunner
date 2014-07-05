@@ -56,7 +56,7 @@ public class SourceLocation implements Serializable, Comparable<SourceLocation> 
 		this.offset = offset;
 	}
 
-	public SourceLocation(String file, int line) {
+	private SourceLocation(String file, int line) {
 		this(file, line, -1);
 	}
 

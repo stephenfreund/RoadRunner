@@ -502,6 +502,9 @@ public abstract class Printer {
      */
     public abstract void visitLineNumber(final int line, final Label start);
 
+
+	public abstract void visitByteCodeIndex(int index);
+    
     /**
      * Method max stack and max locals. See
      * {@link org.objectweb.asm.MethodVisitor#visitMaxs}.
@@ -588,4 +591,5 @@ public abstract class Printer {
             }
         }
     }
+
 }

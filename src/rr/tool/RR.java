@@ -102,7 +102,7 @@ public class RR {
 				new GCRunner());
 
 	public static CommandLineOption<Boolean> nofastPathOption = 
-		CommandLine.makeBoolean("noFP", false, CommandLineOption.Kind.STABLE, "Do not use in-lined tool fastpath code for reads/writes.");
+			CommandLine.makeBoolean("noFP", false, CommandLineOption.Kind.STABLE, "Do not use in-lined tool fastpath code for reads/writes.");
 
 	public static CommandLineOption<Boolean> noEnterOption = 
 		CommandLine.makeBoolean("noEnter", false, CommandLineOption.Kind.STABLE, "Do not generate Enter and Exit events.");
@@ -146,7 +146,7 @@ public class RR {
 
 	protected static Tool firstEnter, firstExit, firstAcquire, firstRelease, firstAccess; //, nextArrayAccess;
 
-	public static ToolLoader toolLoader;
+	private static ToolLoader toolLoader;
 
 	public static void createDefaultToolIfNecessary() {
 		// default values, in case no tool change is supplied.
@@ -169,6 +169,14 @@ public class RR {
 
 	}
 
+	public static void initToolLoader() {
+		if (toolLoader == null) {
+			final URL[] urls = URLUtils.getURLArrayFromString(System.getProperty("user.dir"), toolPathOption.get());
+			Util.logf("Creating tool loader with path %s", java.util.Arrays.toString(urls));
+			toolLoader = new ToolLoader(urls);
+		}
+	}
+	
 	private static void createTool() { 
 		try {
 			Util.log(new TimedStmt("Creating Tool Chain") {
@@ -181,9 +189,7 @@ public class RR {
 				
 				@Override
 				public void run() throws Exception {
-					final URL[] urls = URLUtils.getURLArrayFromString(System.getProperty("user.dir"), toolPathOption.get());
-					Util.logf("Creating tool loader with path %s", java.util.Arrays.toString(urls));
-					toolLoader = new ToolLoader(urls);
+					initToolLoader();
 					setTool(rr.tool.parser.parser.build(toolLoader, toolOption.get(), toolOption.getCommandLine()));
 					Util.logf("    complete chain: %s", getTool().toChainString());
 
@@ -196,12 +202,16 @@ public class RR {
 					if (!nofastPathOption.get()) {
 						List<Tool> readFP = getTool().findAllImplementors("readFastPath");
 						List<Tool> writeFP = getTool().findAllImplementors("writeFastPath");
-						if (readFP.size() + writeFP.size() == 0) {
+						List<Tool> arrayReadFP = getTool().findAllImplementors("arrayReadFastPath");
+						List<Tool> arrayWriteFP = getTool().findAllImplementors("arrayWriteFastPath");
+						if (readFP.size() + writeFP.size() + arrayReadFP.size() + arrayWriteFP.size() == 0) {
 							Util.log("No fastpath code found");
 							nofastPathOption.set(true);
 						} else {
 							Util.log("Read Fastpath code found in " + readFP);						
 							Util.log("Write Fastpath code found in " + writeFP);						
+							Util.log("Array Read Fastpath code found in " + arrayReadFP);						
+							Util.log("Array Write Fastpath code found in " + arrayWriteFP);						
 						}
 					} else {
 						Util.log("User has disabled fastpath instrumentation.");
@@ -343,6 +353,7 @@ public class RR {
 		});
 
 		xml.print("threadCount", ShadowThread.numThreads());
+		xml.print("threadMaxActive", ShadowThread.maxActiveThreads());
 		xml.print("errorTotal", ErrorMessage.getTotalNumberOfErrors());
 		xml.print("distinctErrorTotal", ErrorMessage.getTotalNumberOfDistinctErrors());
 		ErrorMessages.xmlErrorsByMethod(xml);
@@ -423,6 +434,11 @@ public class RR {
 
 	public static ShadowThread currentThread() {
 		return ShadowThread.getCurrentShadowThread();
+	}
+
+	public static ToolLoader getToolLoader() {
+		initToolLoader();
+		return toolLoader;
 	}
 
 

@@ -51,6 +51,7 @@ import rr.meta.InstrumentationFilter;
 import rr.replay.RRReplay;
 import rr.state.AbstractArrayStateCache;
 import rr.state.ArrayStateFactory;
+import rr.state.ShadowThread;
 import rr.state.agent.ThreadStateExtensionAgent;
 import rr.state.agent.ThreadStateExtensionAgent.InstrumentationMode;
 import rr.state.update.Updaters;
@@ -106,9 +107,6 @@ public class RRMain {
 					RR.startTimer();
 
 					Class<?> cl = loader.findClass(className);
-				//	Class<?> cl =  Class.forName(className, true, loader); 
-					
-//					Assert.assertTrue(loader == cl.getClassLoader(), loader + " != " + cl.getClassLoader());
 					
 					Method method = method = cl.getMethod("main", new Class[] { argv.getClass() });
 
@@ -126,6 +124,7 @@ public class RRMain {
 
 					}
 					method.invoke(null, new Object[] { argv });
+					RR.getTool().stop(ShadowThread.getThreadState(this));
 
 					RR.endTimer();
 

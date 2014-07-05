@@ -652,6 +652,11 @@ public class MethodNode extends MethodVisitor {
         instructions.add(new LineNumberNode(line, getLabelNode(start)));
     }
 
+    public void visitBCI(int index) {
+        instructions.add(new ByteCodeIndexNode(index));
+    }
+
+    
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
         this.maxStack = maxStack;

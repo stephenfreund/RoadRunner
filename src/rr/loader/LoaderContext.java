@@ -39,13 +39,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.loader;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Hashtable;
 
 import rr.org.objectweb.asm.ClassReader;
 import rr.org.objectweb.asm.ClassWriter;
-
+import rr.state.update.AbstractFieldUpdater;
+import rr.state.update.CASFieldUpdater;
+import rr.state.update.Updaters;
+import rr.state.update.Updaters.UpdateMode;
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
 import rr.instrument.classes.GuardStateModifierCreator;
@@ -175,20 +179,66 @@ public class LoaderContext {
 		}
 	}
 
-	public Class getGuardStateThunk(final String className, final String fieldName, final boolean isStatic)  {
+	public Class getGuardStateThunkClass(final String className, final String fieldName, final boolean isStatic, final boolean isVolatile)  {
 		final String thunkName = Constants.getUpdateThunkName(className, fieldName);
-		Class c = loader.findLoadedClass(thunkName);
+		Class<?> c = loader.findLoadedClass(thunkName);
 		if (c != null) return c;
+		Class<?> targetClass = loader.findLoadedClass(className.replaceAll("/", "."));
+		try {
+			Field f = targetClass.getField(fieldName);
+		} catch (Exception e) {
+			Assert.fail(e);
+		}
 		byte b[] = Loader.readFromFileCache("updaters", thunkName);
 		if (b == null) {
-			b = GuardStateModifierCreator.dump(className, fieldName, isStatic);
+			b = GuardStateModifierCreator.dump(className, fieldName, isStatic, isVolatile);
 		}
 		return defineClass(thunkName, b);
 	}
 
-	public synchronized Class defineClass(final String className, byte[] bytes) {
+	public AbstractFieldUpdater getGuardStateThunkObject(final String className, final String fieldName, final boolean isStatic, boolean isVolatile)  {
+		try {
+			if (Updaters.updateOptions.get() != Updaters.UpdateMode.CAS) {
+				Class c = getGuardStateThunkClass(className, fieldName, isStatic, isVolatile);
+				return (AbstractFieldUpdater)c.newInstance();
+			} else {
+				Class<?> targetClass = loader.findLoadedClass(className.replaceAll("/", "."));
+				String gsName = Constants.getShadowFieldName(className, fieldName, isStatic, isVolatile);
+				Field f = targetClass.getField(gsName);
+				if (isStatic) {
+					// Fix because CA updaters don't work properly on static fields -- seems to be VM issue
+					//   on all platforms...
+					UpdateMode x = Updaters.updateOptions.get();
+					Updaters.updateOptions.set(UpdateMode.SAFE);
+					Class c = getGuardStateThunkClass(className, fieldName, isStatic, isVolatile);
+					Updaters.updateOptions.set(x);
+					return (AbstractFieldUpdater)c.newInstance();
+				} else {
+					return new CASFieldUpdater(f);
+				}
+			}
+		} catch (Exception e) {
+			Assert.fail(e);
+			return null;
+		}
+	}
 
-		Class c = loader.findLoadedClass(className);
+
+//	
+//	public Class<?> getGuardStateThunk(final String className, final String fieldName, final boolean isStatic, final boolean isVolatile)  {
+//		final String thunkName = Constants.getUpdateThunkName(className, fieldName);
+//		Class<?> c = loader.findLoadedClass(thunkName);
+//		if (c != null) return c;
+//		byte b[] = Loader.readFromFileCache("updaters", thunkName);
+//		if (b == null) {
+//			b = GuardStateModifierCreator.dump(className, fieldName, isStatic, isVolatile);
+//		}
+//		return defineClass(thunkName, b);
+//	}
+
+	public synchronized Class<?> defineClass(final String className, byte[] bytes) {
+
+		Class<?> c = loader.findLoadedClass(className);
 		if (c == null) {
 			c = loader.defineClass(className, bytes, 0, bytes.length);
 		}

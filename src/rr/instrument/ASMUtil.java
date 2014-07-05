@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,14 +34,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.instrument;
 
+import rr.meta.FieldInfo;
 import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.Type;
-
 import rr.instrument.methods.RRMethodAdapter;
 import rr.org.objectweb.asm.Label;
 import rr.tool.Tool;
@@ -59,17 +59,17 @@ public class ASMUtil implements Opcodes {
 
 	public static int storeInstr(Type t) {
 		switch (t.getSort()) {
-			case Type.VOID: Assert.fail("Bad Sort");
-			case Type.BOOLEAN:
-			case Type.CHAR:
-			case Type.BYTE:
-			case Type.SHORT:
-			case Type.INT: return ISTORE;
-			case Type.FLOAT: return FSTORE;
-			case Type.LONG: return LSTORE;
-			case Type.DOUBLE: return DSTORE;
-			case Type.ARRAY:
-			case Type.OBJECT: return ASTORE;
+		case Type.VOID: Assert.fail("Bad Sort");
+		case Type.BOOLEAN:
+		case Type.CHAR:
+		case Type.BYTE:
+		case Type.SHORT:
+		case Type.INT: return ISTORE;
+		case Type.FLOAT: return FSTORE;
+		case Type.LONG: return LSTORE;
+		case Type.DOUBLE: return DSTORE;
+		case Type.ARRAY:
+		case Type.OBJECT: return ASTORE;
 		}
 		return -1;
 	}
@@ -81,17 +81,17 @@ public class ASMUtil implements Opcodes {
 
 	public static int loadInstr(Type t) {
 		switch (t.getSort()) {
-			case Type.VOID: Assert.fail("Bad Sort");
-			case Type.BOOLEAN:
-			case Type.CHAR:
-			case Type.BYTE:
-			case Type.SHORT:
-			case Type.INT: return ILOAD;
-			case Type.FLOAT: return FLOAD;
-			case Type.LONG: return LLOAD;
-			case Type.DOUBLE: return DLOAD;
-			case Type.ARRAY:
-			case Type.OBJECT: return ALOAD;
+		case Type.VOID: Assert.fail("Bad Sort");
+		case Type.BOOLEAN:
+		case Type.CHAR:
+		case Type.BYTE:
+		case Type.SHORT:
+		case Type.INT: return ILOAD;
+		case Type.FLOAT: return FLOAD;
+		case Type.LONG: return LLOAD;
+		case Type.DOUBLE: return DLOAD;
+		case Type.ARRAY:
+		case Type.OBJECT: return ALOAD;
 		}
 		Assert.fail("Bad Sort");
 		return -1;
@@ -104,17 +104,17 @@ public class ASMUtil implements Opcodes {
 
 	public static int returnInstr(Type t) {
 		switch (t.getSort()) {
-			case Type.VOID: return RETURN;
-			case Type.BOOLEAN:
-			case Type.CHAR:
-			case Type.BYTE:
-			case Type.SHORT:
-			case Type.INT: return IRETURN;
-			case Type.FLOAT: return FRETURN;
-			case Type.LONG: return LRETURN;
-			case Type.DOUBLE: return DRETURN;
-			case Type.ARRAY:
-			case Type.OBJECT: return ARETURN;
+		case Type.VOID: return RETURN;
+		case Type.BOOLEAN:
+		case Type.CHAR:
+		case Type.BYTE:
+		case Type.SHORT:
+		case Type.INT: return IRETURN;
+		case Type.FLOAT: return FRETURN;
+		case Type.LONG: return LRETURN;
+		case Type.DOUBLE: return DRETURN;
+		case Type.ARRAY:
+		case Type.OBJECT: return ARETURN;
 		}
 		Assert.fail("Bad Sort");
 		return -1;
@@ -202,7 +202,8 @@ public class ASMUtil implements Opcodes {
 		return newDesc;
 	}
 
-	public static void insertFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int gsVar, final int tdVar, final Label success) {
+	// Register 0 must have reciever if using OffsetFPMethod.
+	public static void insertFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int gsVar, final int tdVar, final Label success, final FieldInfo field) {
 		if (!RR.nofastPathOption.get()) {
 			Label nullVarState = new Label();
 			mv.visitVarInsn(ALOAD, gsVar);
@@ -221,6 +222,36 @@ public class ASMUtil implements Opcodes {
 			mv.visitLabel(nullVarState);
 		}
 	}
+
+
+	// indexVar == -1 -> on stack
+	public static void insertArrayFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int shadowStateVar, final int guardStateLoc, final int tdVar, final Label success, final int indexVar) {
+		if (!RR.nofastPathOption.get()) {
+			RR.applyToTools(new ToolVisitor() {
+				public void apply(Tool t) {
+					if (t.hasArrayFPMethod(isWrite)) {
+						if (indexVar == -1) {
+							mv.dup();
+						} else {
+							mv.visitVarInsn(ILOAD, indexVar);
+						}
+						mv.visitVarInsn(ALOAD, shadowStateVar);
+						mv.visitVarInsn(ALOAD, tdVar);
+						mv.invokeStatic(Type.getType(t.getClass()), 
+								isWrite ? Constants.ARRAY_WRITE_FP_METHOD : Constants.ARRAY_READ_FP_METHOD);
+						mv.visitJumpInsn(IFNE, success);
+					} else if (t.hasFPMethod(isWrite)) {
+						mv.visitVarInsn(ALOAD, guardStateLoc);
+						mv.visitVarInsn(ALOAD, tdVar);
+						mv.invokeStatic(Type.getType(t.getClass()), 
+								isWrite ? Constants.WRITE_FP_METHOD : Constants.READ_FP_METHOD);
+						mv.visitJumpInsn(IFNE, success);
+					} 
+				}
+			});
+		}
+	}
+
 
 	public static int makePublic(int access) {
 		return (access & ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) | Opcodes.ACC_PUBLIC;

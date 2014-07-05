@@ -109,6 +109,8 @@ public class Constants {
 
 	public static final Method READ_FP_METHOD = Method.getMethod("boolean readFastPath(rr.state.ShadowVar, rr.state.ShadowThread)");
 	public static final Method WRITE_FP_METHOD =  Method.getMethod("boolean writeFastPath(rr.state.ShadowVar, rr.state.ShadowThread)");
+	public static final Method ARRAY_READ_FP_METHOD = Method.getMethod("boolean arrayReadFastPath(int, rr.state.AbstractArrayState, rr.state.ShadowThread)");
+	public static final Method ARRAY_WRITE_FP_METHOD =  Method.getMethod("boolean arrayWriteFastPath(int, rr.state.AbstractArrayState, rr.state.ShadowThread)");
 
 
 	
@@ -130,11 +132,11 @@ public class Constants {
 	}
 	
 
-	public static String getShadowFieldName(String owner, String name, boolean isStatic) {
-		if (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.FINE) {
+	public static String getShadowFieldName(String owner, String name, boolean isStatic, boolean isVolatile) {
+		if (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.FINE || isStatic || isVolatile) {
 			return PREFIX + name;
 		} else {
-			String s = PREFIX + owner.replace("/", "_") + VAR_STATE_SUFFIX + (isStatic ? "static" : "instance");
+			String s = PREFIX + (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.COARSE ? "" : owner.replace("/", "_")) + VAR_STATE_SUFFIX + (isStatic ? "static" : "instance");
 			return s;
 		}
 	}

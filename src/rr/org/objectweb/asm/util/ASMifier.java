@@ -866,6 +866,13 @@ public class ASMifier extends Printer {
         text.add(buf.toString());
     }
 
+    public void visitByteCodeIndex(final int index) {
+        buf.setLength(0);
+        buf.append(name).append(".visitByteCodeIndex(").append(index);
+        buf.append(");\n");
+        text.add(buf.toString());
+    }
+
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
         buf.setLength(0);

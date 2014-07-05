@@ -44,6 +44,7 @@ import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.update.AbstractFieldUpdater;
 import acme.util.Util;
+import acme.util.Yikes;
 
 /** Represents field accesses (reads or writes) performed by the target program. */
 
@@ -91,7 +92,8 @@ public class FieldAccessEvent extends AccessEvent {
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = getUpdater().putState(target, this.getOriginalShadow(), newGS);
 		if (!b) {
-			this.originalShadow = getOriginalShadow();
+			Yikes.yikes("Concurrent Mod: + " + this.getOriginalShadow());
+			this.originalShadow = getShadow();
 		}
 		return b;
 	}

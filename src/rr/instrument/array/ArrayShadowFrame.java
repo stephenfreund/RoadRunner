@@ -109,7 +109,7 @@ public class ArrayShadowFrame extends Frame {
 	 * @param nStack the maximum stack size of the frame.
 	 */
 	public ArrayShadowFrame(final int nLocals, final int nStack) {
-		super(nLocals, nStack);
+		super(nLocals, nStack+2);
 	}
 
 	/**

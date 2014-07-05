@@ -280,6 +280,12 @@ public final class TraceMethodVisitor extends MethodVisitor {
         p.visitLineNumber(line, start);
         super.visitLineNumber(line, start);
     }
+ 
+    @Override
+    public void visitByteCodeIndex(final int index) {
+        p.visitByteCodeIndex(index);
+        super.visitByteCodeIndex(index);
+    }
 
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {

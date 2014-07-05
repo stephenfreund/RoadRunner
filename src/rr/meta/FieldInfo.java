@@ -103,8 +103,8 @@ public class FieldInfo extends MetaDataInfo {
 			if (updater == null) {
 				try {
 					final LoaderContext loaderForClass = Loader.loaderForClass(rrClass.getName());
-					final Class guardStateThunk = loaderForClass.getGuardStateThunk(rrClass.getName(), name, isStatic);
-					setUpdater((AbstractFieldUpdater) guardStateThunk.newInstance());
+					AbstractFieldUpdater u = loaderForClass.getGuardStateThunkObject(rrClass.getName(), name, isStatic, isVolatile);
+					setUpdater(u);
 				} catch (Exception e) {
 					Assert.panic(e);
 				}
@@ -130,4 +130,9 @@ public class FieldInfo extends MetaDataInfo {
 	public void setUpdater(AbstractFieldUpdater guardStateThunk) {
 		updater = guardStateThunk;
 	}
+
+	public int getInstanceOffset() {
+		return this.getOwner().offsetOfInstanceField(this);
+	}
+
 }

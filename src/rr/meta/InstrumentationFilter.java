@@ -86,8 +86,10 @@ public class InstrumentationFilter {
 		MetaDataInfoMaps.getOpDecorations().make("instrument op", DecorationFactory.Type.SINGLE, new DefaultValue<OperationInfo, Boolean>() {
 			public Boolean get(OperationInfo op) { 
 				final MethodInfo enclosing = op.getEnclosing();
+				String s = op.getLoc().getKey();
+				s = s.substring(0, s.lastIndexOf(":"));
 				return shouldInstrument(enclosing.getOwner()) &&		
-				linesToWatch.get().test(op.getLoc().getKey()) == StringMatchResult.ACCEPT &&
+								linesToWatch.get().test(s) == StringMatchResult.ACCEPT &&
 				shouldInstrument(enclosing);
 			}	
 		});
@@ -121,7 +123,7 @@ public class InstrumentationFilter {
 		CommandLine.makeStringMatcher("classes", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies classes to instrument.  The default is all but standard libs.  Uses the StringMatcher scheme.  Examples:\n" + 
 				"   -classes=\"-.*cow.*\" ignores classes with cow in name.\n" +
 				"   -classes=\"+.*moo.*\" -classes=\"-.*cow.*\" ignores classes with cow in name, except if they have moo in the name",
-				"-java..*", "-javax..*", "-com.sun..*", "-org.objectweb.asm..*", "-sun..*", "-rr..*", "-rrtools..*", "-acme..*", "-.*__\\$rr_.*");
+				"-java..*", "-javax..*", "-com.sun..*", "-sun..*", "-rr..*", "-rrtools..*", "-acme..*", "-.*__\\$rr_.*");
 
 	public static CommandLineOption<StringMatcher> methodsSupportThreadStateParam  = 
 		CommandLine.makeStringMatcher("shadowThread", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which methods can be tranformed into version that take a ShadowThread parameter.  The default is all except main, run, and constructors.",
@@ -159,5 +161,7 @@ public class InstrumentationFilter {
 	public static boolean isNoOp(MethodInfo m) {
 		return noOpsOption.get().test(m.getKey())==StringMatchResult.REJECT;
 	}
+	
+	
 }
 

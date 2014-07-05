@@ -1076,6 +1076,14 @@ public class Textifier extends Printer {
         text.add(buf.toString());
     }
 
+	@Override
+	public void visitByteCodeIndex(int index) {
+        buf.setLength(0);
+        buf.append(tab2).append("BCI ").append(index);
+        buf.append('\n');
+        text.add(buf.toString());
+	}
+    
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
         buf.setLength(0);
@@ -1462,4 +1470,5 @@ public class Textifier extends Printer {
             }
         }
     }
+
 }

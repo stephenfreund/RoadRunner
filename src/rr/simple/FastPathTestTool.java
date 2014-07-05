@@ -49,10 +49,12 @@ import rr.event.ReleaseEvent;
 import rr.event.SleepEvent;
 import rr.event.StartEvent;
 import rr.event.WaitEvent;
+import rr.state.AbstractArrayState;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.tool.Tool;
 import acme.util.StringMatchResult;
+import acme.util.Util;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -63,15 +65,15 @@ import acme.util.option.CommandLineOption;
  * Use this only for performance tests.
  */
 
-@Abbrev("N")
-final public class EmptyTool extends Tool {
+@Abbrev("FPTest")
+final public class FastPathTestTool extends Tool {
 
 	@Override
 	public String toString() {
-		return "Empty";
+		return "FPTestTool";
 	}
 
-	public EmptyTool(String name, Tool next, CommandLine commandLine) {
+	public FastPathTestTool(String name, Tool next, CommandLine commandLine) {
 		super(name, next, commandLine);
 	}
 
@@ -125,10 +127,23 @@ final public class EmptyTool extends Tool {
 
 
 	public static boolean readFastPath(ShadowVar vs, ShadowThread ts) {
+		Util.log("Read FP");
 		return true;
 	}
 
 	public static boolean writeFastPath(ShadowVar vs, ShadowThread ts) {
+		Util.log("Write FP");
 		return true;
 	}
+
+	public static boolean arrayReadFastPath(int index, AbstractArrayState a, ShadowThread ts) {
+		Util.log("Array Read FP");
+		return true;
+	}
+
+	public static boolean arrayWriteFastPath(int index, AbstractArrayState a, ShadowThread ts) {
+		Util.log("Array Write FP");
+		return true;
+	}
+
 }

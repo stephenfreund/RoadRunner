@@ -40,6 +40,6 @@ package rr.instrument.classes;
 
 import rr.org.objectweb.asm.ClassVisitor;
 
-abstract public class ToolSpecificClassVisitorFactory {
-	public abstract ClassVisitor make(ClassVisitor in);
+public interface ToolSpecificClassVisitorFactory {
+	public ClassVisitor make(ClassVisitor in);
 }
