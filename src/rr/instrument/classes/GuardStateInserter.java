@@ -109,7 +109,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 2 + valueSize, success, field);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 2 + valueSize, success);
 			// 
 			mv.visitVarInsn(ALOAD, 0);
 			// this
@@ -166,7 +166,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success, field);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success);
 
 			mv.visitVarInsn(ALOAD, 0);
 			mv.visitVarInsn(ALOAD, 5);
@@ -215,7 +215,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success, field);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success);
 
 			mv.visitInsn(ACONST_NULL);
 			mv.visitVarInsn(ALOAD, 5);			
@@ -263,7 +263,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success, field);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success);
 
 			mv.visitInsn(ACONST_NULL);
 

@@ -260,7 +260,7 @@ public class RRMethodAdapter extends MethodVisitor implements Opcodes {
 
 	public void visitByteCodeIndex(int index) {
 		this.bci = index;
-		mv.visitByteCodeIndex(index);
+		super.visitByteCodeIndex(index);
 	}
 
 	public int getByteCodeIndex() {

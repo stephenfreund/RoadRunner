@@ -86,7 +86,7 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 			// ShadowVar 
 			super.visitVarInsn(ASTORE, guardStateLoc);	
 		
-			ASMUtil.insertArrayFastPathCode(this, isWrite, arrayShadowLoc, guardStateLoc, threadDataLoc, success, indexLoc);
+			ASMUtil.insertFastPathCode(this, isWrite, guardStateLoc, threadDataLoc, success);
 		} 
 	}
 

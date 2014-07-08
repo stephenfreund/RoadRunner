@@ -44,8 +44,6 @@ import rr.org.objectweb.asm.Type;
 import rr.org.objectweb.asm.commons.Method;
 import acme.util.Util;
 import rr.instrument.Constants;
-import rr.instrument.pragma.PragmaHandler;
-import rr.instrument.pragma.PragmaProcessor;
 import rr.loader.RRTypeInfo;
 import rr.meta.FieldAccessInfo;
 import rr.meta.FieldInfo;
@@ -58,13 +56,6 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 
 	protected static boolean instrument;
 
-	static {
-		PragmaProcessor.addHandler(new PragmaHandler("rr/instrument/pragma/Pragmas", "CHECK", "()V") { 
-			public void pragma() { instrument = true; } });
-		PragmaProcessor.addHandler(new PragmaHandler("rr/instrument/pragma/Pragmas", "NO_CHECK", "()V") { 
-			public void pragma() { instrument = false; } });
-	}
-	
 	public GuardStateInstructionAdapter(final MethodVisitor mv, MethodInfo m) {
 		super(mv, m);
 		instrument = true;
@@ -96,6 +87,7 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 				boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
 				boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
 				FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
+				Util.log("!!!" + access + " " + this.getByteCodeIndex());
 				if (!shouldInstrument(access)) {
 					Util.log("Skipping field access: " + access);
 					super.visitFieldInsn(opcode, owner, name, desc);

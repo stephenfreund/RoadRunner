@@ -652,7 +652,8 @@ public class MethodNode extends MethodVisitor {
         instructions.add(new LineNumberNode(line, getLabelNode(start)));
     }
 
-    public void visitBCI(int index) {
+    @Override
+    public void visitByteCodeIndex(int index) {
         instructions.add(new ByteCodeIndexNode(index));
     }
 

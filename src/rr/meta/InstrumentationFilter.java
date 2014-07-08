@@ -137,21 +137,27 @@ public class InstrumentationFilter {
 	public static CommandLineOption<StringMatcher> noOpsOption  = 
 		CommandLine.makeStringMatcher("noop", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which void methods should be replaced with a no op.  Useful for ignoring methods that check access via stack inspection.");
 
+	private static ToolSpecificInstrumentationFilter toolFilter = new ToolSpecificInstrumentationFilter() {
+		public boolean shouldInstrument(ClassInfo rrClass) { return true; }
+		public boolean shouldInstrument(FieldInfo field) { return true; }
+		public boolean shouldInstrument(MethodInfo rrMethod) { return true; }
+		public boolean shouldInstrument(OperationInfo rrOp) { return true; }
+	};
 
 	public static boolean shouldInstrument(ClassInfo rrClass) {
-		return shouldInstrumentClass.get(rrClass);
+		return shouldInstrumentClass.get(rrClass) && toolFilter.shouldInstrument(rrClass);
 	}
 
 	public static boolean shouldInstrument(FieldInfo field) {
-		return shouldInstrumentField.get(field);
+		return shouldInstrumentField.get(field) && toolFilter.shouldInstrument(field);
 	}
 
 	public static boolean shouldInstrument(MethodInfo rrMethod) {
-		return shouldInstrumentMethod.get(rrMethod);
+		return shouldInstrumentMethod.get(rrMethod) && toolFilter.shouldInstrument(rrMethod);
 	}
 
 	public static boolean shouldInstrument(OperationInfo rrOp) {
-		return shouldInstrumentOp.get(rrOp);
+		return shouldInstrumentOp.get(rrOp) && toolFilter.shouldInstrument(rrOp);
 	}
 
 	public static boolean supportsThreadStateParam(MethodInfo m) {
@@ -160,6 +166,10 @@ public class InstrumentationFilter {
 
 	public static boolean isNoOp(MethodInfo m) {
 		return noOpsOption.get().test(m.getKey())==StringMatchResult.REJECT;
+	}
+	
+	public static void addToolSpecificInstrumentationFilter(ToolSpecificInstrumentationFilter filter) {
+		toolFilter = filter;
 	}
 	
 	

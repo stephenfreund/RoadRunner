@@ -60,7 +60,6 @@ import rr.instrument.methods.SimpleArrayWithValuesInstructionAdapter;
 import rr.instrument.methods.SpecialMethodReplacer;
 import rr.instrument.methods.SystemMethodReplacer;
 import rr.instrument.methods.ThreadDataInstructionAdapter;
-import rr.instrument.pragma.PragmaProcessor;
 import rr.meta.ClassInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
@@ -163,7 +162,6 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 			mv = new SpecialMethodReplacer(mv, newMethod);
 			mv = new SystemMethodReplacer(mv, newMethod);
 			mv = new NoOpMethodReplacer(mv, newMethod);
-			mv = new PragmaProcessor(mv, newMethod);
 			mv = new JSRInlinerAdapter(mv, access, newName, newDesc, signature, exceptions);
 
 			return mv;
