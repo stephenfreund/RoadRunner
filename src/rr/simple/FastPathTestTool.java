@@ -49,22 +49,15 @@ import rr.event.ReleaseEvent;
 import rr.event.SleepEvent;
 import rr.event.StartEvent;
 import rr.event.WaitEvent;
-import rr.state.AbstractArrayState;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.tool.Tool;
-import acme.util.StringMatchResult;
 import acme.util.Util;
 import acme.util.option.CommandLine;
-import acme.util.option.CommandLineOption;
 
 /**
- * Like LastTool, but keeps ShadowVar set to thread, so that
- * the fast path in the Instrumenter is triggered.
- * 
- * Use this only for performance tests.
+ * Test for fast pathing
  */
-
 @Abbrev("FPTest")
 final public class FastPathTestTool extends Tool {
 
@@ -133,16 +126,6 @@ final public class FastPathTestTool extends Tool {
 
 	public static boolean writeFastPath(ShadowVar vs, ShadowThread ts) {
 		Util.log("Write FP");
-		return true;
-	}
-
-	public static boolean arrayReadFastPath(int index, AbstractArrayState a, ShadowThread ts) {
-		Util.log("Array Read FP");
-		return true;
-	}
-
-	public static boolean arrayWriteFastPath(int index, AbstractArrayState a, ShadowThread ts) {
-		Util.log("Array Write FP");
 		return true;
 	}
 
