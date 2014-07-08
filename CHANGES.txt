@@ -35,6 +35,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+July 8, 2014: Various small changes and bug fixes in instrumentation.
+              New CAS-based updaters.
+              Updated to ASM version 5.
+              
 Jan 9, 2012:  Fixed typo in message reporting code for HB tool.
 
 Jan 6, 2012:  Committed change for -lines option.  It now applies to
@@ -45,8 +49,7 @@ Jan 5, 2012:  Committed change for -lines option.  It now applies to
               array ops, field ops, and lock acquire/release.
   
 
-Oct 3, 2011:  
-			  Committed and pushed small code edits from various places.
+Oct 3, 2011:  Committed and pushed small code edits from various places.
               There were some conflicts that should have been resolved 
               correctly.  If problems exist, please use the version from
               June 20.
