@@ -82,7 +82,7 @@ public class RRMain {
 	}
 
 	public static final CommandLineOption<Boolean> noInstrumentOption = 
-		CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.DEPRECATED, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
+		CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.STABLE, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
 
 	public static final CommandLineOption<InstrumentationMode> instrumentOption = 
 		CommandLine.makeEnumChoice("inst", InstrumentationMode.INST, CommandLineOption.Kind.STABLE, "Instrument mode: ISNT for instrument; NOINST for no instrument; REP for build repository", InstrumentationMode.class, 

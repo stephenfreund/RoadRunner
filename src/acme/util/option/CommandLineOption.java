@@ -40,6 +40,7 @@ package acme.util.option;
 
 import acme.util.Assert;
 import acme.util.Strings;
+import acme.util.Util;
 
 /**
  * An option configurable on the command line.
@@ -78,6 +79,9 @@ public abstract class CommandLineOption<T> extends Option<T> {
 		} else if (!hasArg && arg != null) {
 			Assert.fail("Command Line Option '%s' does not take a value", id);
 		} else {
+			if (kind == Kind.DEPRECATED) {
+				Assert.warn("Using Deprecated Option '%s'", id);
+			}
 			apply(arg);
 		}
 	}

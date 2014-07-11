@@ -126,13 +126,18 @@ public class InstrumentationFilter {
 				"-java..*", "-javax..*", "-com.sun..*", "-sun..*", "-rr..*", "-rrtools..*", "-acme..*", "-.*__\\$rr_.*");
 
 	public static CommandLineOption<StringMatcher> methodsSupportThreadStateParam  = 
-		CommandLine.makeStringMatcher("shadowThread", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which methods can be tranformed into version that take a ShadowThread parameter.  The default is all except main, run, and constructors.",
-				"-.*main\\(\\[Ljava/lang/String;\\)V.*", 
-				"-.*run\\(\\)V.*", 
-				"+.*\\$rr__Original.*",
-				"-.*\\$rr.*",
-				"-.*\\<init\\>.*", 
-				"-.*\\<clinit\\>.*");
+			CommandLine.makeStringMatcher("shadowThread", StringMatchResult.ACCEPT, CommandLineOption.Kind.DEPRECATED, "Specifies which methods can be tranformed into version that take a ShadowThread parameter.  No longer used --- JVMs have faster direct access to thread local data than before.",
+					"-.*");
+	
+	
+//	public static CommandLineOption<StringMatcher> methodsSupportThreadStateParam  = 
+//		CommandLine.makeStringMatcher("shadowThread", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which methods can be tranformed into version that take a ShadowThread parameter.  The default is all except main, run, and constructors.",
+//				"-.*main\\(\\[Ljava/lang/String;\\)V.*", 
+//				"-.*run\\(\\)V.*", 
+//				"+.*\\$rr__Original.*",
+//				"-.*\\$rr.*",
+//				"-.*\\<init\\>.*", 
+//				"-.*\\<clinit\\>.*");
 
 	public static CommandLineOption<StringMatcher> noOpsOption  = 
 		CommandLine.makeStringMatcher("noop", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which void methods should be replaced with a no op.  Useful for ignoring methods that check access via stack inspection.");
