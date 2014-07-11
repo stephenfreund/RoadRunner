@@ -114,11 +114,11 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		});
 	}
 
-	static int ts_get_epoch(ShadowThread ts) { Assert.panic("Bad");	return -1;	}
-	static void ts_set_epoch(ShadowThread ts, int v) { Assert.panic("Bad");  }
+	protected static int ts_get_epoch(ShadowThread ts) { Assert.panic("Bad");	return -1;	}
+	protected void ts_set_epoch(ShadowThread ts, int v) { Assert.panic("Bad");  }
 
-	static CV ts_get_cv(ShadowThread ts) { Assert.panic("Bad");	return null; }
-	static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
+	protected static CV ts_get_cv(ShadowThread ts) { Assert.panic("Bad");	return null; }
+	protected static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
 
 
 	static final Decoration<ShadowLock,FastTrackLockData> ftLockData = ShadowLock.makeDecoration("FastTrack:ShadowLock", DecorationFactory.Type.MULTIPLE,
