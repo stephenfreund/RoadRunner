@@ -81,6 +81,7 @@ public final class CoarseArrayState extends AbstractArrayState {
 
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
+		if (shadowVar != expected) return false;
 		shadowVar = v;
 		return true;
 	}

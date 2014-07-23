@@ -53,8 +53,8 @@ public class SafeArrayUpdater extends UnsafeArrayUpdater {
 		if (expectedGS == newGS) return true;
 		int hash = (o.hashCode() + index);
 		synchronized(locks.get(hash)) {
-			o.putState(index, expectedGS, newGS);
-			return true;
+			return o.putState(index, expectedGS, newGS);
+			//return true;
 		}
 	}
 	
