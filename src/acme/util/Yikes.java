@@ -60,10 +60,10 @@ public class Yikes {
 				n++;
 			}
 			yikesMessages.put(msg, n);
-			if (n < Yikes.YIKES_MAX) {
+			if (n <= Yikes.YIKES_MAX) {
 				Util.pad();
 				Util.error("YIKES: " + msg);
-				if (n== Yikes.YIKES_MAX - 1) {
+				if (n== Yikes.YIKES_MAX) {
 					Util.error("Suppressing further yikes messages like that one."); 
 				}
 				Util.err.println();	 

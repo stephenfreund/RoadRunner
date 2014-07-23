@@ -416,7 +416,7 @@ public class Util {
 	/**
 	 * Method to generate sequenced file names.
 	 */
-	static private String makeLogFileName(String relName) {
+	public static String makeLogFileName(String relName) {
 		String path = outputPathOption.get();
 		if (!path.equals("") && path.charAt(path.length() - 1) != File.separatorChar) {
 			path += File.separatorChar;

@@ -1332,7 +1332,6 @@ public class ClassReader {
 
             // visits the instruction at this offset
             int opcode = b[u] & 0xFF;
-            System.out.println(u - codeStart);
             mv.visitByteCodeIndex(u - codeStart);
             switch (ClassWriter.TYPE[opcode]) {
             case ClassWriter.NOARG_INSN:

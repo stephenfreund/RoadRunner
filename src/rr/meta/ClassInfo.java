@@ -201,11 +201,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 	}
 
 	public void setState(State state) {
-		//		Util.log(this + " " + this.state + " -> " + state);
 		this.state = state;
-		//		if (state == State.COMPLETE) {
-		//			Util.log(this + " COMPLETED " + instanceLayout());
-		//		}
 	}
 
 	public void addInterface(ClassInfo i) {

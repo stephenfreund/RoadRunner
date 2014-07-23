@@ -243,7 +243,8 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			Object target = fae.getTarget();
 			if (target == null) {
 				CV initTime = classInitTime.get(((FieldAccessEvent)fae).getInfo().getField().getOwner());
-				tdCV.max(initTime);
+				this.maxEpochAndCV(td, initTime, fae);
+				//tdCV.max(initTime);
 			}
 			if (!fae.isWrite()) {
 				// READ
@@ -354,7 +355,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			vd.cv.max(cv);
 			this.incEpochAndCV(td, fae); 		
 		} else {
-			cv.max(vd.cv);
+			this.maxEpochAndCV(td, vd.cv, fae);
 		}
 		super.volatileAccess(fae);
 	}

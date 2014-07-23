@@ -45,6 +45,7 @@ import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.update.AbstractArrayUpdater;
 import acme.util.Util;
+import acme.util.Yikes;
 
 /** An Event representing an array access (read or write) operation of the target program. */
 public class ArrayAccessEvent extends AccessEvent {
@@ -88,6 +89,7 @@ public class ArrayAccessEvent extends AccessEvent {
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = updater.putState(arrayState, getIndex(), this.getOriginalShadow(), newGS);
 		if (!b) {
+			Yikes.yikes("Bad Updated!");
 			this.originalShadow = getOriginalShadow();
 		}
 		return b;

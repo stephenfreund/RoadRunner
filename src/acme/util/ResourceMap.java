@@ -48,7 +48,7 @@ import acme.util.collections.ArrayIterator;
  */
 public final class ResourceMap<T> implements Iterable<T> {
 	
-	private final Object[] store;
+	private Object[] store;
 	private int count;
 	
 	public ResourceMap(int n) {
@@ -72,7 +72,7 @@ public final class ResourceMap<T> implements Iterable<T> {
 		for (int i = 0; i < count; i++) {
 			newStore[i] = store[i];
 		}
-	//	store = newStore;
+		store = newStore;
 	}
 	
 	@SuppressWarnings("unchecked")

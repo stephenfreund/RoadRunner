@@ -68,7 +68,7 @@ public class ArrayStateFactory {
 	private static int count = 0; // since ConcurrentHashMap size() is slow, approximate here...
 
 	public static CommandLineOption<ArrayMode> arrayOption = 
-			CommandLine.makeEnumChoice("array", ArrayMode.NONE, CommandLineOption.Kind.STABLE, "Determine the granularity of array shadow memory.\n    NONE tracks no array info.\n    FINE uses one location per index.\n    COARSE uses one location per array\n    SPECIAL can change from COARSE to FINE if tool requests it.", ArrayMode.class);
+			CommandLine.makeEnumChoice("array", ArrayMode.FINE, CommandLineOption.Kind.STABLE, "Determine the granularity of array shadow memory.\n    NONE tracks no array info.\n    FINE uses one location per index.\n    COARSE uses one location per array\n    SPECIAL can change from COARSE to FINE if tool requests it.", ArrayMode.class);
 
 
 	public static CommandLineOption<Constructor<? extends AbstractArrayState>> userArrayOption;

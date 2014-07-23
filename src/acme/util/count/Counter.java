@@ -67,4 +67,8 @@ public class Counter extends AbstractCounter {
 	public long getCount() {
 		return count;
 	}
+
+	public void add(int n) {
+		count += n;
+	}
 }

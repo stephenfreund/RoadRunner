@@ -46,7 +46,7 @@ public class Updaters {
 	public static enum UpdateMode { SAFE, UNSAFE, CAS };
 
 	public static CommandLineOption<UpdateMode> updateOptions = 
-			CommandLine.makeEnumChoice("updaters", UpdateMode.SAFE, CommandLineOption.Kind.EXPERIMENTAL, "Specify whether to use synchronized or unsynchronized updates to shadow locations.  Unsynchronized are faster may cause subtle issues because of the JMM.", UpdateMode.class);
+			CommandLine.makeEnumChoice("updaters", UpdateMode.SAFE, CommandLineOption.Kind.EXPERIMENTAL, "Specify whether to use synchronized (safe) or unsynchronized (unsafe) updates to shadow locations.  You should leave this as SAFE unless there is a compelling argument why it is not needed. Unsynchronized are faster may cause subtle issues because of the JMM. CAS is EXPERIMENTAL --- use at your own risk (see CASFieldUpdater.java)", UpdateMode.class);
 
 	public static Class<? extends UnsafeFieldUpdater> fieldUpdaterClass() {
 		return (updateOptions.get() == UpdateMode.SAFE) ? SafeFieldUpdater.class : UnsafeFieldUpdater.class;
