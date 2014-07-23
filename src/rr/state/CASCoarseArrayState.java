@@ -41,6 +41,15 @@ package rr.state;
 import acme.util.Assert;
 import acme.util.Yikes;
 
+/*
+ * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
+ * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
+ * same memory location.
+ * 
+ * I believe this to be true on x86, but have not tested it thoroughly.
+ *   
+ * Use at your own risk.
+ */
 public final class CASCoarseArrayState extends CASAbstractArrayState {
 
 	protected ShadowVar state;
@@ -90,7 +99,7 @@ public final class CASCoarseArrayState extends CASAbstractArrayState {
 
 	@Override
 	public ShadowVar getState(int in) {
-		return state;
+		return (ShadowVar) unsafe.getObjectVolatile(this,  offset);
 	}
 
 	public void setState(ShadowVar state) {

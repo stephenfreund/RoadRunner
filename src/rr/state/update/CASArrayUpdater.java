@@ -47,6 +47,16 @@ import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
 
+/*
+ * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
+ * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
+ * same memory location.
+ * 
+ * I believe this to be true on x86, but have not tested it thoroughly.
+ *   
+ * Use at your own risk.
+ */
+
 public class CASArrayUpdater extends AbstractArrayUpdater {
 
 	public CASArrayUpdater() {
@@ -60,24 +70,4 @@ public class CASArrayUpdater extends AbstractArrayUpdater {
 		if (expectedGS == newGS) return true;
 		return o.putState(index, expectedGS, newGS);
 	}
-
-//	
-//	public final ShadowVar getState(Object o) {
-//		return (ShadowVar) unsafe.getObject(o,  offset);
-//	}
-//
-//	public boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {
-//		try {
-//			if (expectedGS == newGS) return true;
-//			return (cas(o, expectedGS, newGS)); 
-//			//{
-////				Yikes.yikes("Concurrent update"); // Yikes.yikes("Concurrent update on %s: %s.  current=%s  expected=%s  new=%s", getClass(), Util.objectToIdentityString(o), getState(o), expectedGS, newGS);
-////			}
-////			return true;
-//		} catch (ClassCastException e) {
-//			Util.log(this.getClass() + " " + o.getClass());
-//			Assert.fail(e);
-//			return true;
-//		}
-//	}
 }

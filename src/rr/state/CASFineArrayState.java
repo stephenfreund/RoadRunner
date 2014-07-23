@@ -41,6 +41,15 @@ package rr.state;
 import sun.misc.Unsafe;
 import acme.util.Yikes;
 
+/*
+ * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
+ * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
+ * same memory location.
+ * 
+ * I believe this to be true on x86, but have not tested it thoroughly.
+ *   
+ * Use at your own risk.
+ */
 public final class CASFineArrayState extends CASAbstractArrayState {
 
 	protected final ShadowVar[] shadowVar;
@@ -83,7 +92,8 @@ public final class CASFineArrayState extends CASAbstractArrayState {
 //			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
 //			return shadowVar[0];
 //		}
-		return shadowVar[index];
+//		return shadowVar[index];
+		return (ShadowVar) get(shadowVar, index);
 	}
 
 	@Override

@@ -46,6 +46,15 @@ import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
 
+/*
+ * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
+ * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
+ * same memory location.
+ * 
+ * I believe this to be true on x86, but have not tested it thoroughly.
+ *   
+ * Use at your own risk.
+ */
 public class CASFieldUpdater extends AbstractFieldUpdater {
 
     private final long offset;
@@ -58,12 +67,12 @@ public class CASFieldUpdater extends AbstractFieldUpdater {
     
 	private final boolean cas(Object o, ShadowVar expected, ShadowVar newState) {
 		final boolean b = unsafe.compareAndSwapObject(o, offset, expected, newState);
-		if (!b) Yikes.yikes("Atomic updated failed.");
+		if (!b) Yikes.yikes("CASFieldUpdater: atomic updated failed.");
 		return b;
 	}
 
 	public final ShadowVar getState(Object o) {
-		return (ShadowVar) unsafe.getObject(o,  offset);
+		return (ShadowVar) unsafe.getObjectVolatile(o,  offset);
 	}
 
 	public boolean putState(Object o, ShadowVar expectedGS, ShadowVar newGS) {

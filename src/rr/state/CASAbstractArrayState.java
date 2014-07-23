@@ -40,7 +40,17 @@ package rr.state;
 
 import sun.misc.Unsafe;
 import acme.util.Assert;
+import acme.util.Yikes;
 
+/*
+ * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
+ * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
+ * same memory location.
+ * 
+ * I believe this to be true on x86, but have not tested it thoroughly.
+ *   
+ * Use at your own risk.
+ */
 public abstract class CASAbstractArrayState extends AbstractArrayState {
 
 	public CASAbstractArrayState(Object array) {
@@ -67,6 +77,12 @@ public abstract class CASAbstractArrayState extends AbstractArrayState {
 
 	protected static final boolean cas(ShadowVar[] shadow, int index, ShadowVar expected, ShadowVar newState) {
 		final boolean b = unsafe.compareAndSwapObject(shadow, byteOffset(index), expected, newState);
+		if (!b) Yikes.yikes("CASAbstractArrayState: atomic updated failed.");
 		return b;
 	}
+
+	protected static final ShadowVar get(ShadowVar[] shadow, int index) {
+		return (ShadowVar) unsafe.getObjectVolatile(shadow, byteOffset(index));
+	}
+
 }
