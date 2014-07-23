@@ -87,7 +87,6 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 				boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
 				boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
 				FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
-				Util.log("!!!" + access + " " + this.getByteCodeIndex());
 				if (!shouldInstrument(access)) {
 					Util.log("Skipping field access: " + access);
 					super.visitFieldInsn(opcode, owner, name, desc);
