@@ -100,9 +100,8 @@ To Run:
 6.  Running on benchmarks:
 
     When performing comparisions to other analysis platforms, you will
-    need to pay particular attention to several options.  In
-    particular, you will likely want to use -array to turn on checking
-    of arrays.  Otherwise array accesses will not be instrumented.
+    need to pay particular attention to several options, including 
+    -array and -field to ensure memory is instrumented as you intend. 
 
     In addition, RoadRunner includes specialized handling of various
     barrier implementations to facilitate writing analyses that must
