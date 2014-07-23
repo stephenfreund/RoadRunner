@@ -47,7 +47,7 @@ import acme.util.count.Counter;
  * For efficiency, clock vectors are mutable, extensible functions from ShadowThread ids to ints
  */
 public class CV implements Serializable {
-	private int[] a;
+	protected int[] a;
 	private static final int FAST = 8;
 
 	private static final Counter cvCount = new Counter("CV", "Count");
