@@ -122,10 +122,11 @@ public class RREventGenerator extends RR {
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
 		if (gs == null) {
+			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);
 			Assert.assertTrue(gs != null);
 			if (!updater.putState(target, null, gs)) {
-				Assert.warn("null gs");
+				Assert.warn("concurrent initialization of guard state");
 				gs = updater.getState(target);
 				if (gs == null) Assert.fail("concurrent updates to new var state not resolved properly: " + fae + " " + fae.getShadow());
 			}
@@ -551,6 +552,7 @@ public class RREventGenerator extends RR {
 			aae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(aae);
 			if (!aae.putShadow(gs)) {
+				Yikes.yikes("Concurrent guard state init...");
 				gs = as.getState(index);
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
 			}
