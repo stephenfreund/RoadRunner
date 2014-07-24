@@ -70,6 +70,7 @@ import acme.util.Util;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 import acme.util.Assert;
+import acme.util.Yikes;
 
 
 public class RRValueEventGenerator extends RR {
