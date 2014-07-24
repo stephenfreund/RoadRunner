@@ -56,7 +56,6 @@ import acme.util.Yikes;
  *   
  * Use at your own risk.
  */
-
 public class CASArrayUpdater extends AbstractArrayUpdater {
 
 	public CASArrayUpdater() {

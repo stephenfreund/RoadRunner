@@ -136,7 +136,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 	}
 
 
-	protected FastTrackGuardState createHelper(AccessEvent e) {
+	protected ShadowVar createHelper(AccessEvent e) {
 		return new FastTrackGuardState(e.isWrite(), ts_get_epoch(e.getThread()));
 	}
 

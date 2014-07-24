@@ -131,6 +131,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 			fae.putOriginalShadow(null); \
 			gs = getTool().makeShadowVar(fae);\
 			if (!fae.putShadow(gs)) {\
+			  Yikes.yikes("Concurrent guard state init..."); \
 			  gs = updater.getState(target); \
 			  Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly"); \
 			}\
@@ -158,6 +159,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 			fae.putOriginalShadow(null);\
 			gs = getTool().makeShadowVar(fae);\
 			if (!fae.putShadow(gs)) {\
+		   	    Yikes.yikes("Concurrent guard state init..."); \
 				gs = updater.getState(target);\
 				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");\
 			}\
@@ -188,6 +190,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 			aae.putOriginalShadow(null); \
 			gs = getTool().makeShadowVar(aae);\
 			if (!aae.putShadow(gs)) {\
+			  Yikes.yikes("Concurrent guard state init..."); \
 			  gs = as.getState(index); \
 			  Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly"); \
 			}\
