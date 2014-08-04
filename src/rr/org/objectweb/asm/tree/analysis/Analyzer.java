@@ -273,7 +273,7 @@ public class Analyzer<V extends Value> implements Opcodes {
 								merge(insn + 1, current, subroutine);
 								newControlFlowEdge(insn, insn + 1);
 							} else {
-								if (!(insnOpcode >= IRETURN && insnOpcode <= RETURN)) Assert.fail("moo " + insnOpcode);
+								if (!(insnOpcode >= IRETURN && insnOpcode <= RETURN || insnOpcode == ATHROW)) Assert.fail("Bad Opcode " + insnOpcode);
 							}
 						}
 

@@ -244,20 +244,22 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 
 	protected void makeInstanceFieldList() {
 		if (instanceFields == null) {
-
-			if (this.superClass != null) {
-				superClass.makeInstanceFieldList();
-				instanceFields = new Vector<FieldInfo>(superClass.instanceFields);
-			} else {
-				instanceFields = new Vector<FieldInfo>();
-			}
-			for (FieldInfo x : fields) {
-				if (!x.isStatic() && !x.isFinal()) {
-					instanceFields.add(x);
+			synchronized(this) {
+				if (instanceFields == null) {
+					if (this.superClass != null) {
+						superClass.makeInstanceFieldList();
+						instanceFields = new Vector<FieldInfo>(superClass.instanceFields);
+					} else {
+						instanceFields = new Vector<FieldInfo>();
+					}
+					for (FieldInfo x : fields) {
+						if (!x.isStatic() && !x.isFinal()) {
+							instanceFields.add(x);
+						}
+					}
 				}
 			}
 		}
-
 	}
 
 	public Vector<FieldInfo> getInstanceFields() {

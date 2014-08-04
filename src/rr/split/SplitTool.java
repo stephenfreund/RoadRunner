@@ -128,14 +128,14 @@ public class SplitTool extends Tool {
 
 	@Override
 	public void fini() {
-		ToolVisitor f = new ToolVisitor() {
-			public void apply(Tool t) {
-				t.fini();
-			}
-
-		};
-		firstNext.accept(f);
-		secondNext.accept(f);
+//		ToolVisitor f = new ToolVisitor() {
+//			public void apply(Tool t) {
+//				t.fini();
+//			}
+//
+//		};
+		firstNext.fini();
+		secondNext.fini();
 	}
 
 	@Override

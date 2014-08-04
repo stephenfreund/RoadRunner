@@ -165,7 +165,6 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 				Textifier tt = new Textifier();
 				TraceMethodVisitor t = new TraceMethodVisitor(tt);
 				for (int k = 0; k < m; k++) {
-					//Util.logf("INSTR %d", k);
 					if (frames[k] != null) {
 						t.visitAnalysisFrame(frames[k]);
 					}
@@ -179,7 +178,6 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 					s += o + "\n";
 					ik++;
 				}
-				Util.log(s);
 				Assert.panic(exc);
 			}
 			
