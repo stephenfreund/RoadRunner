@@ -209,7 +209,6 @@ public class RRMain {
 		cl.add(AbstractArrayStateCache.noOptimizedArrayLookupOption);
 		cl.add(infinitelyRunningThreadsOption);
 		cl.add(rr.instrument.methods.ThreadDataInstructionAdapter.callSitesOption);
-		cl.add(ArrayAllocSiteTracker.arraySitesOption);
 
 		cl.addGroup("Limits");
 		cl.add(rr.tool.RR.timeOutOption);

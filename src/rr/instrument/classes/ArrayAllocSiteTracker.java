@@ -59,9 +59,6 @@ import acme.util.option.CommandLineOption;
 
 public class ArrayAllocSiteTracker extends RRClassAdapter {
 	
-	public final static CommandLineOption<Boolean> arraySitesOption  = 
-			CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Specifies which array alloc sites to watch.  The default is all");
-	
 	public static final ConcurrentIdentityHashMap<Object, SourceLocation> allocSites = new ConcurrentIdentityHashMap<Object,SourceLocation>();
 
 	private ClassInfo currentClass;

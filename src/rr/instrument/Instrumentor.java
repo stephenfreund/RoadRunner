@@ -192,7 +192,7 @@ public class Instrumentor {
 				cv1 = new InterruptFixer(cv1);
 				cv1 = new CloneFixer(cv1);
 				cv1 = new ClassInitNotifier(currentClass, cv1);
-				if (ArrayAllocSiteTracker.arraySitesOption.get()) {
+				if (trackArraySitesOption.get()) {
 					cv1 = new ArrayAllocSiteTracker(currentClass, cv1);
 				}
 				cv1 = new AbstractOrphanFixer(cv1);
