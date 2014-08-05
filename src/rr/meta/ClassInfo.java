@@ -262,7 +262,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 		}
 	}
 
-	public Vector<FieldInfo> getInstanceFields() {
+	public synchronized Vector<FieldInfo> getInstanceFields() {
 		assertStateAtLeast(State.PRELOADED);
 		makeInstanceFieldList();
 		return instanceFields;

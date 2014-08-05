@@ -183,7 +183,7 @@ public class SplitTool extends Tool {
 		super.access(fae);
 	}
 
-	protected synchronized void accessHelper(FieldAccessEvent fae) { 
+	protected void accessHelper(FieldAccessEvent fae) { 
 		SplitVarState sgs = (SplitVarState)fae.getOriginalShadow();
 		AbstractFieldUpdater old = fae.getUpdater();
 		final ShadowThread currentThread = fae.getThread();
