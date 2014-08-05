@@ -41,7 +41,6 @@ package rr.instrument.classes;
 import rr.org.objectweb.asm.ClassVisitor;
 import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
-
 import rr.instrument.methods.RRMethodAdapter;
 import rr.instrument.tools.ArrayFilterTool;
 import rr.loader.MethodResolutionException;
@@ -53,9 +52,16 @@ import rr.org.objectweb.asm.Label;
 import rr.state.ArrayStateFactory;
 import acme.util.Assert;
 import acme.util.StringMatchResult;
+import acme.util.StringMatcher;
 import acme.util.identityhash.ConcurrentIdentityHashMap;
+import acme.util.option.CommandLine;
+import acme.util.option.CommandLineOption;
 
 public class ArrayAllocSiteTracker extends RRClassAdapter {
+	
+	public final static CommandLineOption<Boolean> arraySitesOption  = 
+			CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Specifies which array alloc sites to watch.  The default is all");
+	
 	public static final ConcurrentIdentityHashMap<Object, SourceLocation> allocSites = new ConcurrentIdentityHashMap<Object,SourceLocation>();
 
 	private ClassInfo currentClass;

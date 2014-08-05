@@ -43,6 +43,7 @@ import rr.meta.FieldAccessInfo;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.update.AbstractFieldUpdater;
+import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
 
