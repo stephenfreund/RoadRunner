@@ -75,4 +75,5 @@ final public class ThreadLocalCounter extends AbstractCounter {
 	public String get() {
 		return String.format("%,10d", total());
 	}
+
 }
