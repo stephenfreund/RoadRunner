@@ -186,7 +186,7 @@ public class MetaDataInfoMaps {
 				for (FieldInfo f : c.getFields()) {
 					out.print("    ");
 					out.print(InstrumentationFilter.shouldInstrument(f) ? "instrumented " : "");
-					out.print(f.getOffset() + " : ");
+					out.print(f.getInstanceOffset() + " : ");
 					out.print(f.isSynthetic() ? "synthetic " : "");
 					out.print(f.isFinal() ? "final " : "");
 					out.print(f.isVolatile() ? "volatile " : "");
