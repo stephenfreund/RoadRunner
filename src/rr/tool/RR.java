@@ -365,6 +365,7 @@ public class RR {
 		xml.print("warningsTotal", Assert.getNumWarnings());
 		xml.print("yikesTotal", Yikes.getNumYikes());
 		xml.print("failed", Assert.getFailed());
+		xml.print("failedReason", Assert.getFailedReason());
 
 
 		xml.print("time", endTime - startTime);
