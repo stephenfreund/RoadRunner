@@ -58,7 +58,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 	protected final Vector<ClassInfo> interfaces = new Vector<ClassInfo>();
 	protected final Vector<MethodInfo> methods = new Vector<MethodInfo>();
 
-	protected Vector<FieldInfo> instanceFields;
+	protected volatile Vector<FieldInfo> instanceFields;
 
 
 	public ClassInfo(int id, SourceLocation loc, String name, boolean isSynthetic) {
@@ -262,7 +262,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 		}
 	}
 
-	public synchronized Vector<FieldInfo> getInstanceFields() {
+	public Vector<FieldInfo> getInstanceFields() {
 		assertStateAtLeast(State.PRELOADED);
 		makeInstanceFieldList();
 		return instanceFields;
