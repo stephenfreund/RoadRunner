@@ -134,8 +134,8 @@ public class SplitTool extends Tool {
 //			}
 //
 //		};
-		firstNext.fini();
-		secondNext.fini();
+//		firstNext.fini();
+//		secondNext.fini();
 	}
 
 	@Override
@@ -158,7 +158,9 @@ public class SplitTool extends Tool {
 
 	@Override
 	public ShadowVar makeShadowVar(AccessEvent fae) {
-		return new SplitVarState(firstNext.makeShadowVar(fae), secondNext.makeShadowVar(fae));
+		ShadowVar makeShadowVarFirst = firstNext.makeShadowVar(fae);
+		ShadowVar makeShadowVarSecond = secondNext.makeShadowVar(fae);
+		return new SplitVarState(makeShadowVarFirst, makeShadowVarSecond);
 	}
 	
 	@Override

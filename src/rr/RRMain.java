@@ -45,6 +45,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 
 import rr.instrument.Instrumentor;
+import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.instrument.classes.CloneFixer;
 import rr.instrument.classes.ThreadDataThunkInserter;
 import rr.meta.InstrumentationFilter;

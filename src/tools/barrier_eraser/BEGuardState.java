@@ -55,7 +55,6 @@ public final class BEGuardState implements ShadowVar {
 	public String toString() {
 		return String.format("<state=%s barrierClock=%d>", state, barrierClock);
 	}
-
 }
 
 

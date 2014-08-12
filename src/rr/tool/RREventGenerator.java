@@ -121,6 +121,7 @@ public class RREventGenerator extends RR {
 		fae.setInfo(fad);
 		fae.setUpdater(updater);
 		fae.setWrite(isWrite);
+
 		if (gs == null) {
 			fae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(fae);

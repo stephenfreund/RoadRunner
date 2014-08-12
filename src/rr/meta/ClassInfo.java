@@ -58,7 +58,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 	protected final Vector<ClassInfo> interfaces = new Vector<ClassInfo>();
 	protected final Vector<MethodInfo> methods = new Vector<MethodInfo>();
 
-	protected Vector<FieldInfo> instanceFields;
+	protected volatile Vector<FieldInfo> instanceFields;
 
 
 	public ClassInfo(int id, SourceLocation loc, String name, boolean isSynthetic) {
@@ -246,17 +246,19 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 		if (instanceFields == null) {
 			synchronized(this) {
 				if (instanceFields == null) {
+					Vector<FieldInfo> tmpFields;
 					if (this.superClass != null) {
 						superClass.makeInstanceFieldList();
-						instanceFields = new Vector<FieldInfo>(superClass.instanceFields);
+						tmpFields = new Vector<FieldInfo>(superClass.instanceFields);
 					} else {
-						instanceFields = new Vector<FieldInfo>();
+						tmpFields = new Vector<FieldInfo>();
 					}
 					for (FieldInfo x : fields) {
 						if (!x.isStatic() && !x.isFinal()) {
-							instanceFields.add(x);
+							tmpFields.add(x);
 						}
 					}
+					instanceFields = tmpFields;
 				}
 			}
 		}
@@ -271,7 +273,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 	public int offsetOfInstanceField(FieldInfo x) {
 		makeInstanceFieldList();
 		int i = instanceFields.indexOf(x);
-		Assert.assertTrue(i != -1 || x.isStatic() || x.isVolatile());
+		Assert.assertTrue(i != -1 || x.isStatic() || x.isFinal(), x + " ? " + instanceFields);
 		return i;
 	}
 

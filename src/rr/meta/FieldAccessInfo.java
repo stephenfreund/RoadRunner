@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.meta;
 
+import acme.util.Assert;
+
 public class FieldAccessInfo extends AccessInfo {
 
 	protected final FieldInfo field;
