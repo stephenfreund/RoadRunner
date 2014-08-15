@@ -248,7 +248,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			}
 			if (!fae.isWrite()) {
 				// READ
-				retry: do {
+				retry: while (true) {
 					final long orig = x.getWREpochs();
 					final int lastReadEpoch = EpochPair.read(orig);
 
@@ -290,10 +290,11 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 					if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
 						error(fae, 4, "write-by-thread-", lastWriter, "read-by-thread-", tid);
 					}
-				} while (false);  // awesome...
+					break;  // don't go back and retry again...
+				}
 			} else {
 				// WRITE
-				retry: do {
+				retry: while (true) {
 					final long orig = x.getWREpochs();
 					final int lastWriteEpoch = EpochPair.write(orig);
 
@@ -337,7 +338,8 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 					if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
 						error(fae, 1, "write-by-thread-", lastWriter, "write-by-thread-", tid);
 					}
-				} while(false);
+					break; // don't go back and retry
+				}
 			}
 		} else {
 			super.access(fae);
