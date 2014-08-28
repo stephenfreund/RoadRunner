@@ -337,9 +337,27 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 			// ShadowVar 
 			super.visitVarInsn(ASTORE, guardStateLoc);	
 			// 
-			ASMUtil.insertFastPathCode(this, isWrite, guardStateLoc, threadDataLoc, success);
+			ASMUtil.insertArrayFastPathCode(this, isWrite, shadowLoc, guardStateLoc, threadDataLoc, success, this.indexLoc);
 		}
 	}
+
+
+	//
+	//  Old Version that didn't have the option to use indicies.
+	//	private void insertFastPathCode(ArrayShadowValue v, final Label success) {
+	//		if (!RR.nofastPathOption.get()) {
+	//			super.visitVarInsn(ALOAD, locForArrayShadow(v.id));				
+	//			// target-shadow
+	//			super.visitVarInsn(ILOAD, this.indexLoc);
+	//			// index target-shadow 
+	//			this.invokeVirtual(arrayShadowType, getStateMethod);
+	//			// ShadowVar 
+	//			super.visitVarInsn(ASTORE, guardStateLoc);	
+	//			// 
+	//			ASMUtil.insertFastPathCode(this, false, guardStateLoc, threadDataLoc, success);
+	//			// 
+	//		}
+	//	}
 
 
 	protected void putArrayShadowIntoCacheVar(ArrayShadowValue v) {

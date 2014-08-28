@@ -108,11 +108,13 @@ public class CV implements Serializable {
 		}
 	}
 
-	/* Requires this.a.length >= c.a.length */
+	/* Requires this.a.length <= c.a.length */
 	final private void slowMax(CV c) {
 		int[] ca = c.a;
 		int[] thisa = this.a;
-		for(int i = FAST; i < ca.length; i++) {
+		// iterate until thisa.length since someone may have extended ca since
+		// we verified it was long enough.
+		for(int i = FAST; i < thisa.length; i++) {
 			if (thisa[i] < ca[i]) thisa[i] = ca[i];
 		}
 	}

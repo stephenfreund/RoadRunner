@@ -38,32 +38,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package acme.util.count;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Vector;
-import java.util.Map.Entry;
-
-import acme.util.count.AbstractCounter;
-import acme.util.count.Counter;
 
 final public class ThreadLocalCounter extends AbstractCounter {
 
-	long[] counts = new long[128];
+	final long[] counts;
 	
-	public ThreadLocalCounter(String group, String name) {
+	public ThreadLocalCounter(String group, String name, int n) {
 		super(group, name);
+		counts = new long[n];
 	}
 		
 	public void inc(int tid) {
 		counts[tid]++;
 	}
 	
-	public void add(int tid, int n) {
+	public void add(int tid, long n) {
 		counts[tid] += n;
 	}
 	
-	private long total() {
+	public long total() {
 		long total = 0;
 		for (long x : counts) {
 			total += x;

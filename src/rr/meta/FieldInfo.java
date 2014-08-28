@@ -38,10 +38,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.meta;
 
+import java.util.Vector;
+
 import rr.loader.Loader;
 import rr.loader.LoaderContext;
 import rr.state.update.AbstractFieldUpdater;
 import acme.util.Assert;
+import acme.util.Util;
 
 public class FieldInfo extends MetaDataInfo {
 	protected final ClassInfo rrClass;
@@ -54,6 +57,8 @@ public class FieldInfo extends MetaDataInfo {
 
 	protected transient AbstractFieldUpdater updater = null;
 
+	final static Vector<FieldInfo> statics = new Vector<FieldInfo>();
+	
 	public FieldInfo(int id, SourceLocation loc, ClassInfo rrClass, String name, String descriptor, boolean isSynthetic) {
 		super(id, loc);
 		this.rrClass = rrClass;
@@ -66,6 +71,9 @@ public class FieldInfo extends MetaDataInfo {
 		this.isFinal = isFinal;
 		this.isVolatile = isVolatile;
 		this.isStatic = isStatic;
+		if (isStatic) {
+			statics.add(this);
+		}
 	}
 
 	public ClassInfo getOwner() {
@@ -131,8 +139,18 @@ public class FieldInfo extends MetaDataInfo {
 		updater = guardStateThunk;
 	}
 
+	private int offset = -1;
+
 	public int getInstanceOffset() {
-		return this.getOwner().offsetOfInstanceField(this);
+		if (offset == -1) {
+			if (!isStatic) {
+				return offset = this.getOwner().offsetOfInstanceField(this);
+			} else {
+				return offset = statics.indexOf(this);				
+			}
+		} else { 
+			return offset;
+		}
 	}
 
 }

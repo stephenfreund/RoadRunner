@@ -45,7 +45,7 @@ import rr.instrument.hooks.SpecialMethodCallBack;
 import rr.instrument.hooks.SpecialMethodListener;
 import rr.instrument.hooks.SpecialMethods;
 import rr.state.ShadowThread;
-import acme.util.ResourceManager;
+import acme.util.WeakResourceManager;
 import acme.util.Util;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
@@ -91,7 +91,7 @@ public class BarrierMonitor<T> implements SpecialMethodListener {
 
 		});
 
-	private final ResourceManager<Object, T> barriers = new ResourceManager<Object, T>() {
+	private final WeakResourceManager<Object, T> barriers = new WeakResourceManager<Object, T>() {
 		@Override
 		protected T make(Object k) {
 			return defaultValue.get(k);
@@ -103,7 +103,7 @@ public class BarrierMonitor<T> implements SpecialMethodListener {
 		int count;
 	}
 
-	private final ResourceManager<Object, BarrierState> barrierState = new ResourceManager<Object, BarrierState>() {
+	private final WeakResourceManager<Object, BarrierState> barrierState = new WeakResourceManager<Object, BarrierState>() {
 		@Override
 		protected BarrierState make(Object k) {
 			BarrierState b = new BarrierState();

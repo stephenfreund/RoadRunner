@@ -62,7 +62,7 @@ final public class HighWaterMark extends AbstractCounter {
 		if (count > max) max = count;
 	}
 	
-	final public void set(int n) {
+	final public void set(long n) {
 		count = n;
 		if (n > max) max = n;
 	}

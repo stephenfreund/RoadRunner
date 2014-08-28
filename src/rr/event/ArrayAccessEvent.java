@@ -89,8 +89,8 @@ public class ArrayAccessEvent extends AccessEvent {
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = updater.putState(arrayState, getIndex(), this.getOriginalShadow(), newGS);
 		if (!b) {
-			Yikes.yikes("Bad Updated!");
-			this.originalShadow = getOriginalShadow();
+		    Yikes.yikes("Bad Update");
+			this.originalShadow = getShadow();
 		}
 		return b;
 

@@ -127,7 +127,7 @@ public class RREventGenerator extends RR {
 			gs = getTool().makeShadowVar(fae);
 			Assert.assertTrue(gs != null);
 			if (!updater.putState(target, null, gs)) {
-				Assert.warn("concurrent initialization of guard state");
+				Yikes.yikes("concurrent initialization of guard state");
 				gs = updater.getState(target);
 				if (gs == null) Assert.fail("concurrent updates to new var state not resolved properly: " + fae + " " + fae.getShadow());
 			}
@@ -143,6 +143,7 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -153,6 +154,7 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEvent(target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -191,8 +193,9 @@ public class RREventGenerator extends RR {
 
 	public static void volatileWriteAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
-			getTool().volatileAccess(fae);					
+			VolatileAccessEvent ae = prepVolatileAccessEvent(target, gs, fadId, td, true);
+			getTool().volatileAccess(ae);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -200,7 +203,9 @@ public class RREventGenerator extends RR {
 
 	public static void volatileReadAccess(Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+			VolatileAccessEvent ae = prepVolatileAccessEvent(target, gs, fadId, td, false);
+			getTool().volatileAccess(ae);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -227,6 +232,7 @@ public class RREventGenerator extends RR {
 				ae.setLock(ld);
 
 				firstAcquire.acquire(ae); 
+				ae.setLock(null);
 			} 
 		} catch (Throwable e) {
 			Assert.panic(e);
@@ -531,6 +537,8 @@ public class RREventGenerator extends RR {
 					arrayAccessId, td, as, false);
 
 			firstAccess.access(aae);
+			aae.setTarget(null);
+
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -553,9 +561,9 @@ public class RREventGenerator extends RR {
 			aae.putOriginalShadow(null);
 			gs = getTool().makeShadowVar(aae);
 			if (!aae.putShadow(gs)) {
-				Yikes.yikes("Concurrent guard state init...");
+				Yikes.yikes("Concurrent array guard state init...");
 				gs = as.getState(index);
-				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly");
+				Assert.assertTrue(gs != null, "concurrent updates to new var state not resolved properly.");
 			}
 		} 
 		aae.putOriginalShadow(gs);
@@ -575,7 +583,7 @@ public class RREventGenerator extends RR {
 					arrayAccessId, td, as, true);
 
 			firstAccess.access(aae);
-
+			aae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -639,6 +647,7 @@ public class RREventGenerator extends RR {
 			InterruptedEvent e = td.getInterruptedEvent();
 			e.setReason(o);
 			getTool().interrupted(e);
+			e.setReason(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -708,6 +717,7 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, false);
 			firstAccess.access(ae);	
 			ae.setInfo(null);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -718,6 +728,7 @@ public class RREventGenerator extends RR {
 			FieldAccessEvent ae = prepAccessEventML(target, gs, fadId, td, true);
 			firstAccess.access(ae);
 			ae.setInfo(null);
+			ae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -763,6 +774,7 @@ public class RREventGenerator extends RR {
 		try {
 			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, true);
 			getTool().volatileAccess(fae);					
+			fae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
@@ -770,7 +782,9 @@ public class RREventGenerator extends RR {
 
 	public static void volatileReadAccessML(Object target, ShadowVar gs, int fadId, ShadowThread td) {
 		try {
-			getTool().volatileAccess(prepVolatileAccessEvent(target, gs, fadId, td, false));					
+			VolatileAccessEvent fae = prepVolatileAccessEvent(target, gs, fadId, td, false);
+			getTool().volatileAccess(fae);
+			fae.setTarget(null);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}

@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import acme.util.Assert;
 import acme.util.Util;
 import acme.util.count.Counter;
 
@@ -57,10 +58,12 @@ public final class SpecializingArrayState extends AbstractArrayState {
 	public synchronized void specialize() {
 		if (!specialized) {
 			count.inc();
-			Util.logf("Specializing array %s", Util.objectToIdentityString(array));
+			Object target = this.getArray();
+			Assert.assertTrue(target != null);
+			Util.logf("Specializing array %s", Util.objectToIdentityString(target));
 			ShadowVar orig = delegate.getState(0);
-			delegate = new FineArrayState(array);
-			for (int i = 0; i < lengthOf(array); i++) {
+			delegate = new FineArrayState(target);
+			for (int i = 0; i < lengthOf(target); i++) {
 				delegate.putState(i, null, orig);
 			}
 			specialized = true;

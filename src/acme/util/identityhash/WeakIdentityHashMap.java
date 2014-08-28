@@ -716,5 +716,20 @@ public class WeakIdentityHashMap<K,V> {
     		}
     	}
     }
-    
+
+    /**
+     * Applies the ValueFunction to all values with non-null keys.
+     * 
+     * @param f	the ValueFunction
+     */
+    public void applyToAllActiveKeys(ValueFunction<K> f) {
+    	for (Entry<K,V> entry : getTable()) {
+    		for (Entry<K,V> e = entry; e != null; e = e.next) {
+    			if (e.get() != null) {
+    				f.apply(e.get());
+    			}
+    		}
+    	}
+    }
+
 }

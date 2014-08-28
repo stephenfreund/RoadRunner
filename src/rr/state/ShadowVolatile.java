@@ -42,6 +42,7 @@ package rr.state;
 import rr.RRMain;
 import rr.meta.FieldInfo;
 import acme.util.ResourceManager;
+import acme.util.WeakResourceManager;
 import acme.util.Util;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
@@ -100,15 +101,19 @@ public class ShadowVolatile extends Decoratable {
 		return fd;
 	}
 
-	private static class ByFieldTable extends ResourceManager<FieldInfo,ResourceManager<Object,ShadowVolatile>> {
+	/*
+	 * Use Weak Resource Managers to avoid pinning down objects
+	 * that could be collected.
+	 */
+	private static class ByFieldTable extends ResourceManager<FieldInfo,WeakResourceManager<Object,ShadowVolatile>> {
 
 		public ByFieldTable() {
 			super(11);
 		}
 
 		@Override
-		protected ResourceManager<Object, ShadowVolatile> make(final FieldInfo field) {
-			return new ResourceManager<Object, ShadowVolatile>(997) {
+		protected WeakResourceManager<Object, ShadowVolatile> make(final FieldInfo field) {
+			return new WeakResourceManager<Object, ShadowVolatile>() {
 
 				@Override
 				protected ShadowVolatile make(Object obj) {

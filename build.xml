@@ -101,11 +101,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	<target name="wc">
 		<echo> acme loc: </echo>
 		<exec executable="bash">
-			<arg line="-c 'find ${src.dir}/acme -name *.java | xargs wc -l | tail -1'" />
+			<arg line="-c 'find ${src.dir}/acme -name \*.java | xargs wc -l | tail -1'" />
 		</exec>
 		<echo> rr loc: </echo>
 		<exec executable="bash">
-			<arg line="-c 'find ${src.dir}/rr -name *.java | xargs wc -l | tail -1'" />
+			<arg line="-c 'find ${src.dir}/rr -name \*.java | xargs wc -l | tail -1'" />
 		</exec>
 	</target>
 

@@ -70,13 +70,11 @@ final public class Timer extends AbstractCounter {
 
 	@Override
 	public String get() {
-		long inc = 0;  // extra bits that haven't been committed yet...
-		long b = 0;  // extra bits that haven't been committed yet...
-		double totalTime = (this.totalTime + inc) / 1000000;
-		if (count + b > 0) {
-			return String.format("<total>%g</total> <count>%d</count> <ave>%g</ave>", totalTime, (count + b), totalTime / (count + b));
+		double totalTime = (this.totalTime) / 1000000;
+		if (count > 0) {
+			return String.format("<total>%g</total> <count>%d</count> <ave>%g</ave>", totalTime, count, totalTime / count);
 		} else {
-			return String.format("<total>%g</total> <count>%d</count> ", totalTime, (count + b));
+			return String.format("<total>%g</total> <count>%d</count> ", totalTime, count);
 		}
 	}
 }

@@ -57,6 +57,10 @@ import acme.util.option.CommandLine;
 
 /**
  * Test for fast pathing
+ *  Like LastTool, but keeps ShadowVar set to thread, so that 
+ *  the fast path in the Instrumenter is triggered.
+ * 
+ * Use this only for performance tests.
  */
 @Abbrev("FPTest")
 final public class FastPathTestTool extends Tool {
@@ -82,7 +86,7 @@ final public class FastPathTestTool extends Tool {
 	// Does not handle enter/exit, so that the instrumentor won't instrument method invocations.  
 	//	public void enter(MethodEvent me) {}
 	//	public void exit(MethodEvent me) {}	
-	
+
 	@Override
 	public void acquire(AcquireEvent ae) {}	
 	@Override
@@ -111,7 +115,7 @@ final public class FastPathTestTool extends Tool {
 	public void preStart(StartEvent se) {}
 	@Override
 	public void postStart(StartEvent se) {}
-	
+
 	@Override
 	public void interrupted(InterruptedEvent e) { }
 

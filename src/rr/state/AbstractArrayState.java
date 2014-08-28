@@ -38,25 +38,39 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import java.lang.ref.WeakReference;
+
 import acme.util.Assert;
 import acme.util.Util;
 
 public abstract class AbstractArrayState {
 
-	final protected Object array;
+	// Must be a Weak Ref so that our shadow state does not
+	//   pin down objects that could otherwise be collected. 
+	final private WeakReference<Object> array;
+	
 	protected final  int hashCode;
 	protected boolean warned = false;
 
 	public AbstractArrayState(Object array) {
-		this.array = array;
+		this.array = new WeakReference(array);
 		this.hashCode = Util.identityHashCode(array == null ? this : array);
 	}
 
+	// may be null if array has been collected...
 	final public Object getArray() {
-		return array;
+		return array.get();
 	}
 	
+	/** 
+	 * Update the shadow state for index.  Optimistic implementations can
+	 * fail and return false if the expected value is not found.
+	 */
 	public abstract boolean putState(int index, ShadowVar expected, ShadowVar v);
+	
+	/* 
+	 * Return the shadow state for a give index.
+	 */
 	public abstract ShadowVar getState(int index);
 
 	/** @RRInternal */
@@ -74,6 +88,10 @@ public abstract class AbstractArrayState {
 	@Override
 	public int hashCode() { return hashCode; }
 
+	public final int arrayLength() {
+		return lengthOf(array.get());
+	}
+	
 	public static int lengthOf(Object array) {
 		if (array instanceof Object[]) {
 			Object[] a = (Object[])array;
@@ -101,5 +119,13 @@ public abstract class AbstractArrayState {
 			}
 		}
 	}
+	
+	/**
+	 * Called when the array state is created by not needed due to a concurrent
+	 * creation of another array state for an array.
+	 */
+	public void forget() {
+		 
+	 }
 
 }

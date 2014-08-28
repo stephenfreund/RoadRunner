@@ -392,13 +392,15 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				final ShadowThread currentThread = aae.getThread();
 				final Object target = aae.getTarget();
 
+				ShadowThread prevShadowThread = ShadowThread.get(prevTid);
+				Thread prevThread = prevShadowThread == null ? null : prevShadowThread.getThread();
 				arrayErrors.error(currentThread,
 						aae.getInfo(),
 						"Alloc Site", 					ArrayAllocSiteTracker.allocSites.get(aae.getTarget()),
 						"Guard State", 					aae.getOriginalShadow(),
 						"Current Thread",				toString(currentThread), 
 						"Array",						Util.objectToIdentityString(target) + "[" + aae.getIndex() + "]",
-						"Prev Op",						prevOp + prevTid + ("name = " + ShadowThread.get(prevTid).getThread().getName()),
+						"Prev Op",						prevOp + prevTid + ("name = " + prevThread == null ? prevThread.getName(): ""),
 						"Cur Op",						curOp + curTid + ("name = " + ShadowThread.get(curTid).getThread().getName()), 
 						"Case", 						"#" + errorCase,
 						"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 

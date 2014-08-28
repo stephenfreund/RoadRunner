@@ -59,6 +59,10 @@ public class Counter extends AbstractCounter {
 		count++;
 	}
 	
+	final public void add(long n) {
+		count+=n;
+	}
+	
 	@Override
 	public String get() {
 		return String.format("%,d",count);
@@ -66,9 +70,5 @@ public class Counter extends AbstractCounter {
 	
 	public long getCount() {
 		return count;
-	}
-
-	public void add(int n) {
-		count += n;
 	}
 }

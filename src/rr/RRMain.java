@@ -233,17 +233,6 @@ public class RRMain {
 	}
 
 	private static void waitForAllThreads() {
-//		while (runningThreads < infinitelyRunningThreadsOption.get()) {
-//			acme.util.Util.logf("Waiting for Thread Count to go over %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
-//
-//			try {
-//				Thread.sleep(1000);
-//			} catch (InterruptedException e) {
-//				acme.util.Assert.warn("Interrupted...");
-//			}
-//		}
-
-
 		while (runningThreads > infinitelyRunningThreadsOption.get()) {
 			acme.util.Util.logf("Waiting for Thread Count to reach %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
 
@@ -292,7 +281,8 @@ public class RRMain {
 		} catch (Exception e) {
 			Assert.panic(e);
 		}
-		RR.shutDown();		
+
+		RR.shutDown();	
 		Util.exit(0);
 	}
 

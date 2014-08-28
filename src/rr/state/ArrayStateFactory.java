@@ -48,7 +48,6 @@ import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.meta.SourceLocation;
 import rr.state.update.Updaters;
 import rr.tool.RR;
-
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
@@ -56,6 +55,7 @@ import acme.util.count.Counter;
 import acme.util.count.Timer;
 import acme.util.identityhash.ConcurrentIdentityHashMap;
 import acme.util.identityhash.WeakIdentityHashMap;
+import acme.util.identityhash.WeakIdentityHashMap.ValueFunction;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -64,7 +64,7 @@ public class ArrayStateFactory {
 	public static enum ArrayMode { NONE, FINE, COARSE, SPECIAL, USER };
 
 	protected static final ConcurrentIdentityHashMap<Object,AbstractArrayState> table = new ConcurrentIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11, (float) 0.5, 128);
-	private static final WeakIdentityHashMap<Object,WeakReference<AbstractArrayState>> attic = new WeakIdentityHashMap<Object,WeakReference<AbstractArrayState>>((1 << 18) - 11);
+	private static final WeakIdentityHashMap<Object,AbstractArrayState> attic = new WeakIdentityHashMap<Object,AbstractArrayState>((1 << 18) - 11);
 	private static int count = 0; // since ConcurrentHashMap size() is slow, approximate here...
 
 	public static CommandLineOption<ArrayMode> arrayOption = 
@@ -124,7 +124,7 @@ public class ArrayStateFactory {
 		this.useCAS = useCAS;
 		for (int i = 0; i < cache.length; i++) {
 			cache[i] = NULL;
-		}
+		}		
 	}
 
 	public ArrayStateFactory() {
@@ -135,17 +135,15 @@ public class ArrayStateFactory {
 		if (array == null) {
 			return NULL; 
 		} else {
-			//		synchronized(array) {
 			int hash = Util.identityHashCode(array);
 			AbstractArrayState state = table.get(array, hash);
 			if (state != null) {
 				return state;
 			}
 			synchronized(attic) {
-				WeakReference<AbstractArrayState> aas = attic.get(array);
-				if (aas != null && aas.get() != null) {
+				state = attic.get(array);
+				if (state != null) {
 					atticHits.inc();
-					state = aas.get();
 					AbstractArrayState z = table.putIfAbsent(array, state, hash);
 					if (z != null && z != state) {
 						Assert.panic("Pulled wrong array state for %s from attic: %s != %s", array, state, z);
@@ -173,7 +171,6 @@ public class ArrayStateFactory {
 				}
 			}
 			return put0(array, state, hash);
-			//		}		
 		}
 
 	}
@@ -208,35 +205,36 @@ public class ArrayStateFactory {
 		AbstractArrayState z = table.putIfAbsent(array, state, hash);
 		if (z != null) {
 			Yikes.yikes("Concurrent array state creation...");
+			z.forget();
 			state = z;
 		}
 		count++;
 		size.inc();
 		if (count % mapCheck == 0) {
-			synchronized (attic) {
-				count = 0;	
-				if (mapCheck < MAP_MAX) {
-					mapCheck += MAP_INC;
-				}
-				//	if (count > MAP_THRESHOLD) {
-				long start = atticTime.start();
-				int oldCount = count;
-				int oldAtticSize = attic.size();
-				for (AbstractArrayState aas : table.values()) {
-					final Object a = aas.array;
-					if (!attic.containsKey(a)) {
-						attic.put(a, new WeakReference<AbstractArrayState>(aas));
-					}
-					final AbstractArrayState remove = table.remove(a);
-				}
-				//		count = table.size();
-				Util.logf("ArrayStateFactory Moved Entries to Attic.  Attic size: %d->%d", oldAtticSize, attic.size());
-				atticTime.stop(start);
-				//}
-			}
+			moveToAttic();
 		}
 
 		return state;
+	}
+
+	protected static void moveToAttic() {
+		synchronized (attic) {
+			count = 0;	
+			if (mapCheck < MAP_MAX) {
+				mapCheck += MAP_INC;
+			}
+			long start = atticTime.start();
+			int oldAtticSize = attic.size();
+			for (AbstractArrayState aas : table.values()) {
+				final Object a = aas.getArray();
+				if (!attic.containsKey(a)) {
+					attic.put(a, aas);
+				}
+				final AbstractArrayState remove = table.remove(a);
+			}
+			Util.logf("ArrayStateFactory Moved Entries to Attic.  Attic size: %d->%d.", oldAtticSize, attic.size());
+			atticTime.stop(start);
+		}
 	}	
 
 	public static AbstractArrayState make(Object array) {

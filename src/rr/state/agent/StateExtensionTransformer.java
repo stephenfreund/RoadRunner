@@ -90,6 +90,11 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 	final Set<String> classesToTransform = new HashSet<String>();
 
 	public void addField(ThreadStateFieldExtension f) {
+		for (ThreadStateFieldExtension o : fields) {
+			if (o.name.equals(f.name)) { 
+				Assert.warn("Potential ThreadState field extension name clash: '%s'", o.name);
+			}
+		}
 		fields.add(f);
 	}
 
@@ -150,9 +155,9 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
-			if (owner.equals(className)) {
+			//if (owner.equals(className)) {  Conflicts are now the user's problem...
 				for (ThreadStateFieldExtension f : fields) {
-					if (f.origin.equals(className)) {
+				//	if (f.origin.equals(className)) {
 						if (name.equals("ts_get_" + f.name)) {
 							super.visitFieldInsn(GETFIELD, f.owner, f.name + "_" + f.origin.replace("/", "_"), f.desc);
 							return;
@@ -160,9 +165,9 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 							super.visitFieldInsn(PUTFIELD, f.owner, f.name + "_" + f.origin.replace("/", "_"), f.desc);
 							return;
 						} 
-					}
+				//	}
 				}
-			}
+			//}
 			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}

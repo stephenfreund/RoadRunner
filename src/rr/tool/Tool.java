@@ -46,6 +46,7 @@ import java.util.Vector;
 
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
+import rr.event.ArrayAccessEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
@@ -140,12 +141,6 @@ public abstract class Tool  {
 			nextEnter = nextExit = nextAcquire = nextRelease = nextAccess = null;
 		}
 
-//		hasReadFPMethod = hasMethod("readFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-//		hasWriteFPMethod = hasMethod("writeFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-//		
-//		hasArrayReadFPMethod = hasMethod("arrayReadFastPath", int.class, rr.state.AbstractArrayState.class, rr.state.ShadowThread.class);
-//		hasArrayWriteFPMethod = hasMethod("arrayWriteFastPath", int.class, rr.state.AbstractArrayState.class, rr.state.ShadowThread.class);
-
 		hasReadFPMethod = implementsMethod("readFastPath");
 		hasWriteFPMethod = implementsMethod("writeFastPath");
 		
@@ -155,15 +150,6 @@ public abstract class Tool  {
 		
 		
 	}
-//
-//	protected boolean hasMethod(String name, Class<?>... args) {
-//		try {
-//			getClass().getMethod(name, args);
-//			return true;
-//		} catch (NoSuchMethodException e) {
-//			return false;
-//		}
-//	}
 
 	/**
 	 * Tool-specific initialization.  Called after the entire chain has been constructed but
@@ -353,7 +339,7 @@ public abstract class Tool  {
 	public ShadowVar makeShadowVar(AccessEvent ae) {
 		return next.makeShadowVar(ae);
 	}
-
+	
 	/** The name of this tool. Used in auto-generated help information. */
 	@Override
 	public String toString() {
@@ -444,6 +430,7 @@ public abstract class Tool  {
 	protected final <T extends Serializable> Decoration<ShadowLock, T> makeLockDecoration(String name, T initial) {
 		return ShadowLock.makeDecoration(name, DecorationFactory.Type.SINGLE, new SingletonValue<ShadowLock, T>(initial));
 	}
+
 
 
 	

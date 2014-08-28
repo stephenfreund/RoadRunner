@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.tool;
 
@@ -85,58 +85,58 @@ public class RR {
 	public static final CommandLineOption<String> classPathOption = CommandLine.makeString("classpath", ".", CommandLineOption.Kind.STABLE, "The class path used to load classes from the target program.");
 
 	public static CommandLineOption<String> toolOption = 
-		CommandLine.makeString("tool", "rrtools.simple.EmptyTool", CommandLineOption.Kind.STABLE, "The tool chain to use.  Can be single tool, sequentially composed tools, parallel composed tools, or parenthesized chain.  " + 
-				"Specified with full class names or abbrevations in rr.props files on the toolpath.  " +
-				"Examples: \n   -tool=FT\n   -tool=TL:V\n  -tool=rrtools.fastrack.FastTrack\n  -tool=FT|HB\n  -tool=FT:(P|V)", 
-				new Runnable() { public void run() { RR.createTool(); } } );
+			CommandLine.makeString("tool", "rrtools.simple.EmptyTool", CommandLineOption.Kind.STABLE, "The tool chain to use.  Can be single tool, sequentially composed tools, parallel composed tools, or parenthesized chain.  " + 
+					"Specified with full class names or abbrevations in rr.props files on the toolpath.  " +
+					"Examples: \n   -tool=FT\n   -tool=TL:V\n  -tool=rrtools.fastrack.FastTrack\n  -tool=FT|HB\n  -tool=FT:(P|V)", 
+					new Runnable() { public void run() { RR.createTool(); } } );
 
 	public static CommandLineOption<Boolean> printToolsOption = 
-		CommandLine.makeBoolean("tools", false, CommandLineOption.Kind.STABLE, "Print all known tools", 
-				new Runnable() { public void run() { RR.printAbbrevs(); } } );
+			CommandLine.makeBoolean("tools", false, CommandLineOption.Kind.STABLE, "Print all known tools", 
+					new Runnable() { public void run() { RR.printAbbrevs(); } } );
 
 	public static CommandLineOption<Boolean> noxmlOption = 
-		CommandLine.makeBoolean("noxml", false, CommandLineOption.Kind.STABLE, "Turn off printing the xml summary at the end of the run.");
+			CommandLine.makeBoolean("noxml", false, CommandLineOption.Kind.STABLE, "Turn off printing the xml summary at the end of the run.");
 
 	public static CommandLineOption<Boolean> forceGCOption = 
-		CommandLine.makeBoolean("constantGC", false, CommandLineOption.Kind.EXPERIMENTAL, "Turn on constant garbage collection.",
-				new GCRunner());
+			CommandLine.makeBoolean("constantGC", false, CommandLineOption.Kind.EXPERIMENTAL, "Turn on constant garbage collection.",
+					new GCRunner());
 
 	public static CommandLineOption<Boolean> nofastPathOption = 
 			CommandLine.makeBoolean("noFP", false, CommandLineOption.Kind.STABLE, "Do not use in-lined tool fastpath code for reads/writes.");
 
 	public static CommandLineOption<Boolean> noEnterOption = 
-		CommandLine.makeBoolean("noEnter", false, CommandLineOption.Kind.STABLE, "Do not generate Enter and Exit events.");
+			CommandLine.makeBoolean("noEnter", false, CommandLineOption.Kind.STABLE, "Do not generate Enter and Exit events.");
 
 	public static CommandLineOption<String> xmlFileOption = 
-		CommandLine.makeString("xml", "log.xml", CommandLineOption.Kind.STABLE, "Log file name for the xml summary printed at the end of the run.");
+			CommandLine.makeString("xml", "log.xml", CommandLineOption.Kind.STABLE, "Log file name for the xml summary printed at the end of the run.");
 
 	public static CommandLineOption<String> pulseOption =
-		CommandLine.makeString("pulse", "", CommandLineOption.Kind.EXPERIMENTAL, "Install periodic tasks (stacks,stats,counts).  Example: -pulse=stacks:counts", new Runnable() { public void run() { RR.createTasks(); } } );
+			CommandLine.makeString("pulse", "", CommandLineOption.Kind.EXPERIMENTAL, "Install periodic tasks (stacks,stats,counts).  Example: -pulse=stacks:counts", new Runnable() { public void run() { RR.createTasks(); } } );
 
 	public static CommandLineOption<Integer> timeOutOption =
-		CommandLine.makeInteger("maxTime", 0, CommandLineOption.Kind.STABLE, "Maximum execution time in seconds.",
-				new Runnable() { public void run() { Util.addToPeriodicTasks(new TimeOutTask()); } } );
+			CommandLine.makeInteger("maxTime", 0, CommandLineOption.Kind.STABLE, "Maximum execution time in seconds.",
+					new Runnable() { public void run() { Util.addToPeriodicTasks(new TimeOutTask()); } } );
 
 	public static CommandLineOption<Long> memMaxOption = CommandLine.makeLong("maxMem", (10 * 1024), CommandLineOption.Kind.STABLE, "Maximum memory in MB.");
 
 	public static CommandLineOption<Integer> maxTidOption = 
-		CommandLine.makeInteger("maxTid", 16, CommandLineOption.Kind.STABLE, "Maximum number of active threads.");
+			CommandLine.makeInteger("maxTid", 16, CommandLineOption.Kind.STABLE, "Maximum number of active threads.");
 
 	public static CommandLineOption<Boolean> stackOption = 
-		CommandLine.makeBoolean("stacks", false, CommandLineOption.Kind.STABLE, "Record stack traces for printing in erros messages.  Stacks are expensive to compute, so by default RoadRunner doesn't (See ShadowThread.java).");
+			CommandLine.makeBoolean("stacks", false, CommandLineOption.Kind.STABLE, "Record stack traces for printing in erros messages.  Stacks are expensive to compute, so by default RoadRunner doesn't (See ShadowThread.java).");
 
 	public static CommandLineOption<Boolean> valuesOption = 
-		CommandLine.makeBoolean("values", false, CommandLineOption.Kind.EXPERIMENTAL, "Pass tools.internal/new values for writes to tools.  Tools can then change the new value to be written.  You MUST run java with -noverify if you use -values in conjunction with array instrumentation.");
+			CommandLine.makeBoolean("values", false, CommandLineOption.Kind.EXPERIMENTAL, "Pass tools.internal/new values for writes to tools.  Tools can then change the new value to be written.  You MUST run java with -noverify if you use -values in conjunction with array instrumentation.");
 
 	public static final CommandLineOption<Boolean> noTidGCOption = 
-		CommandLine.makeBoolean("noTidGC", false, CommandLineOption.Kind.EXPERIMENTAL, "Do not reuse the tid for a thread that has completed.");
-	
+			CommandLine.makeBoolean("noTidGC", false, CommandLineOption.Kind.EXPERIMENTAL, "Do not reuse the tid for a thread that has completed.");
+
 	public static final CommandLineOption<Boolean> noEventReuseOption = 
-		CommandLine.makeBoolean("noEventReuse", false, CommandLineOption.Kind.EXPERIMENTAL, "Turn of Event Reuse.");
+			CommandLine.makeBoolean("noEventReuse", false, CommandLineOption.Kind.EXPERIMENTAL, "Turn of Event Reuse.");
 
 	public static final StringMatcher toolCode = new StringMatcher(StringMatchResult.REJECT, "+acme..*", "+rr..*", "+java..*");
 
-	private static boolean shuttingDown = false;
+	private static volatile boolean shuttingDown = false;
 	private static boolean timeOut = false;
 
 	private static long startTime;
@@ -176,7 +176,7 @@ public class RR {
 			toolLoader = new ToolLoader(urls);
 		}
 	}
-	
+
 	private static void createTool() { 
 		try {
 			Util.log(new TimedStmt("Creating Tool Chain") {
@@ -186,7 +186,7 @@ public class RR {
 					Util.logf("  %10s chain: %s", methodName, getTool().findAllImplementors(methodName));
 					return t;
 				}
-				
+
 				@Override
 				public void run() throws Exception {
 					initToolLoader();
@@ -222,7 +222,7 @@ public class RR {
 					}
 				}
 			}
-			); 
+					); 
 		} catch (Exception e) {
 			Assert.panic(e);
 		}
@@ -242,11 +242,13 @@ public class RR {
 		});
 
 		Util.log("Tool Init()");
+
 		applyToTools(new ToolVisitor() {
 			public void apply(Tool t) {
 				t.init();
 			}
 		});
+
 	}
 
 	public static void shutDown() {
@@ -313,10 +315,10 @@ public class RR {
 	};
 
 	//	Keep some memory here.  If we run out of memory, System.exit gets called,
-	//	but we can free up this memory to permit us to still dump the XML
+	//	but we can free up this memory to hopefully permit us to still dump the XML
 	//	data.
 	@SuppressWarnings("unused")
-	private static char rainyDayFund[] = new char[1024 * 1024];
+	private static char rainyDayFund[] = new char[1024 * 32];
 	private static volatile boolean inXml = false;
 	private static void xml() {
 		if (inXml) return;
@@ -332,7 +334,7 @@ public class RR {
 
 
 		xml.push("entry");
-		xml.print("data", new Date()); 
+		xml.print("date", new Date()); 
 		xml.print("mode", RRMain.modeName());
 		xml.print("timeout", timeOut ? "YES" : "NO");
 
@@ -389,7 +391,7 @@ public class RR {
 
 		try {
 			java.net.InetAddress localMachine =
-				java.net.InetAddress.getLocalHost();	
+					java.net.InetAddress.getLocalHost();	
 			xml.print("host", localMachine.getHostName());
 		} catch(java.net.UnknownHostException uhe) {
 			xml.print("host", "unknown");
@@ -442,5 +444,12 @@ public class RR {
 		return toolLoader;
 	}
 
-
+	/*
+	 * Return true if RR has started to shutdown and the target
+	 * has officially ended.
+	 */
+	public static boolean targetFinished() {
+		return shuttingDown;
+	}
+	
 }

@@ -80,7 +80,7 @@ public class Yikes {
 
 	public static boolean yikes(String s, Throwable e) {
 		synchronized(Util.class) {
-			boolean b = yikes("%s ", s);
+			boolean b = yikes("%s", s);
 			if (b) {
 				Util.error("\n");
 				StackDump.printStack(Util.err, e, Util.ERROR_PREFIX);
@@ -103,5 +103,14 @@ public class Yikes {
 		return numYikes;
 	}
 
-
+	public static int getNumYikes(String s) {
+		Util.log(yikesMessages);
+		synchronized(Util.class) {
+			if (yikesMessages.containsKey(s)) {
+				return yikesMessages.get(s);
+			} else {
+				return 0;
+			}
+		}
+	}
 }

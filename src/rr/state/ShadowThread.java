@@ -135,7 +135,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * analysis when figuring out when we exit a block.
 	 * Basically we keep the call stack here.
 	 */
-	private final MethodEvent blockStack[] = new MethodEvent[10000];  // ised to be 10000
+	private final MethodEvent blockStack[] = new MethodEvent[1000];  // Used to be 10000
 	private int blockCount = 0;
 
 	/*** Creation ***/

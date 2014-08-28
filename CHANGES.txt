@@ -35,6 +35,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+Aug 28, 2014: Various bug fixes.  RoadRunner's shadow state could pin 
+              down objects that otherwise could be collected.  All Shadow
+		      State objects (ShadowThread, ShadowLock, ArrayShadow, ...)
+		      now refer back to real state via WeakReferences to avoid
+		      pinning down objects that GC could otherwise free.
+  	          Tools can now have specialized fast path methods for
+	          array accesses.  
+
 July 8, 2014: Various small changes and bug fixes in instrumentation.
               New CAS-based updaters.
               Updated to ASM version 5.

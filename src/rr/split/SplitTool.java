@@ -162,7 +162,7 @@ public class SplitTool extends Tool {
 		ShadowVar makeShadowVarSecond = secondNext.makeShadowVar(fae);
 		return new SplitVarState(makeShadowVarFirst, makeShadowVarSecond);
 	}
-	
+		
 	@Override
 	public ShadowVar cloneState(ShadowVar v) {
 		if (v instanceof SplitVarState) {

@@ -109,7 +109,10 @@ public final class CASCoarseArrayState extends CASAbstractArrayState {
 
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		return unsafe.compareAndSwapObject(this, offset, expected, v);
+	    boolean b = unsafe.compareAndSwapObject(this, offset, expected, v);
+	    if (!b) Yikes.yikes("CASCoarseArrayState: atomic updated failed.");
+		return b;
+
 	}
 
 

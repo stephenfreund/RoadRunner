@@ -39,9 +39,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.state;
 
 
+import java.lang.ref.WeakReference;
+
 import rr.RRMain;
 import acme.util.Assert;
-import acme.util.ResourceManager;
+import acme.util.WeakResourceManager;
 import acme.util.Util;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
@@ -59,10 +61,9 @@ public class ShadowLock extends Decoratable {
 
 	private static final Counter count = new Counter("ShadowLock", "objects");
 
-	/*
-	 * Common to notifyAll Tools
-	 */
-	private final Object lock;
+	// Must be a Weak Ref so that our shadow state does not
+	//   pin down objects that could otherwise be collected. 
+	private final WeakReference<Object> lock;
 
 	private int holdCount = 0;
 	private ShadowThread curThread = null;
@@ -75,7 +76,7 @@ public class ShadowLock extends Decoratable {
 	 */
 
 	private ShadowLock(Object lock) { 
-		this.lock = lock;
+		this.lock = new WeakReference<Object>(lock);
 		hashCode = counter++;
 		if (RRMain.slowMode()) count.inc();
 	}
@@ -138,8 +139,8 @@ public class ShadowLock extends Decoratable {
 				"curThread:"+curThread+" holdCount:"+holdCount);
 	}
 
-
-	private static final ResourceManager<Object, ShadowLock> locks = new ResourceManager<Object, ShadowLock>() {
+	
+	private static final WeakResourceManager<Object, ShadowLock> locks = new WeakResourceManager<Object, ShadowLock>() {
 
 		@Override
 		protected ShadowLock make(Object k) {
@@ -151,8 +152,11 @@ public class ShadowLock extends Decoratable {
 		return locks.get(o);
 	}
 
+	/*
+	 * This may return null if the object has been collected.
+	 */
 	public Object getLock() {
-		return lock;
+		return lock.get();
 	}
 
 }

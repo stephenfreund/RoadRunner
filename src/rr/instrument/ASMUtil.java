@@ -203,7 +203,7 @@ public class ASMUtil implements Opcodes {
 	}
 
 	// Register 0 must have reciever if using OffsetFPMethod.
-	public static void insertFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int gsVar, final int tdVar, final Label success) {
+	public static void insertFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int gsVar, final int tdVar, final Label success, final FieldInfo field) {
 		if (!RR.nofastPathOption.get()) {
 			Label nullVarState = new Label();
 			mv.visitVarInsn(ALOAD, gsVar);
@@ -220,6 +220,35 @@ public class ASMUtil implements Opcodes {
 				}
 			});
 			mv.visitLabel(nullVarState);
+		}
+	}
+
+
+	// indexVar == -1 -> on stack
+	public static void insertArrayFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int shadowStateVar, final int guardStateLoc, final int tdVar, final Label success, final int indexVar) {
+		if (!RR.nofastPathOption.get()) {
+			RR.applyToTools(new ToolVisitor() {
+				public void apply(Tool t) {
+					if (t.hasArrayFPMethod(isWrite)) {
+						if (indexVar == -1) {
+							mv.dup();
+						} else {
+							mv.visitVarInsn(ILOAD, indexVar);
+						}
+						mv.visitVarInsn(ALOAD, shadowStateVar);
+						mv.visitVarInsn(ALOAD, tdVar);
+						mv.invokeStatic(Type.getType(t.getClass()), 
+								isWrite ? Constants.ARRAY_WRITE_FP_METHOD : Constants.ARRAY_READ_FP_METHOD);
+						mv.visitJumpInsn(IFNE, success);
+					} else if (t.hasFPMethod(isWrite)) {
+						mv.visitVarInsn(ALOAD, guardStateLoc);
+						mv.visitVarInsn(ALOAD, tdVar);
+						mv.invokeStatic(Type.getType(t.getClass()), 
+								isWrite ? Constants.WRITE_FP_METHOD : Constants.READ_FP_METHOD);
+						mv.visitJumpInsn(IFNE, success);
+					} 
+				}
+			});
 		}
 	}
 

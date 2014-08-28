@@ -77,7 +77,7 @@ public abstract class CASAbstractArrayState extends AbstractArrayState {
 
 	protected static final boolean cas(ShadowVar[] shadow, int index, ShadowVar expected, ShadowVar newState) {
 		final boolean b = unsafe.compareAndSwapObject(shadow, byteOffset(index), expected, newState);
-		if (!b) Yikes.yikes("CASAbstractArrayState: atomic updated failed.");
+		if (!b) Yikes.yikes("CASAbstractArrayState: atomic updated failed: " + expected + " " + get(shadow,index) + " " + newState);
 		return b;
 	}
 

@@ -78,7 +78,7 @@ public final class FineArrayState extends AbstractArrayState {
 	@Override
 	public final ShadowVar getState(int index) {
 		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
+			Yikes.yikes("Bad array get: " + index + " too big for " + arrayLength());
 			return shadowVar[0];
 		}
 		return shadowVar[index];
@@ -87,7 +87,7 @@ public final class FineArrayState extends AbstractArrayState {
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
 		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
+			Yikes.yikes("Bad array set: " + index + " too big for " + arrayLength());
 		}
 		shadowVar[index] = v;
 		return true;

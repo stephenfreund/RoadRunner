@@ -43,7 +43,6 @@ import rr.meta.FieldAccessInfo;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.update.AbstractFieldUpdater;
-import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
 
@@ -92,8 +91,8 @@ public class FieldAccessEvent extends AccessEvent {
 	@Override
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = getUpdater().putState(target, this.getOriginalShadow(), newGS);
-		if (!b) {
-			Yikes.yikes("Concurrent Mod: + " + this.getOriginalShadow());
+		if (!b && (this.getShadow() != newGS)) {
+			Yikes.yikes("Concurrent Mod");
 			this.originalShadow = getShadow();
 		}
 		return b;
