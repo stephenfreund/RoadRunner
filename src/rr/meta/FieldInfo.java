@@ -71,7 +71,7 @@ public class FieldInfo extends MetaDataInfo {
 		this.isFinal = isFinal;
 		this.isVolatile = isVolatile;
 		this.isStatic = isStatic;
-		if (isStatic) {
+		if (isStatic && InstrumentationFilter.shouldInstrument(rrClass) && !statics.contains(this)) {
 			statics.add(this);
 		}
 	}
