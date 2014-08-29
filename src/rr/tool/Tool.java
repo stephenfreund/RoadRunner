@@ -117,6 +117,8 @@ public abstract class Tool  {
 	private boolean hasWriteFPMethod;
 	private boolean hasArrayReadFPMethod;
 	private boolean hasArrayWriteFPMethod;
+	private boolean hasFieldReadFPMethod;
+	private boolean hasFieldWriteFPMethod;
 
 	/**
 	 * All tools are created by the RoadRunner infrastructure from the command line, based on @Abbrev("...") annotations.
@@ -147,6 +149,8 @@ public abstract class Tool  {
 		hasArrayReadFPMethod = implementsMethod("arrayReadFastPath");
 		hasArrayWriteFPMethod = implementsMethod("arrayWriteFastPath");
 
+		hasFieldReadFPMethod = implementsMethod("fieldReadFastPath");
+		hasFieldWriteFPMethod = implementsMethod("fieldWriteFastPath");
 		
 		
 	}
@@ -405,8 +409,18 @@ public abstract class Tool  {
 		return isWrite ? hasWriteFPMethod : hasReadFPMethod;
 	}
 
+	/**
+	 * @RRInternal
+	 */
 	public boolean hasArrayFPMethod(boolean isWrite) {
 		return isWrite ? hasArrayWriteFPMethod : hasArrayReadFPMethod;
+	}
+
+	/**
+	 * @RRInternal
+	 */
+	public boolean hasFieldFPMethod(boolean isWrite) {
+		return isWrite ? hasFieldWriteFPMethod : hasFieldReadFPMethod;
 	}
 
 	/** Add a listener to be notified about class meta data as it is loaded by RoadRunner.

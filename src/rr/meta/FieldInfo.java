@@ -58,7 +58,7 @@ public class FieldInfo extends MetaDataInfo {
 	protected transient AbstractFieldUpdater updater = null;
 
 	final static Vector<FieldInfo> statics = new Vector<FieldInfo>();
-	
+
 	public FieldInfo(int id, SourceLocation loc, ClassInfo rrClass, String name, String descriptor, boolean isSynthetic) {
 		super(id, loc);
 		this.rrClass = rrClass;
@@ -141,16 +141,20 @@ public class FieldInfo extends MetaDataInfo {
 
 	private int offset = -1;
 
-	public int getInstanceOffset() {
+	/*
+	 * Returns a unique offset for each field of an object.  Subclass fields
+	 * will have offsets > than inherited fields.
+	 * Static fields have unique offsets, also starting with 0.  
+	 */
+	public int getFieldOffset() {
 		if (offset == -1) {
 			if (!isStatic) {
-				return offset = this.getOwner().offsetOfInstanceField(this);
+				offset = this.getOwner().getOffsetOfInstanceField(this);
 			} else {
-				return offset = statics.indexOf(this);				
+				offset = statics.indexOf(this);				
 			}
-		} else { 
-			return offset;
-		}
+		} 
+		return offset;
 	}
 
 }

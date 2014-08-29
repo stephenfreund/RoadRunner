@@ -215,9 +215,6 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 		if (!methods.contains(x)) {
 			methods.add(x); 
 		} 
-		//		else if (!x.isSynthetic() && stateAtLeast(State.PRELOADED)) {
-		//			Util.log("Adding method " + x + " to " + this + " in state " + getState());
-		//		}
 	}
 
 	public Vector<ClassInfo> getInterfaces() {
@@ -242,20 +239,22 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 		return getName().compareTo(((ClassInfo)o).getName());
 	}
 
-	protected void makeInstanceFieldList() {
+	protected void makeFieldList() {
 		if (instanceFields == null) {
 			synchronized(this) {
 				if (instanceFields == null) {
 					Vector<FieldInfo> tmpFields;
 					if (this.superClass != null) {
-						superClass.makeInstanceFieldList();
+						superClass.makeFieldList();
 						tmpFields = new Vector<FieldInfo>(superClass.instanceFields);
 					} else {
 						tmpFields = new Vector<FieldInfo>();
 					}
-					for (FieldInfo x : fields) {
-						if (!x.isStatic() && !x.isFinal()) {
-							tmpFields.add(x);
+					if (InstrumentationFilter.shouldInstrument(this)) {
+						for (FieldInfo x : fields) {
+							if (!x.isStatic() && !x.isFinal()) {
+								tmpFields.add(x);
+							}
 						}
 					}
 					instanceFields = tmpFields;
@@ -266,12 +265,12 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 
 	public Vector<FieldInfo> getInstanceFields() {
 		assertStateAtLeast(State.PRELOADED);
-		makeInstanceFieldList();
+		makeFieldList();
 		return instanceFields;
 	}
 
-	public int offsetOfInstanceField(FieldInfo x) {
-		makeInstanceFieldList();
+	public int getOffsetOfInstanceField(FieldInfo x) {
+		makeFieldList();
 		int i = instanceFields.indexOf(x);
 		Assert.assertTrue(i != -1 || x.isStatic() || x.isFinal());
 		return i;

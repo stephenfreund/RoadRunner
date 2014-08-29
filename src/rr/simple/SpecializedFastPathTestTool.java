@@ -40,7 +40,10 @@ package rr.simple;
 
 import rr.annotations.Abbrev;
 import rr.event.AccessEvent;
+import rr.event.AccessEvent.Kind;
 import rr.event.AcquireEvent;
+import rr.event.ArrayAccessEvent;
+import rr.event.FieldAccessEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
 import rr.event.JoinEvent;
@@ -49,36 +52,54 @@ import rr.event.ReleaseEvent;
 import rr.event.SleepEvent;
 import rr.event.StartEvent;
 import rr.event.WaitEvent;
+import rr.meta.FieldInfo;
+import rr.state.AbstractArrayState;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.tool.Tool;
 import acme.util.Util;
 import acme.util.option.CommandLine;
 
-/**
- * Test for fast pathing
- *  Like LastTool, but keeps ShadowVar set to thread, so that 
- *  the fast path in the Instrumenter is triggered.
+/** 
+ * This tests the new specialized fast path methods for fields and arrays
  */
-@Abbrev("FPTest")
-final public class FastPathTestTool extends Tool {
+final public class SpecializedFastPathTestTool extends Tool {
 
 	@Override
 	public String toString() {
-		return "FPTestTool";
+		return "SFPTestTool";
 	}
 
-	public FastPathTestTool(String name, Tool next, CommandLine commandLine) {
+	public SpecializedFastPathTestTool(String name, Tool next, CommandLine commandLine) {
 		super(name, next, commandLine);
+	}
+
+	private class ShadowObj implements ShadowVar {
+		final Object target;
+
+		public ShadowObj(Object obj) {
+			this.target = obj;
+		}
+		
+		public String toString() {
+			return Util.objectToIdentityString(target);
+		}
+
 	}
 
 	@Override
 	public ShadowVar makeShadowVar(AccessEvent fae) {
-		return fae.getThread();
+		return new ShadowObj(fae.getTarget());
 	}
 
 	@Override
 	public final void access(AccessEvent fae) {
+		if (fae.getKind() == Kind.FIELD) {
+			FieldInfo field = ((FieldAccessEvent)fae).getInfo().getField();
+			Util.logf("Access %s %s.%s (%d)", fae.isWrite() ? "WRITE":"READ", fae.getOriginalShadow(), field.toString(), field.getFieldOffset());
+		} else {
+			Util.logf("Access %s %s[%d]", fae.isWrite() ? "WRITE":"READ", fae.getOriginalShadow(), ((ArrayAccessEvent)fae).getIndex());
+		}
 	}
 
 	// Does not handle enter/exit, so that the instrumentor won't instrument method invocations.  
@@ -128,6 +149,26 @@ final public class FastPathTestTool extends Tool {
 
 	public static boolean writeFastPath(ShadowVar vs, ShadowThread ts) {
 		Util.log("Write FP");
+		return true;
+	}
+
+	public static boolean fieldReadFastPath(int offset, ShadowVar vs, ShadowThread ts) {
+		Util.logf("Read FP %s.%d", vs, offset);
+		return true;
+	}
+
+	public static boolean fieldWriteFastPath(int offset, ShadowVar vs, ShadowThread ts) {
+		Util.logf("Write FP %s.%d", vs, offset);
+		return true;
+	}
+
+	public static boolean arrayReadFastPath(int index, AbstractArrayState arrayState, ShadowThread ts) {
+		Util.logf("Read FP %s[%d]", Util.objectToIdentityString(arrayState.getArray()), index);
+		return true;
+	}
+
+	public static boolean arrayWriteFastPath(int index, AbstractArrayState arrayState, ShadowThread ts) {
+		Util.logf("Write FP %s[%d]", Util.objectToIdentityString(arrayState.getArray()), index);
 		return true;
 	}
 

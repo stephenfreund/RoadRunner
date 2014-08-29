@@ -210,7 +210,14 @@ public class ASMUtil implements Opcodes {
 			mv.visitJumpInsn(IFNULL, nullVarState);
 			RR.applyToTools(new ToolVisitor() {
 				public void apply(Tool t) {
-					if (t.hasFPMethod(isWrite)) {
+					if (t.hasFieldFPMethod(isWrite)) {
+						mv.push(field.getFieldOffset());
+						mv.visitVarInsn(ALOAD, gsVar);
+						mv.visitVarInsn(ALOAD, tdVar);
+						mv.invokeStatic(Type.getType(t.getClass()), 
+								isWrite ? Constants.FIELD_WRITE_FP_METHOD : Constants.FIELD_READ_FP_METHOD);
+						mv.visitJumpInsn(IFNE, success);
+					} else if (t.hasFPMethod(isWrite)) {
 						mv.visitVarInsn(ALOAD, gsVar);
 						mv.visitVarInsn(ALOAD, tdVar);
 						mv.invokeStatic(Type.getType(t.getClass()), 
