@@ -39,6 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.state;
 
 
+import java.lang.ref.WeakReference;
+
 import rr.RRMain;
 import rr.meta.FieldInfo;
 import acme.util.ResourceManager;
@@ -71,13 +73,13 @@ public class ShadowVolatile extends Decoratable {
 
 	private static final Counter count = new Counter("ShadowVolatile", "objects");
 
-	private final Object target;
+	private final WeakReference<Object> target;
 	private final FieldInfo fd;
 
 	private final int hashCode;
 
 	private ShadowVolatile(Object target, FieldInfo fd) {
-		this.target = target;
+		this.target = new WeakReference<Object>(target);
 		this.fd = fd;
 		this.hashCode = Util.identityHashCode(target) + Util.identityHashCode(fd);
 		if (RRMain.slowMode()) count.inc();
@@ -93,8 +95,11 @@ public class ShadowVolatile extends Decoratable {
 		return "LOCK " + Util.objectToIdentityString(this.getTarget()) + "." + getField().getName();
 	}
 
+	/**
+	 * This may return null if the object has already been garbage collected.
+	 */
 	public Object getTarget() {
-		return target;
+		return target.get();
 	}
 
 	public FieldInfo getField() {

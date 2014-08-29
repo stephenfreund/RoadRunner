@@ -109,6 +109,8 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/** 
 	 * The Java thread object for this ShadowThread object. 
 	 */
+	// Note: This should possibly be a weak ref to allow Thread objects to be garbed collected,
+	// but for now leave as is.
 	protected final Thread thread;
 	
 	/**
