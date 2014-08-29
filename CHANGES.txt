@@ -37,13 +37,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Aug 28, 2014: Various bug fixes.  This includes corner cases in FT_CAS,
               the instrumentor, and the shadow state representation of 
-              arrays (most notably large, long-running programs.)
+              arrays (most notably in large, long-running programs.)
               
               Performance: RoadRunner's shadow state could pin 
               down objects that otherwise could be collected.  All Shadow
 		      State objects (ShadowVolatile, ShadowLock, ArrayState, ...)
 		      now refer back to real state via WeakReferences to avoid
-		      such issues.
+		      such issues.  Some caches for array states do not use
+		      weak references to avoid a run-time performance hit, but
+		      could perhaps be improved in some additional way in the
+		      future.
 		      
   	          Tools can now have more specialized fast path methods for
 	          array and field accesses.  See Tool.java

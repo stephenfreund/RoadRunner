@@ -77,6 +77,7 @@ public class ShadowLock extends Decoratable {
 	 */
 
 	private ShadowLock(Object lock) { 
+		// Assert.assertTrue(lock != null);
 		this.lock = new WeakReference<Object>(lock);
 		hashCode = counter++;
 		if (RRMain.slowMode()) count.inc();
@@ -158,6 +159,7 @@ public class ShadowLock extends Decoratable {
 	 */
 	public Object getLock() {
 		Object l = lock.get();
+		if (l == null) Yikes.yikes("Getting target of ShadowLock after target has been gc'd");		
 		return l;
 	}
 

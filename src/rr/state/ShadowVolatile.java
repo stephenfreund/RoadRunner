@@ -43,6 +43,7 @@ import java.lang.ref.WeakReference;
 
 import rr.RRMain;
 import rr.meta.FieldInfo;
+import acme.util.Assert;
 import acme.util.ResourceManager;
 import acme.util.WeakResourceManager;
 import acme.util.Util;
@@ -80,6 +81,7 @@ public class ShadowVolatile extends Decoratable {
 	private final int hashCode;
 
 	private ShadowVolatile(Object target, FieldInfo fd) {
+		// Assert.assertTrue(target != null || fd.isStatic());
 		this.target = new WeakReference<Object>(target);
 		this.fd = fd;
 		this.hashCode = Util.identityHashCode(target) + Util.identityHashCode(fd);
@@ -93,7 +95,7 @@ public class ShadowVolatile extends Decoratable {
 
 	@Override
 	public String toString() {
-		return "LOCK " + Util.objectToIdentityString(this.getTarget()) + "." + getField().getName();
+		return "VOLATILE " + Util.objectToIdentityString(this.getTarget()) + "." + getField().getName();
 	}
 
 	/**
@@ -102,7 +104,9 @@ public class ShadowVolatile extends Decoratable {
 	 *   2) if the owning object has already been garbage collected.
 	 */
 	public Object getTarget() {
-		return target.get();
+		Object l = target.get();
+		if (l == null && !fd.isStatic()) Yikes.yikes("Getting target of ShadowVolatile after target has been gc'd");
+		return l;
 	}
 
 	public FieldInfo getField() {

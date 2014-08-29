@@ -42,8 +42,10 @@ import acme.util.Assert;
 
 public final class NullArrayState extends AbstractArrayState {
 
+	private static final Object placeHolder = new Object();
+	
 	public NullArrayState() {
-		super(null);
+		super(placeHolder);
 	}
  	
 	@Override

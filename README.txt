@@ -32,6 +32,15 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+Notes on Revisions
+========================
+
+  * 9/29/2014: All users should update to this version or later.  
+  			   It fixes many bugs and corner cases, has a variety of 
+  			   small functionality enhancements for fastpath code, and 
+  			   improves scalability for the shadow state.
+
+See CHANGES.txt for more details.
 
 Installation and Running
 ========================

@@ -42,6 +42,7 @@ import java.lang.ref.WeakReference;
 
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.Yikes;
 
 public abstract class AbstractArrayState {
 
@@ -53,7 +54,8 @@ public abstract class AbstractArrayState {
 	protected boolean warned = false;
 
 	public AbstractArrayState(Object array) {
-		this.array = new WeakReference(array);
+		// Assert.assertTrue(array != null);
+		this.array = new WeakReference<Object>(array);
 		this.hashCode = Util.identityHashCode(array == null ? this : array);
 	}
 
@@ -61,7 +63,9 @@ public abstract class AbstractArrayState {
 	 * May return null if array has been collected.
 	 */
 	final public Object getArray() {
-		return array.get();
+		Object l = array.get();
+		if (l == null) Yikes.yikes("Getting array of AbstractArrayState after array has been gc'd");
+		return l;
 	}
 	
 	/** 
@@ -92,7 +96,7 @@ public abstract class AbstractArrayState {
 	public int hashCode() { return hashCode; }
 
 	public final int arrayLength() {
-		return lengthOf(array.get());
+		return lengthOf(getArray());
 	}
 	
 	public static int lengthOf(Object array) {

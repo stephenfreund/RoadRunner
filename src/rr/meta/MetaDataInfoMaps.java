@@ -285,7 +285,7 @@ public class MetaDataInfoMaps {
 			a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc ");
+			Yikes.yikes("making bogus loc");
 		}
 		a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
 		getArrayAccesses().put(a);
@@ -299,7 +299,7 @@ public class MetaDataInfoMaps {
 			a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc ");
+			Yikes.yikes("making bogus loc");
 		}
 		a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
 		getFieldAccesses().put(a);
