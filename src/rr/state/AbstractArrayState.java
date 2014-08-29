@@ -57,7 +57,9 @@ public abstract class AbstractArrayState {
 		this.hashCode = Util.identityHashCode(array == null ? this : array);
 	}
 
-	// may be null if array has been collected...
+	/**
+	 * May return null if array has been collected...
+	 */
 	final public Object getArray() {
 		return array.get();
 	}
@@ -79,6 +81,7 @@ public abstract class AbstractArrayState {
 	/** @RRInternal */
 	public abstract void setShadowForNextDim(int i, AbstractArrayState s);
 
+	/** @RRInternal */
 	public void specialize() {
 		if (warned) return;
 		warned = true;

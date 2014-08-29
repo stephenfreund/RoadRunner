@@ -87,6 +87,9 @@ import acme.util.option.CommandLine;
  *         the standard (and not inlined) 'access' method is called instead. There are
  *         corner cases where they cannot be used.  Thus, design your tool to work properly, even if
  *         they are not inserted at an access site.
+ *         <p>
+ *         Note: New fast path versions have been added to also have a parameter for the index of fields 
+ *         within an object or within an array.  See rr.simple.SpecializedFastPathTestTool for examples.
  *  </ul>       
  *  
  *  Event handlers are the methods of this class that take a single ...Event argument.

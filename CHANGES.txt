@@ -35,13 +35,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
-Aug 28, 2014: Various bug fixes.  RoadRunner's shadow state could pin 
+Aug 28, 2014: Various bug fixes.  This includes corner cases in FT_CAS,
+              the instrumentor, and the shadow state representation of 
+              arrays (most notably large, long-running programs.)
+              
+              Performance: RoadRunner's shadow state could pin 
               down objects that otherwise could be collected.  All Shadow
-		      State objects (ShadowThread, ShadowLock, ArrayShadow, ...)
+		      State objects (ShadowVolatile, ShadowLock, ArrayState, ...)
 		      now refer back to real state via WeakReferences to avoid
-		      pinning down objects that GC could otherwise free.
-  	          Tools can now have specialized fast path methods for
-	          array accesses.  
+		      such issues.
+		      
+  	          Tools can now have more specialized fast path methods for
+	          array and field accesses.  See Tool.java
 
 July 8, 2014: Various small changes and bug fixes in instrumentation.
               New CAS-based updaters.
@@ -61,7 +66,3 @@ Oct 3, 2011:  Committed and pushed small code edits from various places.
               There were some conflicts that should have been resolved 
               correctly.  If problems exist, please use the version from
               June 20.
-              
-    
-
-              
