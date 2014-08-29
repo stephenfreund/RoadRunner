@@ -45,6 +45,7 @@ import rr.RRMain;
 import acme.util.Assert;
 import acme.util.WeakResourceManager;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
@@ -152,11 +153,12 @@ public class ShadowLock extends Decoratable {
 		return locks.get(o);
 	}
 
-	/*
+	/**
 	 * This may return null if the object has been collected.
 	 */
 	public Object getLock() {
-		return lock.get();
+		Object l = lock.get();
+		return l;
 	}
 
 }

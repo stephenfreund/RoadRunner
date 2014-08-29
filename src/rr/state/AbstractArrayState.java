@@ -58,7 +58,7 @@ public abstract class AbstractArrayState {
 	}
 
 	/**
-	 * May return null if array has been collected...
+	 * May return null if array has been collected.
 	 */
 	final public Object getArray() {
 		return array.get();

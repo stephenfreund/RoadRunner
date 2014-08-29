@@ -46,6 +46,7 @@ import rr.meta.FieldInfo;
 import acme.util.ResourceManager;
 import acme.util.WeakResourceManager;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
@@ -96,7 +97,9 @@ public class ShadowVolatile extends Decoratable {
 	}
 
 	/**
-	 * This may return null if the object has already been garbage collected.
+	 * This may return null in two cases:
+	 *   1) if the field is a static field.
+	 *   2) if the owning object has already been garbage collected.
 	 */
 	public Object getTarget() {
 		return target.get();
