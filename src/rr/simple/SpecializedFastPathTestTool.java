@@ -63,6 +63,7 @@ import acme.util.option.CommandLine;
 /** 
  * This tests the new specialized fast path methods for fields and arrays
  */
+@Abbrev("SFPTool")
 final public class SpecializedFastPathTestTool extends Tool {
 
 	@Override
