@@ -144,8 +144,8 @@ public class AnalyzerAdapter extends MethodVisitor {
     public AnalyzerAdapter(final String owner, final int access,
             final String name, final String desc, final MethodVisitor mv) {
         this(Opcodes.ASM5, owner, access, name, desc, mv);
-        if (getClass() != AnalyzerAdapter.class) {
-            throw new IllegalStateException();
+        if (!(this instanceof AnalyzerAdapter)) {
+        	throw new IllegalStateException();
         }
     }
 

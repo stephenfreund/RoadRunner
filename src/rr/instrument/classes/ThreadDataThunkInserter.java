@@ -69,6 +69,7 @@ import rr.tool.RR;
 import acme.util.Assert;
 import acme.util.Debug;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -127,11 +128,15 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 
 				if (ArrayStateFactory.arrayOption.get() != ArrayStateFactory.ArrayMode.NONE) {
 					if (RR.valuesOption.get()) {
-//						if (version < V1_6) {
-//							Util.panic("Classfile for " + this.getCurrentClass() + " is version " + version + ", but -values requires class files be at least version " + V1_6 + ".  Recompile with javac version 1.6.");
-//						}
+						if (version < V1_6) {
+							Yikes.yikes("Classfile is version " + version + ", but -values requires class files be at least version " + V1_6 + ".  Recompile with javac version 1.6 or higher, or crashes may result.");
+						}
+						
 						SimpleArrayWithValuesInstructionAdapter mv2 = new SimpleArrayWithValuesInstructionAdapter(mv, newMethod);
-						ArrayTypeExtractor mv3 = new ArrayTypeExtractor(owner.getName(), access, newName, newDesc, mv2);
+						// MethodVisitor p = new PrintingAnalyzerAdapter(owner.getName(), access, newName, desc, mv2);
+						MethodVisitor p = mv2;
+						ArrayTypeExtractor mv3 = new ArrayTypeExtractor(owner.getName(), access, newName, newDesc, p);
+
 						mv2.setTypeAnalyzer(mv3);
 						mv = mv3;
 						if (Debug.debugOn("analysis")) {
