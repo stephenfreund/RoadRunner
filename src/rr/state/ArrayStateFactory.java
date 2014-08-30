@@ -197,7 +197,7 @@ public class ArrayStateFactory {
 
 		for (int i = 0; i < CACHE_SIZE; i++) {
 			final AbstractArrayState s = cache[i];
-			if (s.getArray() == array) {
+			if (s.getArrayNoCheck() == array) {
 				return s; 
 			}
 		}

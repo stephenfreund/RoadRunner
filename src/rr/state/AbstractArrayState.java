@@ -48,7 +48,9 @@ import acme.util.Yikes;
 public abstract class AbstractArrayState {
 
 	// Must be a Weak Ref so that our shadow state does not
-	//   pin down objects that could otherwise be collected. 
+	//   pin down objects that could otherwise be collected.
+	//
+	// @RRInternal
 	final private WeakReference<Object> array;
 	
 	protected final  int hashCode;
@@ -66,11 +68,16 @@ public abstract class AbstractArrayState {
 	final public Object getArray() {
 		Object l = array.get();
 		if (l == null) {
-			// This will happen if the array is still in a cache, so not a problem unless
-			// tool code directly relies on the result for some reason.
 			Yikes.yikes("Getting array of AbstractArrayState after array has been gc'd.");
 		}
 		return l;
+	}
+	
+	/*
+	 * A version to use in caches where getting null can be expected.
+	 */
+	final Object getArrayNoCheck() {
+		return array.get();
 	}
 	
 	/** 
