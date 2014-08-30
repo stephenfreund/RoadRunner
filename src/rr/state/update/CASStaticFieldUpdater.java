@@ -54,6 +54,9 @@ import acme.util.Yikes;
  * I believe this to be true on x86, but have not tested it thoroughly.
  *   
  * Use at your own risk.
+ *
+ * @RRExperimental
+ *
  */
 public class CASStaticFieldUpdater extends AbstractFieldUpdater {
 

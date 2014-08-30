@@ -41,6 +41,7 @@ package rr.state;
 import java.lang.ref.WeakReference;
 
 import acme.util.Assert;
+import acme.util.StackDump;
 import acme.util.Util;
 import acme.util.Yikes;
 
@@ -64,7 +65,11 @@ public abstract class AbstractArrayState {
 	 */
 	final public Object getArray() {
 		Object l = array.get();
-		if (l == null) Yikes.yikes("Getting array of AbstractArrayState after array has been gc'd");
+		if (l == null) {
+			// This will happen if the array is still in a cache, so not a problem unless
+			// tool code directly relies on the result for some reason.
+			Yikes.yikes("Getting array of AbstractArrayState after array has been gc'd.");
+		}
 		return l;
 	}
 	

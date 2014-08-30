@@ -89,11 +89,13 @@ public class ArrayAccessEvent extends AccessEvent {
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = updater.putState(arrayState, getIndex(), this.getOriginalShadow(), newGS);
 		if (!b) {
-		    Yikes.yikes("Bad Update");
+			if (this.getShadow() == newGS) return true; // optimize redundant update
+			Yikes.yikes("Bad Update");
 			this.originalShadow = getShadow();
+			return false;
+		} else {
+			return true;
 		}
-		return b;
-
 	}
 
 	/** Gets the state of the shadow location corresponding to the accessed array element. */
