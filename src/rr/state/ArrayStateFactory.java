@@ -64,7 +64,15 @@ public class ArrayStateFactory {
 	public static enum ArrayMode { NONE, FINE, COARSE, SPECIAL, USER };
 
 	protected static final ConcurrentIdentityHashMap<Object,AbstractArrayState> table = new ConcurrentIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11, (float) 0.5, 128);
+	
+	/*
+	 * In previous versions that AbstractArrayState values were weak references, which could cause 
+	 * state for long-lived arrays in the attic to be remove if those arrays were not accesses often
+	 * enough to keep them in the other caches.
+	 */
 	private static final WeakIdentityHashMap<Object,AbstractArrayState> attic = new WeakIdentityHashMap<Object,AbstractArrayState>((1 << 18) - 11);
+	
+	
 	private static int count = 0; // since ConcurrentHashMap size() is slow, approximate here...
 
 	public static CommandLineOption<ArrayMode> arrayOption = 
