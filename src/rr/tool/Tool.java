@@ -90,6 +90,11 @@ import acme.util.option.CommandLine;
  *         <p>
  *         Note: New fast path versions have been added to also have a parameter for the index of fields 
  *         within an object or within an array.  See rr.simple.SpecializedFastPathTestTool for examples.
+ *         <p>
+ *         Also, fast path code may assume the guard state is non-null.  On first access to a 
+ *         memory location, the slow path will run with a freshly-created guard state.  Only subsequent
+ *         accesses will run fastpath code.  Also, you must set the guard state to a non-null value
+ *         or else the fast path code will not be called.
  *  </ul>       
  *  
  *  Event handlers are the methods of this class that take a single ...Event argument.
@@ -118,9 +123,25 @@ public abstract class Tool  {
 
 	private boolean hasReadFPMethod;
 	private boolean hasWriteFPMethod;
+	
+	/*
+	 * @RRExperimental
+	 */
 	private boolean hasArrayReadFPMethod;
+
+	/*
+	 * @RRExperimental
+	 */
 	private boolean hasArrayWriteFPMethod;
+
+	/*
+	 * @RRExperimental
+	 */
 	private boolean hasFieldReadFPMethod;
+
+	/*
+	 * @RRExperimental
+	 */
 	private boolean hasFieldWriteFPMethod;
 
 	/**

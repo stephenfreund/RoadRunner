@@ -38,7 +38,8 @@ Notes on Revisions
   * 9/29/2014: All users should update to this version or later.  
   			   It fixes many bugs and corner cases, has a variety of 
   			   small functionality enhancements for fastpath code, and 
-  			   improves scalability for the shadow state.
+  			   improves scalability of the shadow state data 
+  			   structures.
 
 See CHANGES.txt for more details.
 
@@ -70,7 +71,7 @@ These are the most relevant classes/packages for writing new tools.
   - rr.meta.*:
   
   		Represents the source metadata about types, classes, operations, etc.
-  		You should only need to use the accessors provided on the RR* classes
+  		You should only need to use the accessors provided on these classes
   		in your event handlers.  You will never create any of these objects
   		yourself.
   		
@@ -81,6 +82,7 @@ These are the most relevant classes/packages for writing new tools.
   - rr.state.ShadowThread:
   - rr.state.ShadowLock:
   - rr.state.ShadowVar:
+  - rr.state.ShadowVolatile:
   
   		The state attached to each Thread, object uses as a lock, and
   		memory location used by a program.  Tools can attach decorations
