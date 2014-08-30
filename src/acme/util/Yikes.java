@@ -46,7 +46,7 @@ import java.util.HashMap;
  */
 public class Yikes {
 
-	private static final int YIKES_MAX = 1;
+	private static final int YIKES_MAX = 5;
 	private static int numYikes = 0;
 	private static HashMap<String, Integer> yikesMessages = new HashMap<String,Integer>();
 
@@ -59,6 +59,7 @@ public class Yikes {
 			} else {
 				n++;
 			}
+			numYikes++;
 			yikesMessages.put(msg, n);
 			if (n <= Yikes.YIKES_MAX) {
 				Util.pad();
