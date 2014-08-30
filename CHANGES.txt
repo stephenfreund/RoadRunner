@@ -38,10 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Aug 28, 2014: Various bug fixes.  This includes corner cases in FT_CAS,
               the instrumentor, and the shadow state representation of 
               arrays (most notably in long-running programs with large
-     		  heap sizes).
+     		  heap sizes --- see ArrayStateFactory.java).
               
               Arrays are now tracked in fine-grained mode by default
-              (rather than being untracked by default).
+              rather than being untracked by default.
               
               Performance: RoadRunner's shadow state could pin 
               down objects that otherwise could be collected.  All Shadow
@@ -56,8 +56,11 @@ Aug 28, 2014: Various bug fixes.  This includes corner cases in FT_CAS,
 	          array and field accesses.  See Tool.java.
 
 July 8, 2014: Various small changes and bug fixes in instrumentation.
-              New CAS-based updaters.
-              Updated to ASM version 5.
+              
+              New experimental CAS-based updaters.
+              
+              Updated to ASM version 5 and moved it into the rr package 
+              to enable targets using ASM to be properly loaded.
               
 Jan 9, 2012:  Fixed typo in message reporting code for HB tool.
 

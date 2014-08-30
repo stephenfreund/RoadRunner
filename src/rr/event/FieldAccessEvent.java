@@ -91,11 +91,14 @@ public class FieldAccessEvent extends AccessEvent {
 	@Override
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = getUpdater().putState(target, this.getOriginalShadow(), newGS);
-		if (!b && (this.getShadow() != newGS)) {
-			Yikes.yikes("Concurrent Mod");
+		if (!b) {
+			if (this.getShadow() == newGS) return true; // optimize redundant update
+			Yikes.yikes("Bad Update");
 			this.originalShadow = getShadow();
+			return false;
+		} else {
+			return true;
 		}
-		return b;
 	}
 
 	@Override

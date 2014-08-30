@@ -32,14 +32,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Notes on Revisions
+Notes on Major Updates
 ========================
 
-  * 9/29/2014: All users should update to this version or later.  
+  * Version 1.1: committed on 8/30/2014.
+  
+  			   All users should update to this version.  
+  			   
   			   It fixes many bugs and corner cases, has a variety of 
   			   small functionality enhancements for fastpath code, and 
   			   improves scalability of the shadow state data 
-  			   structures.
+  			   structures.  Instrumentation now uses ASM version 5.
+  			   
+  			   
+  * Version 1.0: initial release.
 
 See CHANGES.txt for more details.
 

@@ -49,6 +49,8 @@ import acme.util.Yikes;
  * I believe this to be true on x86, but have not tested it thoroughly.
  *   
  * Use at your own risk.
+ * 
+ * @RRExperimental
  */
 public final class CASFineArrayState extends CASAbstractArrayState {
 
@@ -88,19 +90,19 @@ public final class CASFineArrayState extends CASAbstractArrayState {
 
 	@Override
 	public final ShadowVar getState(int index) {
-//		if (index >= shadowVar.length) {
-//			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
-//			return shadowVar[0];
-//		}
-//		return shadowVar[index];
+		if (index >= shadowVar.length) {
+			Yikes.yikes("Bad shadow array get: out of bounds.  Using index 0...");
+			return get(shadowVar, 0);
+		}
 		return (ShadowVar) get(shadowVar, index);
 	}
 
 	@Override
 	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		//if (index >= shadowVar.length) {
-		//	Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
-		//}
+		if (index >= shadowVar.length) {
+			Yikes.yikes("Bad array set: out of bounds. ");
+			return true;
+		}
 		return cas(shadowVar, index, expected, v);
 	}
 
