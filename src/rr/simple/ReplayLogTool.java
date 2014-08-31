@@ -125,7 +125,7 @@ final public class ReplayLogTool extends Tool implements MetaDataInfoVisitor, Ba
 		RR.nofastPathOption.set(true);
 		try {
 			out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream("events.rrlog"), 8192 * 32));
-			addMetaDatListener(this);
+			addMetaDataListener(this);
 
 			new BarrierMonitor<ReplayBarrier>(this, new DefaultValue<Object,ReplayBarrier>() {
 				public ReplayBarrier get(Object k) {

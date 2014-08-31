@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Vector;
 
+import acme.util.identityhash.WeakIdentityHashMap;
 import acme.util.io.NamedFileWriter;
 import acme.util.io.SplitOutputWriter;
 import acme.util.option.CommandLine;
@@ -291,20 +292,21 @@ public class Util {
 
 	/*******/
 
-	private static IdentityHashMap<Object,String> ids = new IdentityHashMap<Object,String>();
-
+	private static WeakIdentityHashMap<Object,String> ids = new WeakIdentityHashMap<Object,String>();
+	private static int idCounter = 1;
+	
 	/**
 	 * Return identity string for any object.
 	 */
 	public static String objectToIdentityString(Object target) {
 		if (target == null) return "null";
-		if (true) {
+		if (false) { // set to true for more detailed identity info
 			return String.format("0x%08X (%s)", Util.identityHashCode(target), target.getClass());
 		} else {
 			synchronized(Util.class) {
 				String x = ids.get(target);
 				if (x == null) {
-					x = String.format("@%02X", ids.size() + 1);
+					x = String.format("@%02X", idCounter++);
 					ids.put(target, x);
 				}
 				return x;
@@ -416,7 +418,7 @@ public class Util {
 	/**
 	 * Method to generate sequenced file names.
 	 */
-	static private String makeLogFileName(String relName) {
+	public static String makeLogFileName(String relName) {
 		String path = outputPathOption.get();
 		if (!path.equals("") && path.charAt(path.length() - 1) != File.separatorChar) {
 			path += File.separatorChar;

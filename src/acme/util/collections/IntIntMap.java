@@ -57,6 +57,7 @@ public class IntIntMap {
 	}
 
 	private synchronized void resize(int n) {
+		if (n <= store.length) return;
 		int[] newStore = new int[n];
 		for (int i = 0; i < store.length; i++) {
 			newStore[i] = store[i];

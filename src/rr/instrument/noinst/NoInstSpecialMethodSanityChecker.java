@@ -38,8 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.noinst;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.hooks.SpecialMethods;
 import rr.instrument.methods.RRMethodAdapter;
@@ -55,7 +55,7 @@ public class NoInstSpecialMethodSanityChecker extends RRMethodAdapter implements
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		MethodInfo m;
 		try {
 			m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
@@ -65,6 +65,6 @@ public class NoInstSpecialMethodSanityChecker extends RRMethodAdapter implements
 		} catch (MethodResolutionException e) {
 			Assert.warn("Can't find method in NoInst Special Sanity Checker: " + e);
 		}
-		super.visitMethodInsn(opcode, owner, name, desc);
+		super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 	}
 }

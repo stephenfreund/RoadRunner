@@ -38,21 +38,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.ClassContext;
 import rr.instrument.Instrumentor;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.ClassInfo;
 
-public class RRClassAdapter extends ClassAdapter {
+public class RRClassAdapter extends ClassVisitor {
 
 	protected ClassContext context;
 	protected int version;
 	
 	public RRClassAdapter(ClassVisitor cv) {
-		super(cv);
+		super(Opcodes.ASM5, cv);
+	}
+	
+	public RRClassAdapter() {
+		super(Opcodes.ASM5);
 	}
 
 	@Override

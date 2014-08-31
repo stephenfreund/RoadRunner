@@ -38,13 +38,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
-
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
@@ -54,13 +52,13 @@ import rr.meta.FieldInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.org.objectweb.asm.Label;
 import rr.tool.RR;
 
 public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 	protected boolean alreadyAddedPerObjectGuard = false;
-	protected boolean volatileAtomic = Instrumentor.nonAtomicVolatileOption.get();
-	
+
 	public GuardStateInserter(final ClassVisitor cv) {
 		super(cv);
 	}
@@ -81,9 +79,9 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 	}
 
 
-	public void visitGetShadow(RRMethodAdapter mv, String owner, String name, boolean isStatic) {
+	public void visitGetShadow(RRMethodAdapter mv, String owner, String name, boolean isStatic, boolean isVolatile) {
 		final Type ownerType = Type.getObjectType(owner);
-		final String shadowFieldName = Constants.getShadowFieldName(owner, name, isStatic);
+		final String shadowFieldName = Constants.getShadowFieldName(owner, name, isStatic, isVolatile);
 		if (isStatic) {
 			mv.getStatic(ownerType, shadowFieldName, Constants.GUARD_STATE_TYPE);
 		} else {
@@ -91,11 +89,14 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		}
 	}
 
-	protected void addPutMethod(final int access, final String name, final String desc) {
+	protected void addPutMethod(final int access, final FieldInfo field) {
 		ClassInfo rrClass = this.getCurrentClass();
+		final String name = field.getName();
+		final String desc = field.getDescriptor();
+
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, true);
+		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		final int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
@@ -104,11 +105,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			mv.visitVarInsn(ALOAD, 0);
 			// THIS
-			visitGetShadow(mv, rrClass.getName(), name, false);
+			visitGetShadow(mv, rrClass.getName(), name, false, field.isVolatile());
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 2 + valueSize, success);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 2 + valueSize, success, field);
 			// 
 			mv.visitVarInsn(ALOAD, 0);
 			// this
@@ -145,11 +146,14 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 	}
 
 
-	protected void addGetMethod(final int access, final String name, final String desc) {	
+	protected void addGetMethod(final int access, final FieldInfo field) {	
 		ClassInfo rrClass = this.getCurrentClass();
+		final String name = field.getName();
+		final String desc = field.getDescriptor();
+
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		if ((access & ACC_FINAL) == 0) {
@@ -157,12 +161,12 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 
 			mv.visitVarInsn(ALOAD, 0);
-			visitGetShadow(mv, rrClass.getName(), name, false);
+			visitGetShadow(mv, rrClass.getName(), name, false, field.isVolatile());
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success, field);
 
 			mv.visitVarInsn(ALOAD, 0);
 			mv.visitVarInsn(ALOAD, 5);
@@ -180,7 +184,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 				mv.visitInsn(ASMUtil.returnInstr(desc));
 			} else {
 				mv.invokeStatic(Constants.MANAGER_TYPE,
-							    isVolatile ? Constants.getVOLATILE_READ_ACCESS_METHOD() : Constants.getREAD_ACCESS_METHOD());
+						isVolatile ? Constants.getVOLATILE_READ_ACCESS_METHOD() : Constants.getREAD_ACCESS_METHOD());
 			}
 			mv.visitLabel(success);
 		}
@@ -192,11 +196,14 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 	}
 
 
-	protected void addStaticPutMethod(final int access, final String name, final String desc) {
+	protected void addStaticPutMethod(final int access, final FieldInfo field) {
 		ClassInfo rrClass = this.getCurrentClass();
+		final String name = field.getName();
+		final String desc = field.getDescriptor();
+
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic? ACC_SYNCHRONIZED : 0), name, desc, true);
+		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
@@ -204,11 +211,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			Label success = new Label();
 
-			visitGetShadow(mv, rrClass.getName(), name, true);
+			visitGetShadow(mv, rrClass.getName(), name, true, field.isVolatile());
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success, field);
 
 			mv.visitInsn(ACONST_NULL);
 			mv.visitVarInsn(ALOAD, 5);			
@@ -236,11 +243,14 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		mv.visitEnd();
 	}
 
-	protected void addStaticGetMethod(final int access, final String name, final String desc) {	
+	protected void addStaticGetMethod(final int access, final FieldInfo field) {	
 		ClassInfo rrClass = this.getCurrentClass();
+		final String name = field.getName();
+		final String desc = field.getDescriptor();
+
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile && volatileAtomic ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		Label l0 = new Label();
@@ -248,12 +258,12 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		if ((access & ACC_FINAL) == 0) {
 			Label success = new Label();
 
-			visitGetShadow(mv, rrClass.getName(), name, true);
+			visitGetShadow(mv, rrClass.getName(), name, true, field.isVolatile());
 			// gs
 			mv.visitVarInsn(ASTORE, 5);
 
 			// insert fast path code.
-			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success);
+			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success, field);
 
 			mv.visitInsn(ACONST_NULL);
 
@@ -281,42 +291,53 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 		mv.visitEnd();
 	}
 
-
-
 	@Override
 	public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
 		ClassInfo rrClass = this.getCurrentClass();
 		final boolean isStatic = (access & ACC_STATIC) != 0;
 		FieldVisitor fv = super.visitField(ASMUtil.makePublic(access), name, desc, signature, value);
 
-
 		FieldInfo field = MetaDataInfoMaps.getField(rrClass, name, desc);
 
 		if (InstrumentationFilter.shouldInstrument(field)) {
 
-			boolean isFinal = (access & ACC_FINAL) != 0; 
+			boolean isFinal = (access & ACC_FINAL) != 0;
+			boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
 			if (!isFinal) {
 				final String currentClassName = rrClass.getName();
-				if (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.FINE) {
-					cv.visitField(ASMUtil.makePublic(access | ACC_TRANSIENT), Constants.getShadowFieldName(currentClassName, name, isStatic), Constants.GUARD_STATE_TYPE.getDescriptor(), null, null);
-				} else if (!this.alreadyAddedPerObjectGuard) {
-					cv.visitField(ASMUtil.makePublic(ACC_STATIC | ACC_TRANSIENT), Constants.getShadowFieldName(currentClassName, "bogus", true), Constants.GUARD_STATE_TYPE.getDescriptor(), null, null);
-					cv.visitField(ASMUtil.makePublic(ACC_TRANSIENT), Constants.getShadowFieldName(currentClassName, "bogus", false), Constants.GUARD_STATE_TYPE.getDescriptor(), null, null);
-					this.alreadyAddedPerObjectGuard = true;
+				if (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.FINE || isStatic || isVolatile) {
+					String shadowFieldName = Constants.getShadowFieldName(currentClassName, name, isStatic, isVolatile);
+					cv.visitField(ASMUtil.makePublic(access | ACC_TRANSIENT), shadowFieldName, Constants.GUARD_STATE_TYPE.getDescriptor(), null, null);
 				}
 			}
 
 			final int publicAccess = ASMUtil.makePublic(access);
 			if (!isStatic) {
-				addPutMethod(publicAccess, name, desc);
-				addGetMethod(publicAccess, name, desc);
+				addPutMethod(publicAccess, field);
+				addGetMethod(publicAccess, field);
 			} else {
-				addStaticPutMethod(publicAccess, name, desc);
-				addStaticGetMethod(publicAccess, name, desc);
+				addStaticPutMethod(publicAccess, field);
+				addStaticGetMethod(publicAccess, field);
 			}
-
 		}
 		return fv;
 	}
+
+	public void visitEnd() {
+		if (Instrumentor.fieldOption.get() == Instrumentor.FieldMode.COARSE) {
+			ClassInfo rrClass = this.getCurrentClass();
+			ClassInfo superClass = rrClass.getSuperClass();
+			boolean hasSuperInstrumented = superClass != null && InstrumentationFilter.shouldInstrument(superClass);
+
+			if (!hasSuperInstrumented) {
+				final String currentClassName = rrClass.getName();
+				cv.visitField(ASMUtil.makePublic(ACC_TRANSIENT),
+						Constants.getShadowFieldName(currentClassName, "", false, false), 
+						Constants.GUARD_STATE_TYPE.getDescriptor(), null, null);
+			}
+		}
+		super.visitEnd();
+	}
+
 }

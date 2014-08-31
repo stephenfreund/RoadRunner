@@ -55,7 +55,7 @@ public class MetaDataInfoKeys {
 	}
 
 	public static String getFieldKey(String rrClass, String fieldName, String descriptor) {
-		return rrClass + "." + fieldName + " " + descriptor; 
+		return rrClass + "." + fieldName + "_" + descriptor.replace("[", "\\["); 
 	}
 
 	public static String getMethodKey(ClassInfo rrClass, String methodName, String signature) {
@@ -67,15 +67,15 @@ public class MetaDataInfoKeys {
 	}
 
 	private static String getLockKey(String fileName, int line, int offset, boolean isAcquire) {
-		return (isAcquire ? "acq":"rel") + "_lock@" + SourceLocation.toKeyString(fileName, line) + "(" + offset + ")"; 
+		return (isAcquire ? "acq":"rel") + "_lock@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
 	}
 	
-	public static String getArrayAccessKey(String fileName, int line, boolean isWrite) {
-		return (isWrite ? "wr":"rd") + "_array@" + SourceLocation.toKeyString(fileName, line); 
+	public static String getArrayAccessKey(String fileName, int line, int offset, boolean isWrite) {
+		return (isWrite ? "wr":"rd") + "_array@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
 	}
 
-	public static String getFieldAccessKey(String fileName, int line, FieldInfo field, boolean isWrite) {
-		return (isWrite ? "wr":"rd") + "_" + (field == null ? "null" : field.getKey()) + "@" + SourceLocation.toKeyString(fileName, line); 
+	public static String getFieldAccessKey(String fileName, int line, int offset, FieldInfo field, boolean isWrite) {
+		return (isWrite ? "wr":"rd") + "_" + (field == null ? "null" : field.getKey()) + "@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
 	}
 
 	public static String getJoinKey(String fileName, int line) {
@@ -104,11 +104,11 @@ public class MetaDataInfoKeys {
 	}
 	
 	public static String getArrayAccessKey(SourceLocation loc, boolean isWrite) {
-		return getArrayAccessKey(loc.getFile(), loc.getLine(), isWrite);
+		return getArrayAccessKey(loc.getFile(), loc.getLine(), loc.getOffset(), isWrite);
 	}
 
 	public static String getFieldAccessKey(SourceLocation loc, MethodInfo enclosing, FieldInfo field, boolean isWrite) {
-		return getFieldAccessKey(loc.getFile(), loc.getLine(), field, isWrite);
+		return getFieldAccessKey(loc.getFile(), loc.getLine(), loc.getOffset(), field, isWrite);
 	}
 
 	public static String getJoinKey(SourceLocation loc) {

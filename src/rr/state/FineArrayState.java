@@ -53,7 +53,7 @@ public final class FineArrayState extends AbstractArrayState {
 			nextDimension = new AbstractArrayState[n];
 			Object[] objArray = (Object[])array;
 			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE);
+				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, false);
 			}
 		} else {
 			nextDimension = null;
@@ -78,18 +78,20 @@ public final class FineArrayState extends AbstractArrayState {
 	@Override
 	public final ShadowVar getState(int index) {
 		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array get: " + index + " too big for " + lengthOf(array));
+			Yikes.yikes("Bad shadow array get: out of bounds.  Using index 0...");
 			return shadowVar[0];
 		}
 		return shadowVar[index];
 	}
 
 	@Override
-	public final void putState(int index, ShadowVar v) {
+	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
 		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: " + index + " too big for " + lengthOf(array));
+			Yikes.yikes("Bad shadow array set: out of bounds.");
+			return true;
 		}
 		shadowVar[index] = v;
+		return true;
 	}
 
 

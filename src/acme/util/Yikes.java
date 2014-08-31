@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-***********************************************************************/
+ ***********************************************************************/
 
 package acme.util;
 
@@ -46,7 +46,7 @@ import java.util.HashMap;
  */
 public class Yikes {
 
-	private static final int YIKES_MAX = 1;
+	private static final int YIKES_MAX = 5;
 	private static int numYikes = 0;
 	private static HashMap<String, Integer> yikesMessages = new HashMap<String,Integer>();
 
@@ -59,11 +59,12 @@ public class Yikes {
 			} else {
 				n++;
 			}
+			numYikes++;
 			yikesMessages.put(msg, n);
 			if (n <= Yikes.YIKES_MAX) {
 				Util.pad();
 				Util.error("YIKES: " + msg);
-				if (n== Yikes.YIKES_MAX - 1) {
+				if (n== Yikes.YIKES_MAX) {
 					Util.error("Suppressing further yikes messages like that one."); 
 				}
 				Util.err.println();	 
@@ -80,7 +81,7 @@ public class Yikes {
 
 	public static boolean yikes(String s, Throwable e) {
 		synchronized(Util.class) {
-			boolean b = yikes("%s ", s);
+			boolean b = yikes("%s", s);
 			if (b) {
 				Util.error("\n");
 				StackDump.printStack(Util.err, e, Util.ERROR_PREFIX);
@@ -103,5 +104,13 @@ public class Yikes {
 		return numYikes;
 	}
 
-
+	public static int getNumYikes(String s) {
+		synchronized(Util.class) {
+			if (yikesMessages.containsKey(s)) {
+				return yikesMessages.get(s);
+			} else {
+				return 0;
+			}
+		}
+	}
 }

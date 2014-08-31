@@ -75,9 +75,10 @@ public class ReplayArray extends AbstractArrayState {
 	}
 
 	@Override
-	public void putState(int x, ShadowVar v) {
+	public boolean putState(int x, ShadowVar expected, ShadowVar v) {
 		ensureSize(x);
 		elems.set(x, v);
+		return true;
 	}
 
 	@Override

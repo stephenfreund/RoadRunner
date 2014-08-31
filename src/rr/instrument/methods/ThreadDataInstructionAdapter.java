@@ -38,11 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.instrument.Instrumentor;
@@ -53,6 +51,8 @@ import rr.meta.InstrumentationFilter;
 import rr.meta.InvokeInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.meta.ReleaseInfo;
+import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.option.CommandLine;
@@ -103,7 +103,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 
 		if (callSitesOption.get()) {
 			try {
@@ -128,16 +128,16 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 				} else if (InstrumentationFilter.supportsThreadStateParam(m)) {
 					String newDesc = ASMUtil.addThreadDataToDescriptor(desc);
 					this.visitVarInsn(ALOAD, threadDataLoc);
-					super.visitMethodInsn(opcode, owner, Constants.getThreadLocalName(name), newDesc);
+					super.visitMethodInsn(opcode, owner, Constants.getThreadLocalName(name), newDesc, isInterface);
 				} else {
-					super.visitMethodInsn(opcode, owner, name, desc);
+					super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 				}
 			} catch (MethodResolutionException e) {
 				Assert.warn("Can't find method in Thread Data Instruction Adapter: " + e);
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} else {
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 
@@ -164,12 +164,6 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 			switch(opcode) {
 			case MONITORENTER: {
 				AcquireInfo acquire = MetaDataInfoMaps.makeAcquire(this.getLocation(), method);
-//				Always process all sync ops --- so don't test this anymore
-//				if (!InstrumentationFilter.shouldInstrument(acquire)) {
-//					Util.log("Skipping lock acquire: " + acquire);
-//					super.visitInsn(opcode);
-//					return;
-//				} 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */
 					// traget
@@ -213,13 +207,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 				break;
 			}
 			case MONITOREXIT: {
-				rr.meta.ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
-//				Always process all sync ops --- so don't test this anymore
-//				if (!InstrumentationFilter.shouldInstrument(release)) {
-//					Util.log("Skipping lock release: " + release);
-//					super.visitInsn(opcode);
-//					return;
-//				} 
+				ReleaseInfo release = MetaDataInfoMaps.makeRelease(this.getLocation(), method);
 
 				if (!Instrumentor.useTestAcquireOption.get()) {
 					/* Simple Version: */

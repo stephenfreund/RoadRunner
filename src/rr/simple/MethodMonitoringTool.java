@@ -67,7 +67,7 @@ public abstract class MethodMonitoringTool extends Tool {
 		super(name, next, commandLine);
 		methodsToWatch = CommandLine.makeStringMatcher(getWatchFlag(), StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "criteria for methods to watch", getInitialWatchCritera());
 		commandLine.add(methodsToWatch);
-		addMetaDatListener(new MetaDataInfoAdapter() {
+		addMetaDataListener(new MetaDataInfoAdapter() {
 			@Override
 			public void visit(MethodInfo info) {
 				shouldWatch.set(info, MethodStatus.IGNORE);

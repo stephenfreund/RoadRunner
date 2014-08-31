@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,13 +34,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state;
 
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Constructor;
+import java.util.BitSet;
+import java.util.HashMap;
 
+import rr.instrument.classes.ArrayAllocSiteTracker;
+import rr.meta.SourceLocation;
+import rr.state.update.Updaters;
+import rr.tool.RR;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
@@ -48,28 +55,67 @@ import acme.util.count.Counter;
 import acme.util.count.Timer;
 import acme.util.identityhash.ConcurrentIdentityHashMap;
 import acme.util.identityhash.WeakIdentityHashMap;
+import acme.util.identityhash.WeakIdentityHashMap.ValueFunction;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
 public class ArrayStateFactory {
 
-	public static enum ArrayMode { NONE, FINE, COARSE, SPECIAL };
+	public static enum ArrayMode { NONE, FINE, COARSE, SPECIAL, USER };
 
 	protected static final ConcurrentIdentityHashMap<Object,AbstractArrayState> table = new ConcurrentIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11, (float) 0.5, 128);
-	private static final WeakIdentityHashMap<Object,WeakReference<AbstractArrayState>> attic = new WeakIdentityHashMap<Object,WeakReference<AbstractArrayState>>((1 << 18) - 11);
+	
+	/*
+	 * In previous versions that AbstractArrayState values were weak references, which could cause 
+	 * state for long-lived arrays in the attic to be remove if those arrays were not accesses often
+	 * enough to keep them in the other caches.
+	 */
+	private static final WeakIdentityHashMap<Object,AbstractArrayState> attic = new WeakIdentityHashMap<Object,AbstractArrayState>((1 << 18) - 11);
+	
+	
 	private static int count = 0; // since ConcurrentHashMap size() is slow, approximate here...
 
 	public static CommandLineOption<ArrayMode> arrayOption = 
-		CommandLine.makeEnumChoice("array", ArrayMode.NONE, CommandLineOption.Kind.STABLE, "Determine the granularity of array shadow memory.\n    NONE tracks no array info.\n    FINE uses one location per index.\n    COARSE uses one location per array\n    SPECIAL can change from COARSE to FINE if tool requests it.", ArrayMode.class);
+			CommandLine.makeEnumChoice("array", ArrayMode.FINE, CommandLineOption.Kind.STABLE, "Determine the granularity of array shadow memory.\n    NONE tracks no array info.\n    FINE uses one location per index.\n    COARSE uses one location per array\n    SPECIAL can change from COARSE to FINE if tool requests it.", ArrayMode.class);
+
+
+	public static CommandLineOption<Constructor<? extends AbstractArrayState>> userArrayOption;
+
+	static {
+		try {
+			userArrayOption =
+					new CommandLineOption<Constructor<? extends AbstractArrayState>>("userArray", 
+							(Constructor<? extends AbstractArrayState>)rr.state.FineArrayState.class.getConstructor(Object.class), 
+							true, CommandLineOption.Kind.EXPERIMENTAL, "User defined array mode class") {
+				@Override
+				protected void apply(String arg) {
+					try {
+						Class<AbstractArrayState> c = (Class<AbstractArrayState>)RR.getToolLoader().loadClass(arg);
+						Assert.assertTrue(c != null);
+						Constructor<AbstractArrayState> x = c.getConstructor(Object.class);
+						set(x);
+					} catch (Exception e) {
+						Assert.fail("Invalid option for userArray: " + arg + ".  " + e);
+					}
+				}
+			};
+		} catch(Exception e) {
+			userArrayOption = null;
+			Assert.panic(e);
+		}
+	}
+
+
 
 	public static final NullArrayState NULL = new NullArrayState();
 
-	private static int CACHE_SIZE = 10;
+	private static int CACHE_SIZE = 8;
 
 	protected final AbstractArrayState cache[] = new AbstractArrayState[CACHE_SIZE];
 	protected int rotate = 0;
 
 	protected final ArrayMode defaultMode;
+	protected final boolean useCAS;
 
 
 	private static int MAP_CHECK = 2000;
@@ -81,32 +127,31 @@ public class ArrayStateFactory {
 	private static final Counter atticHits = new Counter("ArrayStateFactory", "Attic Hits");
 
 
-	public ArrayStateFactory(ArrayMode defaultMode) {
+	public ArrayStateFactory(ArrayMode defaultMode, boolean useCAS) {
 		this.defaultMode = defaultMode;
+		this.useCAS = useCAS;
 		for (int i = 0; i < cache.length; i++) {
 			cache[i] = NULL;
-		}
+		}		
 	}
 
 	public ArrayStateFactory() {
-		this(arrayOption.get());
+		this(arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
 	}
 
-	private static AbstractArrayState get0(Object array, ArrayMode mode) {
+	private static AbstractArrayState get0(Object array, ArrayMode mode, boolean useCAS) {
 		if (array == null) {
 			return NULL; 
 		} else {
-			//		synchronized(array) {
 			int hash = Util.identityHashCode(array);
 			AbstractArrayState state = table.get(array, hash);
 			if (state != null) {
 				return state;
 			}
 			synchronized(attic) {
-				WeakReference<AbstractArrayState> aas = attic.get(array);
-				if (aas != null && aas.get() != null) {
+				state = attic.get(array);
+				if (state != null) {
 					atticHits.inc();
-					state = aas.get();
 					AbstractArrayState z = table.putIfAbsent(array, state, hash);
 					if (z != null && z != state) {
 						Assert.panic("Pulled wrong array state for %s from attic: %s != %s", array, state, z);
@@ -115,40 +160,49 @@ public class ArrayStateFactory {
 				}
 			}
 			switch (mode) {
+			case NONE:
+				Assert.panic("NO array state option....");
 			case FINE:
-				state = new FineArrayState(array);
+				state = useCAS ? new CASFineArrayState(array) : new FineArrayState(array);
 				break;
 			case COARSE:
-				state = new CoarseArrayState(array);
+				state = useCAS ? new CASCoarseArrayState(array) : new CoarseArrayState(array);
 				break;
 			case SPECIAL:
 				state = new SpecializingArrayState(array);
 				break;
+			case USER:
+				try {
+					state = userArrayOption.get().newInstance(array);
+				} catch (Exception ex) {
+					Assert.panic(ex);
+				}
 			}
 			return put0(array, state, hash);
-			//		}		
 		}
 
 	}
 
-	public static AbstractArrayState make(Object array, ArrayMode mode) {
-		return get0(array, mode);
+	public static AbstractArrayState make(Object array, ArrayMode mode, boolean useCAS) {
+		return get0(array, mode, useCAS);
 	}
 
 	public AbstractArrayState get(Object array) {
-		return get(array, defaultMode);		
+		return get(array, defaultMode, useCAS);		
 	}
 
 
-	public AbstractArrayState get(Object array, ArrayMode mode) {
+	public AbstractArrayState get(Object array, ArrayMode mode, boolean useCAS) {
 		AbstractArrayState state;
-		for (AbstractArrayState s : cache) {
-			if (s.getArray() == array) {
+
+		for (int i = 0; i < CACHE_SIZE; i++) {
+			final AbstractArrayState s = cache[i];
+			if (s.getArrayNoCheck() == array) {
 				return s; 
 			}
 		}
 
-		state = get0(array, mode);
+		state = get0(array, mode, useCAS);
 		cache[rotate] = state;
 		rotate = (rotate + 1) % cache.length;
 		return state;
@@ -159,38 +213,39 @@ public class ArrayStateFactory {
 		AbstractArrayState z = table.putIfAbsent(array, state, hash);
 		if (z != null) {
 			Yikes.yikes("Concurrent array state creation...");
+			z.forget();
 			state = z;
 		}
 		count++;
 		size.inc();
 		if (count % mapCheck == 0) {
-			synchronized (attic) {
-				count = 0;	
-				if (mapCheck < MAP_MAX) {
-					mapCheck += MAP_INC;
-				}
-				//	if (count > MAP_THRESHOLD) {
-				long start = atticTime.start();
-				int oldCount = count;
-				int oldAtticSize = attic.size();
-				for (AbstractArrayState aas : table.values()) {
-					final Object a = aas.array;
-					if (!attic.containsKey(a)) {
-						attic.put(a, new WeakReference<AbstractArrayState>(aas));
-					}
-					final AbstractArrayState remove = table.remove(a);
-				}
-				//		count = table.size();
-				Util.logf("ArrayStateFactory Moved Entries to Attic.  Attic size: %d->%d", oldAtticSize, attic.size());
-				atticTime.stop(start);
-				//}
-			}
+			moveToAttic();
 		}
 
 		return state;
+	}
+
+	protected static void moveToAttic() {
+		synchronized (attic) {
+			count = 0;	
+			if (mapCheck < MAP_MAX) {
+				mapCheck += MAP_INC;
+			}
+			long start = atticTime.start();
+			int oldAtticSize = attic.size();
+			for (AbstractArrayState aas : table.values()) {
+				final Object a = aas.getArray();
+				if (!attic.containsKey(a)) {
+					attic.put(a, aas);
+				}
+				final AbstractArrayState remove = table.remove(a);
+			}
+			Util.logf("ArrayStateFactory Moved Entries to Attic.  Attic size: %d->%d.", oldAtticSize, attic.size());
+			atticTime.stop(start);
+		}
 	}	
 
 	public static AbstractArrayState make(Object array) {
-		return make(array, arrayOption.get());
+		return make(array, arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
 	}
 }

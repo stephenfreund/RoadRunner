@@ -38,10 +38,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.meta;
 
+import java.util.Vector;
+
 import rr.loader.Loader;
 import rr.loader.LoaderContext;
 import rr.state.update.AbstractFieldUpdater;
 import acme.util.Assert;
+import acme.util.Util;
 
 public class FieldInfo extends MetaDataInfo {
 	protected final ClassInfo rrClass;
@@ -53,6 +56,8 @@ public class FieldInfo extends MetaDataInfo {
 	protected final boolean isSynthetic;
 
 	protected transient AbstractFieldUpdater updater = null;
+
+	final static Vector<FieldInfo> statics = new Vector<FieldInfo>();
 
 	public FieldInfo(int id, SourceLocation loc, ClassInfo rrClass, String name, String descriptor, boolean isSynthetic) {
 		super(id, loc);
@@ -66,6 +71,9 @@ public class FieldInfo extends MetaDataInfo {
 		this.isFinal = isFinal;
 		this.isVolatile = isVolatile;
 		this.isStatic = isStatic;
+		if (isStatic && InstrumentationFilter.shouldInstrument(rrClass) && !statics.contains(this)) {
+			statics.add(this);
+		}
 	}
 
 	public ClassInfo getOwner() {
@@ -103,8 +111,8 @@ public class FieldInfo extends MetaDataInfo {
 			if (updater == null) {
 				try {
 					final LoaderContext loaderForClass = Loader.loaderForClass(rrClass.getName());
-					final Class guardStateThunk = loaderForClass.getGuardStateThunk(rrClass.getName(), name, isStatic);
-					setUpdater((AbstractFieldUpdater) guardStateThunk.newInstance());
+					AbstractFieldUpdater u = loaderForClass.getGuardStateThunkObject(rrClass.getName(), name, isStatic, isVolatile);
+					setUpdater(u);
 				} catch (Exception e) {
 					Assert.panic(e);
 				}
@@ -130,4 +138,23 @@ public class FieldInfo extends MetaDataInfo {
 	public void setUpdater(AbstractFieldUpdater guardStateThunk) {
 		updater = guardStateThunk;
 	}
+
+	private int offset = -1;
+
+	/*
+	 * Returns a unique offset for each field of an object.  Subclass fields
+	 * will have offsets > than inherited fields.
+	 * Static fields have unique offsets, also starting with 0.  
+	 */
+	public int getFieldOffset() {
+		if (offset == -1) {
+			if (!isStatic) {
+				offset = this.getOwner().getOffsetOfInstanceField(this);
+			} else {
+				offset = statics.indexOf(this);				
+			}
+		} 
+		return offset;
+	}
+
 }

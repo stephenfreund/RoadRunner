@@ -38,9 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.loader.RRTypeInfo;
 import rr.meta.InstrumentationFilter;
@@ -55,7 +55,7 @@ public class NoOpMethodReplacer extends RRMethodAdapter implements Opcodes {
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		// SNF: Changed to catch exceptions, since this is trying to find methods 
 		//   in a way that is currently not working.
 		try {
@@ -70,11 +70,11 @@ public class NoOpMethodReplacer extends RRMethodAdapter implements Opcodes {
 					this.pop();
 				}
 			} else {
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} catch(Exception e) {
 			Assert.warn("Can't find method in NoOp Method Replacer: " + e);
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 }

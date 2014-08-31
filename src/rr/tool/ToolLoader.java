@@ -148,7 +148,7 @@ public class ToolLoader extends URLClassLoader {
 		} 
 		expanded = expanded.replace(".", "/");
 		InputStream in = getToolAsStream(expanded);
-		ThreadStateExtensionAgent.registerTool(expanded, in);
+		ThreadStateExtensionAgent.registerTool(this, expanded, in);
 	}
 
 	@Override

@@ -1,47 +1,7 @@
-/******************************************************************************
-
-Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
-                    and Stephen Freund (Williams College) 
-
-All rights reserved.  
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the names of the University of California, Santa Cruz
-      and Williams College nor the names of its contributors may be
-      used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-******************************************************************************/
-
-// based on ASM code
-
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
- * All rights reserved.  
+ * Copyright (c) 2000-2011 INRIA, France Telecom
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,53 +29,59 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package rr.instrument.analysis;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.AnnotationVisitor;
+import rr.org.objectweb.asm.Attribute;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.TypePath;
 
 /**
- * A {@link FieldVisitor} that prints a disassembled view of the fields it
- * visits.
+ * A {@link FieldVisitor} that prints the fields it visits with a
+ * {@link Printer}.
  * 
  * @author Eric Bruneton
  */
-public class TraceFieldVisitor extends TraceAbstractVisitor implements
-        FieldVisitor
-{
+public final class TraceFieldVisitor extends FieldVisitor {
 
-    /**
-     * The {@link FieldVisitor} to which this visitor delegates calls. May be
-     * <tt>null</tt>.
-     */
-    protected FieldVisitor fv;
+    public final Printer p;
 
-    @Override
-	public AnnotationVisitor visitAnnotation(
-        final String desc,
-        final boolean visible)
-    {
-        AnnotationVisitor av = super.visitAnnotation(desc, visible);
-        if (fv != null) {
-            ((TraceAnnotationVisitor) av).av = fv.visitAnnotation(desc, visible);
-        }
-        return av;
+    public TraceFieldVisitor(final Printer p) {
+        this(null, p);
+    }
+
+    public TraceFieldVisitor(final FieldVisitor fv, final Printer p) {
+        super(Opcodes.ASM5, fv);
+        this.p = p;
     }
 
     @Override
-	public void visitAttribute(final Attribute attr) {
+    public AnnotationVisitor visitAnnotation(final String desc,
+            final boolean visible) {
+        Printer p = this.p.visitFieldAnnotation(desc, visible);
+        AnnotationVisitor av = fv == null ? null : fv.visitAnnotation(desc,
+                visible);
+        return new TraceAnnotationVisitor(av, p);
+    }
+
+    @Override
+    public AnnotationVisitor visitTypeAnnotation(int typeRef,
+            TypePath typePath, String desc, boolean visible) {
+        Printer p = this.p.visitFieldTypeAnnotation(typeRef, typePath, desc,
+                visible);
+        AnnotationVisitor av = fv == null ? null : fv.visitTypeAnnotation(
+                typeRef, typePath, desc, visible);
+        return new TraceAnnotationVisitor(av, p);
+    }
+
+    @Override
+    public void visitAttribute(final Attribute attr) {
+        p.visitFieldAttribute(attr);
         super.visitAttribute(attr);
-
-        if (fv != null) {
-            fv.visitAttribute(attr);
-        }
     }
 
     @Override
-	public void visitEnd() {
+    public void visitEnd() {
+        p.visitFieldEnd();
         super.visitEnd();
-
-        if (fv != null) {
-            fv.visitEnd();
-        }
     }
 }

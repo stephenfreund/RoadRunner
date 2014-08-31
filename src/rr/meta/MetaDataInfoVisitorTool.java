@@ -46,6 +46,6 @@ public class MetaDataInfoVisitorTool extends Tool  {
 
 	public MetaDataInfoVisitorTool(String name, Tool next, CommandLine commandLine) {
 		super(name, next, commandLine); 
-		addMetaDatListener(new MetaDataInfoPrinter());
+		addMetaDataListener(new MetaDataInfoPrinter());
 	}
 }

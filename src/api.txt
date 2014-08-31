@@ -42,7 +42,6 @@ src/acme/util/time/TimedStmt.java
 src/acme/util/Util.java
 src/acme/util/Yikes.java
 
-
 src/rr/barrier/BarrierEvent.java
 src/rr/barrier/BarrierInfo.java
 src/rr/barrier/BarrierListener.java
@@ -94,11 +93,13 @@ src/rr/simple/LastTool.java
 src/rr/simple/MethodMonitoringTool.java
 src/rr/simple/PrintTool.java
 src/rr/simple/SyncTool.java
+src/rr/simple/SpecializedFastPathTestTool.java
 src/rr/simple/ThreadLocalTool.java
 
 src/rr/state/ShadowLock.java
 src/rr/state/ShadowThread.java
 src/rr/state/ShadowVar.java
 src/rr/state/ShadowVolatile.java
+src/rr/state/AbstractArrayState.java
 
 src/rr/tool/Tool.java

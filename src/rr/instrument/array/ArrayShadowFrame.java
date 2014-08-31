@@ -74,19 +74,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.IincInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MultiANewArrayInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.Interpreter;
-import org.objectweb.asm.tree.analysis.Value;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.tree.AbstractInsnNode;
+import rr.org.objectweb.asm.tree.IincInsnNode;
+import rr.org.objectweb.asm.tree.MethodInsnNode;
+import rr.org.objectweb.asm.tree.MultiANewArrayInsnNode;
+import rr.org.objectweb.asm.tree.VarInsnNode;
+import rr.org.objectweb.asm.tree.analysis.AnalyzerException;
+import rr.org.objectweb.asm.tree.analysis.Frame;
+import rr.org.objectweb.asm.tree.analysis.Interpreter;
+import rr.org.objectweb.asm.tree.analysis.Value;
 
 import acme.util.Assert;
+import acme.util.Util;
 
 
 /**
@@ -108,7 +109,7 @@ public class ArrayShadowFrame extends Frame {
 	 * @param nStack the maximum stack size of the frame.
 	 */
 	public ArrayShadowFrame(final int nLocals, final int nStack) {
-		super(nLocals, nStack);
+		super(nLocals, nStack+2);
 	}
 
 	/**
@@ -129,6 +130,7 @@ public class ArrayShadowFrame extends Frame {
 	 */
 	@Override
 	public ArrayShadowFrame init(final Frame src) {
+//		Util.log(src.values.length + " /// " + values.length);6
 		for (int i = 0; i < src.values.length; i++) {
 			ArrayShadowValue v = ((ArrayShadowValue)src.values[i]);
 			if (v != null) v = v.clone();
@@ -320,20 +322,20 @@ public class ArrayShadowFrame extends Frame {
 			break;
 			case Opcodes.POP:
 				if (pop().getSize() == 2) {
-					throw new AnalyzerException("Illegal use of POP");
+					throw new AnalyzerException(insn, "Illegal use of POP");
 				}
 				break;
 			case Opcodes.POP2:
 				if (pop().getSize() == 1) {
 					if (pop().getSize() != 1) {
-						throw new AnalyzerException("Illegal use of POP2");
+						throw new AnalyzerException(insn, "Illegal use of POP2");
 					}
 				}
 				break;
 			case Opcodes.DUP:
 				value1 = pop();
 				if (value1.getSize() != 1) {
-					throw new AnalyzerException("Illegal use of DUP");
+					throw new AnalyzerException(insn, "Illegal use of DUP");
 				}
 				push(interpreter.copyOperation(insn, value1));
 				push(interpreter.copyOperation(insn, value1));
@@ -342,7 +344,7 @@ public class ArrayShadowFrame extends Frame {
 				value1 = pop();
 				value2 = pop();
 				if (value1.getSize() != 1 || value2.getSize() != 1) {
-					throw new AnalyzerException("Illegal use of DUP_X1");
+					throw new AnalyzerException(insn, "Illegal use of DUP_X1");
 				}
 				push(interpreter.copyOperation(insn, value1));
 				push(interpreter.copyOperation(insn, value2));
@@ -368,7 +370,7 @@ public class ArrayShadowFrame extends Frame {
 						break;
 					}
 				}
-				throw new AnalyzerException("Illegal use of DUP_X2");
+				throw new AnalyzerException(insn, "Illegal use of DUP_X2");
 			case Opcodes.DUP2:
 				value1 = pop();
 				if (value1.getSize() == 1) {
@@ -385,7 +387,7 @@ public class ArrayShadowFrame extends Frame {
 					push(interpreter.copyOperation(insn, value1));
 					break;
 				}
-				throw new AnalyzerException("Illegal use of DUP2");
+				throw new AnalyzerException(insn, "Illegal use of DUP2");
 			case Opcodes.DUP2_X1:
 				value1 = pop();
 				if (value1.getSize() == 1) {
@@ -410,7 +412,7 @@ public class ArrayShadowFrame extends Frame {
 						break;
 					}
 				}
-				throw new AnalyzerException("Illegal use of DUP2_X1");
+				throw new AnalyzerException(insn, "Illegal use of DUP2_X1");
 			case Opcodes.DUP2_X2:
 				value1 = pop();
 				if (value1.getSize() == 1) {
@@ -455,12 +457,12 @@ public class ArrayShadowFrame extends Frame {
 						break;
 					}
 				}
-				throw new AnalyzerException("Illegal use of DUP2_X2");
+				throw new AnalyzerException(insn, "Illegal use of DUP2_X2");
 			case Opcodes.SWAP:
 				value2 = pop();
 				value1 = pop();
 				if (value1.getSize() != 1 || value2.getSize() != 1) {
-					throw new AnalyzerException("Illegal use of SWAP");
+					throw new AnalyzerException(insn, "Illegal use of SWAP");
 				}
 				push(interpreter.copyOperation(insn, value2));
 				push(interpreter.copyOperation(insn, value1));

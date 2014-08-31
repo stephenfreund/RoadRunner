@@ -46,6 +46,7 @@ import java.io.PrintWriter;
 
 import rr.instrument.Constants;
 import acme.util.Assert;
+import acme.util.Yikes;
 import acme.util.Util;
 import acme.util.decorations.DecorationFactory;
 import acme.util.option.Option;
@@ -104,7 +105,7 @@ public class MetaDataInfoMaps {
 
 			opDecorations = new DecorationFactory<OperationInfo>();
 			globalDecorations = new GlobalMetaDataInfoDecorations();
-			
+
 		} else {
 			try {
 				final String file = s + "/rr.meta";
@@ -163,51 +164,53 @@ public class MetaDataInfoMaps {
 		for (ClassInfo c : getClasses()) {
 			ClassInfo.State state = c.getState();
 			switch (state) {
-				case FRESH:
-					out.println("fresh " + c.getName());
-					break;
-				case PRELOADED:
-				case COMPLETE:
-					out.print(InstrumentationFilter.shouldInstrument(c) ? "instrumented " : "");
-					out.print(c.isSynthetic() ? "synthetic " : "");
-					out.print(c.isClass() ? "class " : "interface ");
-					out.print(c.getName());
-					if (c.getSuperClass() != null) {
-						out.print(" extends ");
-						out.print(c.getSuperClass());
-					}
-					if (c.getInterfaces().size() > 0) {
-						out.print(" implements ");
-						out.print(c.getInterfaces());
-					}
-					out.println(" {");
-					for (FieldInfo f : c.getFields()) {
-						out.print("    ");
-						out.print(InstrumentationFilter.shouldInstrument(f) ? "instrumented " : "");
-						out.print(f.isSynthetic() ? "synthetic " : "");
-						out.print(f.isFinal() ? "final " : "");
-						out.print(f.isVolatile() ? "volatile " : "");
-						out.print(f.isStatic() ? "static " : "");
-						out.print(f.getDescriptor() + " " + f.getName() + ";");
-						out.println();
-					}
-					for (MethodInfo m : c.getMethods()) {
-						out.print("    ");
-						out.print(InstrumentationFilter.shouldInstrument(m) ? "instrumented " : "");
-						out.print(InstrumentationFilter.supportsThreadStateParam(m)? "threadStateOk " : "");
-						out.print(m.isSynthetic() ? "synthetic " : "");
-						out.print(m.isStatic() ? "static " : "");
-						out.print(m.isNative() ? "native " : "");
+			case FRESH:
+				out.println("fresh " + c.getName());
+				break;
+			case PRELOADED:
+			case COMPLETE:
+				out.print(InstrumentationFilter.shouldInstrument(c) ? "instrumented " : "");
+				out.print(c.isSynthetic() ? "synthetic " : "");
+				out.print(c.isClass() ? "class " : "interface ");
+				out.print(c.getName());
+				if (c.getSuperClass() != null) {
+					out.print(" extends ");
+					out.print(c.getSuperClass());
+				}
+				if (c.getInterfaces().size() > 0) {
+					out.print(" implements ");
+					out.print(c.getInterfaces());
+				}
+				out.println(" {");
+				out.println(c.getInstanceFields().size());
+				for (FieldInfo f : c.getFields()) {
+					out.print("    ");
+					out.print(InstrumentationFilter.shouldInstrument(f) ? "instrumented " : "");
+					out.print(f.getFieldOffset() + " : ");
+					out.print(f.isSynthetic() ? "synthetic " : "");
+					out.print(f.isFinal() ? "final " : "");
+					out.print(f.isVolatile() ? "volatile " : "");
+					out.print(f.isStatic() ? "static " : "");
+					out.print(f.getDescriptor() + " " + f.getName() + ";");
+					out.println();
+				}
+				for (MethodInfo m : c.getMethods()) {
+					out.print("    ");
+					out.print(InstrumentationFilter.shouldInstrument(m) ? "instrumented " : "");
+					out.print(InstrumentationFilter.supportsThreadStateParam(m)? "threadStateOk " : "");
+					out.print(m.isSynthetic() ? "synthetic " : "");
+					out.print(m.isStatic() ? "static " : "");
+					out.print(m.isNative() ? "native " : "");
 
-						out.println("    " + m.getName() + " "+ m.getDescriptor() + ":");
-						for (OperationInfo o : m.getOps()) {
-							out.print("            ");
-							out.print(InstrumentationFilter.shouldInstrument(o) ? "instrumented " : "");
-							out.println(o);
-						}
+					out.println("    " + m.getName() + " "+ m.getDescriptor() + ":");
+					for (OperationInfo o : m.getOps()) {
+						out.print("            ");
+						out.print(InstrumentationFilter.shouldInstrument(o) ? "instrumented " : "");
+						out.println(o);
 					}
-					out.println("}");
-					break;
+				}
+				out.println("}");
+				break;
 			}
 			out.println();
 		}
@@ -254,6 +257,7 @@ public class MetaDataInfoMaps {
 			a = getAcquires().get(MetaDataInfoKeys.getLockKey(loc, true));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc");
 		}
 		a = new AcquireInfo(getAcquires().size(), loc, enclosing);
 		getAcquires().put(a);
@@ -267,6 +271,7 @@ public class MetaDataInfoMaps {
 			a = getReleases().get(MetaDataInfoKeys.getLockKey(loc, false));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc");
 		}
 		a = new ReleaseInfo(getReleases().size(), loc, enclosing);
 		getReleases().put(a);
@@ -274,20 +279,30 @@ public class MetaDataInfoMaps {
 	}
 
 	public static ArrayAccessInfo makeArrayAccess(SourceLocation loc, MethodInfo enclosing, boolean isWrite) {
-		ArrayAccessInfo a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
-		if (a == null) {
-			a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
-			getArrayAccesses().put(a);
+		ArrayAccessInfo a;
+		loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset());
+		while (true) {
+			a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
+			if (a == null) break;
+			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc");
 		}
+		a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
+		getArrayAccesses().put(a);
 		return a;
 	}
 
 	public static FieldAccessInfo makeFieldAccess(SourceLocation loc, MethodInfo enclosing, boolean isWrite, FieldInfo field) {
-		FieldAccessInfo a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
-		if (a == null) {
-			a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
-			getFieldAccesses().put(a);
-		} 
+		FieldAccessInfo a;
+		loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset());
+		while (true) {
+			a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
+			if (a == null) break;
+			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
+			Yikes.yikes("making bogus loc");
+		}
+		a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
+		getFieldAccesses().put(a);
 		return a;
 	}
 
@@ -317,7 +332,7 @@ public class MetaDataInfoMaps {
 		}
 		return a;
 	}
-	
+
 
 
 	public static InterruptInfo makeInterrupt(SourceLocation sourceLocation, MethodInfo method) {
@@ -329,7 +344,7 @@ public class MetaDataInfoMaps {
 		return a;	
 	}
 
-	
+
 	public static InvokeInfo makeInvoke(SourceLocation loc, MethodInfo method, MethodInfo enclosing) {
 		InvokeInfo a;
 		final MetaDataAllocator<InvokeInfo> invokes2 = getInvokes();

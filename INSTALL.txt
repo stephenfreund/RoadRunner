@@ -36,9 +36,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 To Install:
 -----------
 
-1. You will need Ant, Java 1.6, and cpp to build RoadRunner. 
+1. You will need Ant, Java 1.6 or 1.7, and cpp to build RoadRunner. 
    The $JAVA_HOME environment variable must point to the proper
-   Java distribution.
+   Java distribution.  (Depending on the Java version, you may need
+   to add tools.jar from the JDK to your classpath in build.xml or
+   in Eclipse.)
 
 2. Unzip the dist file, and cd into the top-level directory.
 
@@ -100,16 +102,16 @@ To Run:
 6.  Running on benchmarks:
 
     When performing comparisions to other analysis platforms, you will
-    need to pay particular attention to several options.  In
-    particular, you will likely want to use -array to turn on checking
-    of arrays.  Otherwise array accesses will not be instrumented.
+    need to pay particular attention to several options, including 
+    -array and -field to ensure memory is instrumented as you intend. 
 
     In addition, RoadRunner includes specialized handling of various
     barrier implementations to facilitate writing analyses that must
     treat barriers specially.  However, it assumes those barriers are
-    correct, which is not the case for some, including the barriers in
-    JavaGrande.  Thus, you will miss errors unless you specify the
-    "-nobarrier" flag to not treat barrier code specially.
+    correct, which is not the case for some benchmarks, including 
+    the barriers in JavaGrande.  Thus, you will miss errors unless 
+    you specify the "-nobarrier" flag to not treat barrier code 
+    specially.
 
 
 ECLIPSE SUPPORT:

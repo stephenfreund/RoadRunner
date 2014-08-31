@@ -38,14 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.analysis;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.commons.AnalyzerAdapter;
-import org.objectweb.asm.util.AbstractVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.commons.AnalyzerAdapter;
 
 import acme.util.Util;
 
-public class PrintingAnalyzerAdapter extends AnalyzerAdapter implements
-		MethodVisitor {
+public class PrintingAnalyzerAdapter extends AnalyzerAdapter  {
 
 	public PrintingAnalyzerAdapter(String owner, int access, String name,
 			String desc, MethodVisitor mv) {

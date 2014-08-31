@@ -44,6 +44,7 @@ import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.update.AbstractFieldUpdater;
 import acme.util.Util;
+import acme.util.Yikes;
 
 /** Represents field accesses (reads or writes) performed by the target program. */
 
@@ -91,9 +92,13 @@ public class FieldAccessEvent extends AccessEvent {
 	public final boolean putShadow(ShadowVar newGS) {
 		boolean b = getUpdater().putState(target, this.getOriginalShadow(), newGS);
 		if (!b) {
-			this.originalShadow = getOriginalShadow();
+			if (this.getShadow() == newGS) return true; // optimize redundant update
+			Yikes.yikes("Bad Update");
+			this.originalShadow = getShadow();
+			return false;
+		} else {
+			return true;
 		}
-		return b;
 	}
 
 	@Override

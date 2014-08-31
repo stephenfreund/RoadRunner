@@ -38,10 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.loader.LoaderContext;
 import rr.meta.ClassInfo;
@@ -54,10 +53,10 @@ public class ClassInitNotifier extends RRClassAdapter {
 
 	private ClassInfo currentClass;
 
-	private class ClassInitVisitor extends MethodAdapter {
+	private class ClassInitVisitor extends MethodVisitor {
 
 		public ClassInitVisitor(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 		}
 
 		@Override
@@ -69,7 +68,7 @@ public class ClassInitNotifier extends RRClassAdapter {
 					Assert.panic(e);
 				}
 				super.visitLdcInsn(currentClass.getKey());
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ClassInitNotifier", "__$rr_init", "(Ljava/lang/String;)V");
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ClassInitNotifier", "__$rr_init", "(Ljava/lang/String;)V", false);
 			}
 			super.visitInsn(opcode);
 		} 

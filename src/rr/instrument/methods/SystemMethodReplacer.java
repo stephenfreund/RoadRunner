@@ -40,10 +40,10 @@ package rr.instrument.methods;
 
 import java.util.Vector;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.Constants;
 import rr.loader.LoaderContext;
@@ -72,7 +72,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		try {
 			MethodInfo m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
 
@@ -92,7 +92,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		} catch (MethodResolutionException e) {
 			Assert.warn("Can't find method in System Method Replacer: " + e);
 		}
-		super.visitMethodInsn(opcode, owner, name, desc);
+		super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 	}
 
 	protected static Vector<Integer> allOpcodes = new Vector<Integer>();
@@ -118,7 +118,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.THREAD_TYPE, new Method("interrupt","()V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				InterruptInfo x = MetaDataInfoMaps.makeInterrupt(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				InterruptInfo x = MetaDataInfoMaps.makeInterrupt(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(x.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("interrupt",Type.VOID_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.INT_TYPE }));
 			}
@@ -127,7 +127,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.OBJECT_TYPE, new Method("wait","()V")) { 
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(wait.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("wait",Type.VOID_TYPE, new Type[] {  Constants.OBJECT_TYPE, Type.INT_TYPE }));
 			}
@@ -136,7 +136,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.OBJECT_TYPE, new Method("wait","(J)V")) { 
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(wait.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("wait",Type.VOID_TYPE, new Type[] {  Constants.OBJECT_TYPE, Type.LONG_TYPE, Type.INT_TYPE }));
 			}
@@ -145,7 +145,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.OBJECT_TYPE, new Method("wait","(JI)V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				WaitInfo wait = MetaDataInfoMaps.makeWait(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(wait.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("wait",Type.VOID_TYPE, new Type[] {  Constants.OBJECT_TYPE, Type.LONG_TYPE, Type.INT_TYPE, Type.INT_TYPE }));
 			}
@@ -168,7 +168,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(onlyVirtualOpcode, Constants.THREAD_TYPE, new Method("start","()V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) {
-				StartInfo start = MetaDataInfoMaps.makeStart(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				StartInfo start = MetaDataInfoMaps.makeStart(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(start.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("start",Type.VOID_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.INT_TYPE }));
 			}
@@ -184,7 +184,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.THREAD_TYPE, new Method("join","()V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(join.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("join",Type.VOID_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.INT_TYPE }));
 			}
@@ -193,7 +193,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.THREAD_TYPE, new Method("join","(J)V")) { 
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) {
-				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(join.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("join",Type.VOID_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.LONG_TYPE, Type.INT_TYPE }));
 			}
@@ -202,7 +202,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.THREAD_TYPE, new Method("join","(JI)V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(join.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("join",Type.VOID_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.LONG_TYPE, Type.INT_TYPE, Type.INT_TYPE }));
 			}
@@ -225,7 +225,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(allOpcodes, Constants.THREAD_TYPE, new Method("isAlive","()Z")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine()), gen.getMethod());
+				JoinInfo join = MetaDataInfoMaps.makeJoin(new SourceLocation(gen.getFileName(), gen.getFileLine(), gen.getByteCodeIndex()), gen.getMethod());
 				gen.push(join.getId());
 				gen.invokeStatic(Constants.MANAGER_TYPE,new Method("isAlive",Type.BOOLEAN_TYPE, new Type[] {  Constants.THREAD_TYPE, Type.INT_TYPE }));
 			}
@@ -237,5 +237,12 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 				gen.invokeStatic(Constants.RR_SYSTEM_TYPE, Method.getMethod("void arraycopy(java.lang.Object, int, java.lang.Object, int, int)"));
 			}
 		},
+
+		new Replacement(onlyStaticOpcode, Constants.SYSTEM_TYPE, Method.getMethod("void gc()")) {
+			@Override
+			public void replace(int opcode, RRMethodAdapter gen) { 
+			}
+		},
+
 	};
 }

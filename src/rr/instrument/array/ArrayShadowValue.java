@@ -69,8 +69,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package rr.instrument.array;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.analysis.Value;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.tree.analysis.Value;
 
 /**
  * A {@link Value} that is represented by its type in a seven types type system.
@@ -81,9 +81,9 @@ import org.objectweb.asm.tree.analysis.Value;
  */
 public class ArrayShadowValue implements Value {
 
-	public final static Value SINGLE_VALUE = new ArrayShadowValue(Type.INT_TYPE, -1);
-	public final static Value DOUBLE_VALUE = new ArrayShadowValue(Type.LONG_TYPE, -2);
-	public final static Value NULL_VALUE = new ArrayShadowValue(Type.VOID_TYPE, -3);
+	public final static ArrayShadowValue SINGLE_VALUE = new ArrayShadowValue(Type.INT_TYPE, -1);
+	public final static ArrayShadowValue DOUBLE_VALUE = new ArrayShadowValue(Type.LONG_TYPE, -2);
+	public final static ArrayShadowValue NULL_VALUE = new ArrayShadowValue(Type.VOID_TYPE, -3);
 
 	private Type type;  
 	public final int id;  // >=0 if an target type

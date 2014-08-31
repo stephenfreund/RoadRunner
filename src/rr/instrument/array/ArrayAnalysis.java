@@ -38,16 +38,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.array;
 
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.Interpreter;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.tree.analysis.Analyzer;
+import rr.org.objectweb.asm.tree.analysis.Interpreter;
 
 import rr.instrument.analysis.AnalyzedMethodNode;
 import rr.instrument.analysis.MethodVisitorWithAnalysisFrames;
 
 public class ArrayAnalysis extends AnalyzedMethodNode {
 
-	public ArrayAnalysis(MethodVisitorWithAnalysisFrames mv, String owner, int access,
+	// mv must implement MethodVisitorWithAnalysisFrames
+	public ArrayAnalysis(MethodVisitor mv, String owner, int access,
 			String name, String desc, String signature, String[] exceptions) {
+
 		super(mv, owner, access, name, desc, signature, exceptions);
 	}
 

@@ -75,6 +75,7 @@ final public class LastTool extends Tool {
 			return "Final";
 		}
 
+
 		public static ShadowVar get() {
 			return inst;
 		}

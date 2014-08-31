@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.noinst;
 
-import org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
 
 import rr.instrument.methods.Replacement;
 import rr.instrument.methods.SystemMethodReplacer;
@@ -55,7 +55,7 @@ public class NoInstSystemMethodSanityChecker extends SystemMethodReplacer {
 	}
 
 	@Override
-	public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
 		try {
 			MethodInfo m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
 
@@ -73,6 +73,6 @@ public class NoInstSystemMethodSanityChecker extends SystemMethodReplacer {
 		} catch (MethodResolutionException e) {
 			Assert.warn("Can't find method in NoInst System Sanity Checker: " + e);
 		}
-		super.visitMethodInsn(opcode, owner, name, desc);
+		super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 	}
 }

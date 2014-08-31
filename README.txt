@@ -32,6 +32,17 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+Notes on Major Updates
+========================
+
+  * 8/30/2014.   All users should update to this version or later.
+                 
+                 It fixes many bugs and corner cases, has a variety of 
+                 small functionality enhancements for fastpath code, and 
+                 improves scalability of the shadow state data 
+                 structures.  Instrumentation now uses ASM version 5.
+                 
+		 See CHANGES.txt for more details.
 
 Installation and Running
 ========================
@@ -48,44 +59,45 @@ These are the most relevant classes/packages for writing new tools.
 
   - rr.tool.Tool:
   
-  		The base class of any analysis tool
-  		
+          The base class of any analysis tool
+          
   - rr.event.*:
   
-  		The Event objects that are passed to a tool's event handlers.
-  		You should only need to use the accessor methods for those objects.
-  		Note that these are reused.  You should never keep a reference to
-  		an Event object.  You will never create any of these objects
-  		yourself.
-  		
+          The Event objects that are passed to a tool's event handlers.
+          You should only need to use the accessor methods for those objects.
+          Note that these are reused.  You should never keep a reference to
+          an Event object.  You will never create any of these objects
+          yourself.
+          
   - rr.meta.*:
   
-  		Represents the source metadata about types, classes, operations, etc.
-  		You should only need to use the accessors provided on the RR* classes
-  		in your event handlers.  You will never create any of these objects
-  		yourself.
-  		
+          Represents the source metadata about types, classes, operations, etc.
+          You should only need to use the accessors provided on these classes
+          in your event handlers.  You will never create any of these objects
+          yourself.
+          
   - rr.simple.*:
   
-  		A couple simple tools. 
-  		
+          A couple simple tools. 
+          
   - rr.state.ShadowThread:
   - rr.state.ShadowLock:
   - rr.state.ShadowVar:
+  - rr.state.ShadowVolatile:
   
-  		The state attached to each Thread, object uses as a lock, and
-  		memory location used by a program.  Tools can attach decorations
-  		to ThreadStates and LockStates to store additional info on those
-  		structures.
-  		
-  		Tools need to create new types of VariableStates that are specific
-  		to them -- see the example tools.
-  		
+          The state attached to each Thread, object uses as a lock, and
+          memory location used by a program.  Tools can attach decorations
+          to ThreadStates and LockStates to store additional info on those
+          structures.
+          
+          Tools need to create new types of VariableStates that are specific
+          to them -- see the example tools.
+          
   - rr.error:
   
-  		Error reporting classes.  See tools.* for examples of how to use
-  		them.
-  		
+          Error reporting classes.  See tools.* for examples of how to use
+          them.
+          
  The rest of the code base is primarily to instrument bytecode and provide the
  run-time support for tools.  You should not need to modify (or even look at)
  that code.

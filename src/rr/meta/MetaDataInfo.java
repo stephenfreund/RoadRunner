@@ -83,4 +83,9 @@ public abstract class MetaDataInfo extends Decoratable {
 	}
 	
 	public abstract void accept(MetaDataInfoVisitor v);
+
+	public int compareTo(MetaDataInfo other) {
+	    return getKey().compareTo(other.getKey());
+	}
+
 }

@@ -42,14 +42,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.EmptyVisitor;
-
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.tool.ToolLoader;
 import rr.loader.InstrumentingDefineClassLoader;
 import rr.loader.NonInstrumentingPreDefineClassLoader;
 import rr.loader.RepositoryBuildingDefineClassLoader;
@@ -91,13 +89,24 @@ public class ThreadStateExtensionAgent {
 
 
 
-	private static class ToolClassVisitor extends ClassAdapter implements Opcodes {
+	private static class ToolClassVisitor extends ClassVisitor implements Opcodes {
 
 		String owner;
+		private ToolLoader loader;
 
-		public ToolClassVisitor(ClassVisitor cv, String owner) {
-			super(cv);
+		public ToolClassVisitor(ToolLoader loader, ClassVisitor cv, String owner) {
+			super(ASM5, cv);
 			this.owner = owner;
+			this.loader = loader;
+		}
+
+		@Override
+		public void visit(int version, int access, String name,
+				String signature, String superName, String[] interfaces) {
+			if (!superName.equals("rr/tool/Tool")) {
+				loader.prepToolClass(superName);
+			}
+			super.visit(version, access, name, signature, superName, interfaces);
 		}
 
 		@Override
@@ -113,7 +122,7 @@ public class ThreadStateExtensionAgent {
 	}
 
 
-	public static void registerTool(final String name, final InputStream in) {
+	public static void registerTool(final ToolLoader loader, final String name, final InputStream in) {
 		if (noDecorationInline.get()) { 
 			Util.log("Skipping ShadowThread extension for " + name);
 			return;
@@ -126,7 +135,7 @@ public class ThreadStateExtensionAgent {
 				public void run() throws Exception {
 					ClassReader cr;
 					cr = new ClassReader(in);
-					ClassVisitor cv = new ToolClassVisitor(new EmptyVisitor(), name);
+					ClassVisitor cv = new ToolClassVisitor(loader, new ClassVisitor(Opcodes.ASM5) { }, name);
 					cr.accept(cv, 0);
 				}
 			});	

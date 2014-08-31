@@ -56,18 +56,18 @@ public class SourceLocation implements Serializable, Comparable<SourceLocation> 
 		this.offset = offset;
 	}
 
-	public SourceLocation(String file, int line) {
+	private SourceLocation(String file, int line) {
 		this(file, line, -1);
 	}
 
 
 	@Override
 	public String toString() {
-		return this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? "(" + offset + ")" : "");
+		return this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? ":" + offset : "");
 	}
 
 	public static String toKeyString(String file, int line, int offset) {
-		return file + ":" + line + (offset == -1 ? "" : "(" + offset + ")");
+		return file + ":" + line + (offset == -1 ? "" : ":" + offset);
 	}
 
 	public static String toKeyString(String file, int line) {

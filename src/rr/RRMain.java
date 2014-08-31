@@ -45,12 +45,14 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 
 import rr.instrument.Instrumentor;
+import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.instrument.classes.CloneFixer;
 import rr.instrument.classes.ThreadDataThunkInserter;
 import rr.meta.InstrumentationFilter;
 import rr.replay.RRReplay;
 import rr.state.AbstractArrayStateCache;
 import rr.state.ArrayStateFactory;
+import rr.state.ShadowThread;
 import rr.state.agent.ThreadStateExtensionAgent;
 import rr.state.agent.ThreadStateExtensionAgent.InstrumentationMode;
 import rr.state.update.Updaters;
@@ -81,7 +83,7 @@ public class RRMain {
 	}
 
 	public static final CommandLineOption<Boolean> noInstrumentOption = 
-		CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.DEPRECATED, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
+		CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.STABLE, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
 
 	public static final CommandLineOption<InstrumentationMode> instrumentOption = 
 		CommandLine.makeEnumChoice("inst", InstrumentationMode.INST, CommandLineOption.Kind.STABLE, "Instrument mode: ISNT for instrument; NOINST for no instrument; REP for build repository", InstrumentationMode.class, 
@@ -106,9 +108,6 @@ public class RRMain {
 					RR.startTimer();
 
 					Class<?> cl = loader.findClass(className);
-				//	Class<?> cl =  Class.forName(className, true, loader); 
-					
-//					Assert.assertTrue(loader == cl.getClassLoader(), loader + " != " + cl.getClassLoader());
 					
 					Method method = method = cl.getMethod("main", new Class[] { argv.getClass() });
 
@@ -126,6 +125,7 @@ public class RRMain {
 
 					}
 					method.invoke(null, new Object[] { argv });
+					RR.getTool().stop(ShadowThread.getThreadState(this));
 
 					RR.endTimer();
 
@@ -187,7 +187,6 @@ public class RRMain {
 //		cl.add(InstrumentingDefineClassLoader.sanityOption);
 		cl.add(Instrumentor.fancyOption);
 		cl.add(Instrumentor.trackArraySitesOption);
-		cl.add(Instrumentor.nonAtomicVolatileOption);
 		cl.add(ThreadStateExtensionAgent.noDecorationInline);
 		cl.addOrderConstraint(ThreadStateExtensionAgent.noDecorationInline, rr.tool.RR.toolOption);
 
@@ -234,17 +233,6 @@ public class RRMain {
 	}
 
 	private static void waitForAllThreads() {
-//		while (runningThreads < infinitelyRunningThreadsOption.get()) {
-//			acme.util.Util.logf("Waiting for Thread Count to go over %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
-//
-//			try {
-//				Thread.sleep(1000);
-//			} catch (InterruptedException e) {
-//				acme.util.Assert.warn("Interrupted...");
-//			}
-//		}
-
-
 		while (runningThreads > infinitelyRunningThreadsOption.get()) {
 			acme.util.Util.logf("Waiting for Thread Count to reach %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
 
@@ -293,7 +281,8 @@ public class RRMain {
 		} catch (Exception e) {
 			Assert.panic(e);
 		}
-		RR.shutDown();		
+
+		RR.shutDown();	
 		Util.exit(0);
 	}
 

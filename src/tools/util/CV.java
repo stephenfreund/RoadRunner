@@ -38,13 +38,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package tools.util;
 
+import java.io.Serializable;
+
 import rr.RRMain;
 import acme.util.count.Counter;
 
 /**
  * For efficiency, clock vectors are mutable, extensible functions from ShadowThread ids to ints
  */
-public class CV {
+public class CV implements Serializable {
 	protected int[] a;
 	private static final int FAST = 8;
 
@@ -106,11 +108,13 @@ public class CV {
 		}
 	}
 
-	/* Requires this.a.length >= c.a.length */
+	/* Requires this.a.length <= c.a.length */
 	final private void slowMax(CV c) {
 		int[] ca = c.a;
 		int[] thisa = this.a;
-		for(int i = FAST; i < ca.length; i++) {
+		// iterate until thisa.length since someone may have extended ca since
+		// we verified it was long enough.
+		for(int i = FAST; i < thisa.length; i++) {
 			if (thisa[i] < ca[i]) thisa[i] = ca[i];
 		}
 	}
@@ -189,6 +193,10 @@ public class CV {
 		} else {
 			return 0;
 		}
+	}
+	
+	final public int size() {
+		return a.length;
 	}
 	
 	final synchronized public int gets(int tid) {

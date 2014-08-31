@@ -44,10 +44,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import acme.util.Assert;
 import acme.util.Util;
@@ -77,7 +77,7 @@ public class ClassLoaderTransformer extends ClassWriter {
 
 	@Override
 	public void visitEnd() {
-		Assert.assertTrue(count == 5, "Expected to modify 5 methodd but found " + count + ".  You may want to send email to Steve...");
+		Assert.assertTrue(count == 5, "Expected to modify 5 methods but found " + count + ".  You may want to send email to Steve...");
 		super.visitEnd();
 	}
 

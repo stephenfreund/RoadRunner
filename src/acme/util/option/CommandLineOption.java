@@ -40,6 +40,7 @@ package acme.util.option;
 
 import acme.util.Assert;
 import acme.util.Strings;
+import acme.util.Util;
 
 /**
  * An option configurable on the command line.
@@ -78,6 +79,9 @@ public abstract class CommandLineOption<T> extends Option<T> {
 		} else if (!hasArg && arg != null) {
 			Assert.fail("Command Line Option '%s' does not take a value", id);
 		} else {
+			if (kind == Kind.DEPRECATED) {
+				Assert.warn("Using Deprecated Option '%s'", id);
+			}
 			apply(arg);
 		}
 	}
@@ -87,7 +91,7 @@ public abstract class CommandLineOption<T> extends Option<T> {
 	}
 
 	protected String usage() {
-		return usage;
+		return usage + "\n" + "Current Value: " + this.get();
 	}
 
 	protected String getType() {
@@ -100,8 +104,8 @@ public abstract class CommandLineOption<T> extends Option<T> {
 		if (hasArg) {
 			args += "={" + getType() + "}";
 		}
-		args = Strings.pad(args, 30, ' ');
-		String prepend = Strings.pad("", 40, ' ');
+		args = Strings.pad(args, 32, ' ');
+		String prepend = Strings.pad("", 43, ' ');
 		args += (kind == Kind.STABLE ?       "STABLE     " :
 			     kind == Kind.EXPERIMENTAL ? "UNSTABLE   " :
 			    	 						 "DEPRECATED ");

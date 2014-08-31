@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.meta;
 
@@ -43,8 +43,9 @@ import java.util.Set;
 import java.util.Vector;
 
 import acme.util.Assert;
+import acme.util.Util;
 
-public class ClassInfo extends MetaDataInfo implements Comparable {
+public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 
 	public static enum State { FRESH, IN_PRELOAD, PRELOADED, COMPLETE }
 
@@ -56,6 +57,9 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 	protected final Vector<FieldInfo> fields = new Vector<FieldInfo>();
 	protected final Vector<ClassInfo> interfaces = new Vector<ClassInfo>();
 	protected final Vector<MethodInfo> methods = new Vector<MethodInfo>();
+
+	protected volatile Vector<FieldInfo> instanceFields;
+
 
 	public ClassInfo(int id, SourceLocation loc, String name, boolean isSynthetic) {
 		super(id, loc); 
@@ -70,7 +74,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 			Assert.fail("State for " + this + " is " + getState() + " but must be atleast " + (s) + ". " + info);
 		}
 	}
-	
+
 	protected void assertStateAtMost(State s, String info) {
 		if (!stateAtMost(s)) {
 			Assert.fail("State for " + this + " is " + getState() + " but must be atmost " + (s) + ". " + info);
@@ -91,7 +95,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 	protected void assertStateAtMost(State s) {
 		assertStateAtMost(s, "");
 	}
-	
+
 	protected void assertStateIs(State s) {
 		assertStateIs(s, "");
 	}
@@ -109,20 +113,22 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 	}
 
 	public void addField(FieldInfo x) {
+		if (superClass != null) {
+			superClass.assertStateAtLeast(State.PRELOADED);
+		}
 		if (!fields.contains(x)) {
 			fields.add(x);
-		} 
-//		else  if (!x.isSynthetic() && stateAtLeast(State.PRELOADED)) {
-//			Util.warn("Adding field " + x + " to " + this + " in state " + getState());
-//		} 
+		}
 	}
 
 	public void setSuperClass(ClassInfo superClass) {
 		if (this.superClass != superClass) {
+			Assert.assertTrue(instanceFields == null);
 			assertStateAtMost(State.IN_PRELOAD, "add super " + superClass);
 		}
+		superClass.assertStateAtLeast(State.PRELOADED);
 		this.isClass = true;
-		this.superClass = superClass;
+		this.superClass = superClass;		
 	}
 
 	public ClassInfo getSuperClass() {
@@ -157,7 +163,7 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 		assertStateAtMost(State.IN_PRELOAD);
 		this.isClass = isClass;
 	}
-	
+
 	public boolean isClass() {
 		assertStateAtLeast(State.PRELOADED);
 		return isClass;
@@ -181,13 +187,20 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 		}
 		return supers;
 	}
-	
+
 	public State getState() {
 		return state;
 	}
 
+	protected String instanceLayout() {
+		String r = "";
+		for (FieldInfo x : getInstanceFields()) {
+			r += " " + x.getName();
+		}
+		return r;
+	}
+
 	public void setState(State state) {
-//		Util.log(this + " " + this.state + " -> " + state);
 		this.state = state;
 	}
 
@@ -202,9 +215,6 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 		if (!methods.contains(x)) {
 			methods.add(x); 
 		} 
-//		else if (!x.isSynthetic() && stateAtLeast(State.PRELOADED)) {
-//			Util.log("Adding method " + x + " to " + this + " in state " + getState());
-//		}
 	}
 
 	public Vector<ClassInfo> getInterfaces() {
@@ -225,8 +235,45 @@ public class ClassInfo extends MetaDataInfo implements Comparable {
 		return this.isSynthetic;
 	}
 
-	public int compareTo(Object o) {
+	public int compareTo(ClassInfo o) {
 		return getName().compareTo(((ClassInfo)o).getName());
+	}
+
+	protected void makeFieldList() {
+		if (instanceFields == null) {
+			synchronized(this) {
+				if (instanceFields == null) {
+					Vector<FieldInfo> tmpFields;
+					if (this.superClass != null) {
+						superClass.makeFieldList();
+						tmpFields = new Vector<FieldInfo>(superClass.instanceFields);
+					} else {
+						tmpFields = new Vector<FieldInfo>();
+					}
+					if (InstrumentationFilter.shouldInstrument(this)) {
+						for (FieldInfo x : fields) {
+							if (!x.isStatic() && !x.isFinal()) {
+								tmpFields.add(x);
+							}
+						}
+					}
+					instanceFields = tmpFields;
+				}
+			}
+		}
+	}
+
+	public Vector<FieldInfo> getInstanceFields() {
+		assertStateAtLeast(State.PRELOADED);
+		makeFieldList();
+		return instanceFields;
+	}
+
+	public int getOffsetOfInstanceField(FieldInfo x) {
+		makeFieldList();
+		int i = instanceFields.indexOf(x);
+		Assert.assertTrue(i != -1 || x.isStatic() || x.isFinal());
+		return i;
 	}
 
 }

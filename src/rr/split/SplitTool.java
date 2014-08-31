@@ -128,14 +128,14 @@ public class SplitTool extends Tool {
 
 	@Override
 	public void fini() {
-		ToolVisitor f = new ToolVisitor() {
-			public void apply(Tool t) {
-				t.fini();
-			}
-
-		};
-		firstNext.accept(f);
-		secondNext.accept(f);
+//		ToolVisitor f = new ToolVisitor() {
+//			public void apply(Tool t) {
+//				t.fini();
+//			}
+//
+//		};
+//		firstNext.fini();
+//		secondNext.fini();
 	}
 
 	@Override
@@ -158,9 +158,11 @@ public class SplitTool extends Tool {
 
 	@Override
 	public ShadowVar makeShadowVar(AccessEvent fae) {
-		return new SplitVarState(firstNext.makeShadowVar(fae), secondNext.makeShadowVar(fae));
+		ShadowVar makeShadowVarFirst = firstNext.makeShadowVar(fae);
+		ShadowVar makeShadowVarSecond = secondNext.makeShadowVar(fae);
+		return new SplitVarState(makeShadowVarFirst, makeShadowVarSecond);
 	}
-	
+		
 	@Override
 	public ShadowVar cloneState(ShadowVar v) {
 		if (v instanceof SplitVarState) {

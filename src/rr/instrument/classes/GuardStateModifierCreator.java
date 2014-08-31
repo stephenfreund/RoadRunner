@@ -38,9 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.instrument.Constants;
 import rr.loader.Loader;
@@ -48,7 +48,7 @@ import rr.state.update.Updaters;
 
 public class GuardStateModifierCreator implements Opcodes {
 
-	public static byte[] dump (String className, String fieldName, boolean isStatic)  {
+	public static byte[] dump (String className, String fieldName, boolean isStatic, boolean isVolatile)  {
 
 		ClassWriter cw = new ClassWriter(0);
 		MethodVisitor mv;
@@ -60,13 +60,13 @@ public class GuardStateModifierCreator implements Opcodes {
 			mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
 			mv.visitCode();
 			mv.visitVarInsn(ALOAD, 0);
-			mv.visitMethodInsn(INVOKESPECIAL, thunkSuper, "<init>", "()V");
+			mv.visitMethodInsn(INVOKESPECIAL, thunkSuper, "<init>", "()V", false);
 			mv.visitInsn(RETURN);
 			mv.visitMaxs(1, 1);
 			mv.visitEnd();
 		}
 
-		String gsName = Constants.getShadowFieldName(className, fieldName, isStatic);
+		String gsName = Constants.getShadowFieldName(className, fieldName, isStatic, isVolatile);
 		{
 			mv = cw.visitMethod(ACC_PUBLIC, "get", "(Ljava/lang/Object;)Lrr/state/ShadowVar;", null, null);
 			mv.visitCode();
@@ -104,7 +104,7 @@ public class GuardStateModifierCreator implements Opcodes {
 			mv.visitCode();
 			if (!isStatic) {
 				mv.visitVarInsn(ALOAD, 0);
-				mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "identityHashCode", "(Ljava/lang/Object;)I");
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "identityHashCode", "(Ljava/lang/Object;)I", false);
 			} else {
 				mv.visitLdcInsn(thunkName.hashCode());
 			}

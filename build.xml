@@ -101,11 +101,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	<target name="wc">
 		<echo> acme loc: </echo>
 		<exec executable="bash">
-			<arg line="-c 'find ${src.dir}/acme -name *.java | xargs wc -l | tail -1'" />
+			<arg line="-c 'find ${src.dir}/acme -name \*.java | xargs wc -l | tail -1'" />
 		</exec>
 		<echo> rr loc: </echo>
 		<exec executable="bash">
-			<arg line="-c 'find ${src.dir}/rr -name *.java | xargs wc -l | tail -1'" />
+			<arg line="-c 'find ${src.dir}/rr -name \*.java | xargs wc -l | tail -1'" />
 		</exec>
 	</target>
 
@@ -114,6 +114,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		<mkdir dir="${auto.dir}/bin" />
 		<javac srcdir="${src.dir}:${auto.dir}" destdir="${classes.dir}" classpathref="rr.classpath" debug="true">
 			<compilerarg value="-Xbootclasspath/p:${classes.dir}" />
+			<compilerarg value="-XDignore.symbol.file" />
 		</javac>
 		<echo file="${auto.dir}/bin/${run-script}" append="false" message="#!/bin/bash${line.separator}
 								  ${java.home}/bin/java -version ${line.separator}
@@ -126,7 +127,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 	<target name="props" depends="">
-		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/tools" />
+		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/tools">
+		  <compilerarg value="-XDignore.symbol.file" />
+		</apt>
+
 		<move file="rrtools.properties" todir="${classes.dir}/tools" />
 
 		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/rr/simple" />
@@ -175,7 +179,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	<target name="bootstrap-loader">
 		<mkdir dir="${classes.dir}"/>
 		<javac srcdir="${src.dir}/acme" destdir="${classes.dir}" debug="true"/>
-		<javac srcdir="${src.dir}/org" destdir="${classes.dir}" debug="true"/>
 		<javac srcdir="${src.dir}" includes="rr/loader/ClassLoaderTransformer.java" destdir="${classes.dir}" debug="true"/>
 		<java classname="rr.loader.ClassLoaderTransformer" classpath="${classes.dir}"/>
 		<copy file="/tmp/RR_ClassLoader.class" tofile="${classes.dir}/java/lang/ClassLoader.class"/>

@@ -42,8 +42,10 @@ import acme.util.Assert;
 
 public final class NullArrayState extends AbstractArrayState {
 
+	private static final Object placeHolder = new Object();
+	
 	public NullArrayState() {
-		super(null);
+		super(placeHolder);
 	}
  	
 	@Override
@@ -70,8 +72,9 @@ public final class NullArrayState extends AbstractArrayState {
 
 	
 	@Override
-	public void putState(int index, ShadowVar v) {
+	public boolean putState(int index, ShadowVar expected, ShadowVar v) {
 		Assert.panic("Null Array!");
+		return false;
 	}
 
 }

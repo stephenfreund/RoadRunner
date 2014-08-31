@@ -75,16 +75,10 @@ final public class EmptyTool extends Tool {
 		super(name, next, commandLine);
 	}
 
-	public void addOptionsToCommandLine(CommandLine cl) {
-		cl.add(CommandLine.makeStringMatcher("atomics", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "criteria for methods to watch", new String[] {}));
-	}
-
-
 	@Override
 	public ShadowVar makeShadowVar(AccessEvent fae) {
 		return fae.getThread();
 	}
-
 
 	@Override
 	public final void access(AccessEvent fae) {

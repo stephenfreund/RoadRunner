@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,15 +34,18 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state;
 
 
+import java.lang.ref.WeakReference;
+
 import rr.RRMain;
 import acme.util.Assert;
-import acme.util.ResourceManager;
+import acme.util.WeakResourceManager;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
@@ -59,10 +62,9 @@ public class ShadowLock extends Decoratable {
 
 	private static final Counter count = new Counter("ShadowLock", "objects");
 
-	/*
-	 * Common to notifyAll Tools
-	 */
-	private final Object lock;
+	// Must be a Weak Ref so that our shadow state does not
+	//   pin down objects that could otherwise be collected. 
+	private final WeakReference<Object> lock;
 
 	private int holdCount = 0;
 	private ShadowThread curThread = null;
@@ -75,7 +77,8 @@ public class ShadowLock extends Decoratable {
 	 */
 
 	private ShadowLock(Object lock) { 
-		this.lock = lock;
+		// Assert.assertTrue(lock != null);
+		this.lock = new WeakReference<Object>(lock);
 		hashCode = counter++;
 		if (RRMain.slowMode()) count.inc();
 	}
@@ -138,22 +141,27 @@ public class ShadowLock extends Decoratable {
 				"curThread:"+curThread+" holdCount:"+holdCount);
 	}
 
-
-	private static ResourceManager<Object, ShadowLock> locks = new ResourceManager<Object, ShadowLock>() {
+	
+	private static final WeakResourceManager<Object, ShadowLock> locks = new WeakResourceManager<Object, ShadowLock>() {
 
 		@Override
 		protected ShadowLock make(Object k) {
 			return new ShadowLock(k);
 		}
 	};
-  
+
 	public static ShadowLock get(Object o) {
 		return locks.get(o);
 	}
 
+	/**
+	 * This may return null if the object has been collected.
+	 */
 	public Object getLock() {
-		return lock;
+		Object l = lock.get();
+		if (l == null) Yikes.yikes("Getting target of ShadowLock after target has been gc'd");		
+		return l;
 	}
-	
+
 }
 

@@ -40,36 +40,35 @@ package rr.loader;
 
 import java.util.Stack;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.EmptyVisitor;
-
 import rr.instrument.Instrumentor;
 import rr.meta.ClassInfo;
 import rr.meta.FieldInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
 import rr.meta.ClassInfo.State;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.Label;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 import acme.util.Assert;
 
 public class MetaDataBuilder {
 
 	static private Stack<String> preLoad = new Stack<String>();
 
-	private static class MetaDataClassVisitor extends ClassAdapter {
+	private static class MetaDataClassVisitor extends ClassVisitor {
 
 		protected final boolean sigsOnly;
 		protected ClassInfo current;
+		protected LoaderContext ctxt;
 
-		public MetaDataClassVisitor(boolean sigsOnly) {
-			super(new EmptyVisitor());
+		public MetaDataClassVisitor(LoaderContext c, boolean sigsOnly) {
+			super(Opcodes.ASM5);
 			this.sigsOnly = sigsOnly;
+			this.ctxt = c;
 		}
 
 		@Override
@@ -79,6 +78,11 @@ public class MetaDataBuilder {
 			current = MetaDataInfoMaps.getClass(name);
 
 			if ((access & Opcodes.ACC_INTERFACE) == 0 && superName != null) {
+				try {
+					ctxt.getRRClass(superName);
+				} catch (ClassNotFoundException e) {
+					Assert.fail(e);
+				}
 				preLoadRec(superName);
 				MetaDataInfoMaps.getClass(superName);
 				if (current.stateAtMost(ClassInfo.State.IN_PRELOAD)) {
@@ -134,12 +138,12 @@ public class MetaDataBuilder {
 
 	}
 
-	private static class MetaDataMethodVisitor extends MethodAdapter {
+	private static class MetaDataMethodVisitor extends MethodVisitor {
 
 		protected final MethodInfo method;
 
 		public MetaDataMethodVisitor(MethodInfo method, MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 			this.method = method;
 		}
 
@@ -159,13 +163,13 @@ public class MetaDataBuilder {
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name,
-				String desc) {
+				String desc, boolean itf) {
 			preLoadRec(owner);
 			visitType(Type.getReturnType(desc));
 			for (Type t : Type.getArgumentTypes(desc)) {
 				visitType(t);
 			}
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc, itf);
 		}
 
 		@Override
@@ -192,7 +196,7 @@ public class MetaDataBuilder {
 	}
 
 	public static void preLoad(LoaderContext c, ClassReader in) {
-		MetaDataClassVisitor mcv = new MetaDataClassVisitor(true);
+		MetaDataClassVisitor mcv = new MetaDataClassVisitor(c, true);
 		in.accept(mcv, 0);
 	}
 
@@ -201,7 +205,7 @@ public class MetaDataBuilder {
 	}
 
 	public static void preLoadFully(final LoaderContext c, final ClassReader in)  {
-		MetaDataClassVisitor mcv = new MetaDataClassVisitor(false);
+		MetaDataClassVisitor mcv = new MetaDataClassVisitor(c, false);
 		in.accept(mcv, 0);
 
 		while (!preLoad.isEmpty()) {

@@ -42,8 +42,8 @@ import acme.util.Assert;
 
 public class ArrayStateCache extends AbstractArrayStateCache {
 
-	public Object arrayCache[] = new Object[rr.tool.RR.maxTidOption.get()]; 
-	public AbstractArrayState shadowCache[] = new AbstractArrayState[rr.tool.RR.maxTidOption.get()];
+	public final Object arrayCache[] = new Object[rr.tool.RR.maxTidOption.get()]; 
+	public final AbstractArrayState shadowCache[] = new AbstractArrayState[rr.tool.RR.maxTidOption.get()];
 
 	protected ArrayStateCache(String tag, int id) {
 		super(tag, id);

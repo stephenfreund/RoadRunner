@@ -46,6 +46,7 @@ import java.util.Vector;
 
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
+import rr.event.ArrayAccessEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
@@ -86,6 +87,14 @@ import acme.util.option.CommandLine;
  *         the standard (and not inlined) 'access' method is called instead. There are
  *         corner cases where they cannot be used.  Thus, design your tool to work properly, even if
  *         they are not inserted at an access site.
+ *         <p>
+ *         Note: New fast path versions have been added to also have a parameter for the index of fields 
+ *         within an object or within an array.  See rr.simple.SpecializedFastPathTestTool for examples.
+ *         <p>
+ *         Also, fast path code may assume the guard state is non-null.  On first access to a 
+ *         memory location, the slow path will run with a freshly-created guard state.  Only subsequent
+ *         accesses will run fastpath code.  Also, you must set the guard state to a non-null value
+ *         or else the fast path code will not be called.
  *  </ul>       
  *  
  *  Event handlers are the methods of this class that take a single ...Event argument.
@@ -114,7 +123,26 @@ public abstract class Tool  {
 
 	private boolean hasReadFPMethod;
 	private boolean hasWriteFPMethod;
+	
+	/*
+	 * @RRExperimental
+	 */
+	private boolean hasArrayReadFPMethod;
 
+	/*
+	 * @RRExperimental
+	 */
+	private boolean hasArrayWriteFPMethod;
+
+	/*
+	 * @RRExperimental
+	 */
+	private boolean hasFieldReadFPMethod;
+
+	/*
+	 * @RRExperimental
+	 */
+	private boolean hasFieldWriteFPMethod;
 
 	/**
 	 * All tools are created by the RoadRunner infrastructure from the command line, based on @Abbrev("...") annotations.
@@ -139,21 +167,17 @@ public abstract class Tool  {
 			nextEnter = nextExit = nextAcquire = nextRelease = nextAccess = null;
 		}
 
-		try {
-			getClass().getMethod("readFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-			hasReadFPMethod = true;
-		} catch (NoSuchMethodException e) {
-			hasReadFPMethod = false;
-		}
+		hasReadFPMethod = implementsMethod("readFastPath");
+		hasWriteFPMethod = implementsMethod("writeFastPath");
+		
+		hasArrayReadFPMethod = implementsMethod("arrayReadFastPath");
+		hasArrayWriteFPMethod = implementsMethod("arrayWriteFastPath");
 
-		try {
-			getClass().getMethod("writeFastPath", rr.state.ShadowVar.class, rr.state.ShadowThread.class);
-			hasWriteFPMethod = true;
-		} catch (NoSuchMethodException e) {
-			hasWriteFPMethod = false;
-		}
+		hasFieldReadFPMethod = implementsMethod("fieldReadFastPath");
+		hasFieldWriteFPMethod = implementsMethod("fieldWriteFastPath");
+		
+		
 	}
-
 
 	/**
 	 * Tool-specific initialization.  Called after the entire chain has been constructed but
@@ -343,7 +367,7 @@ public abstract class Tool  {
 	public ShadowVar makeShadowVar(AccessEvent ae) {
 		return next.makeShadowVar(ae);
 	}
-
+	
 	/** The name of this tool. Used in auto-generated help information. */
 	@Override
 	public String toString() {
@@ -409,9 +433,23 @@ public abstract class Tool  {
 		return isWrite ? hasWriteFPMethod : hasReadFPMethod;
 	}
 
+	/**
+	 * @RRInternal
+	 */
+	public boolean hasArrayFPMethod(boolean isWrite) {
+		return isWrite ? hasArrayWriteFPMethod : hasArrayReadFPMethod;
+	}
+
+	/**
+	 * @RRInternal
+	 */
+	public boolean hasFieldFPMethod(boolean isWrite) {
+		return isWrite ? hasFieldWriteFPMethod : hasFieldReadFPMethod;
+	}
+
 	/** Add a listener to be notified about class meta data as it is loaded by RoadRunner.
 	 */
-	protected final void addMetaDatListener(MetaDataInfoVisitor visitor) {
+	protected final void addMetaDataListener(MetaDataInfoVisitor visitor) {
 		Loader.addListener(visitor);
 	}
 	
@@ -430,6 +468,7 @@ public abstract class Tool  {
 	protected final <T extends Serializable> Decoration<ShadowLock, T> makeLockDecoration(String name, T initial) {
 		return ShadowLock.makeDecoration(name, DecorationFactory.Type.SINGLE, new SingletonValue<ShadowLock, T>(initial));
 	}
+
 
 
 	

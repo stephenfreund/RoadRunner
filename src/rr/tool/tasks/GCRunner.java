@@ -41,22 +41,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package rr.tool.tasks;
 
+import java.lang.management.CompilationMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
+
+import rr.tool.RR;
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.time.*;
+import acme.util.count.HighWaterMark;
 
 public final class GCRunner implements Runnable {
+	
+	private final HighWaterMark maxUsage = new HighWaterMark("GCRunner", "Max Usage");
+	
 	public void run() { 
-		new Thread() {
+		new Thread("GC Runner") {
 			public void run() {
+				MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+				CompilationMXBean cbean = ManagementFactory.getCompilationMXBean();
+
 				long start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < 30000) {
 					try {
-						Thread.sleep(5);
+						Thread.sleep(10);
 					} catch (InterruptedException e) {
 						Assert.panic(e);
 					}
-					Util.log("GC");
-					System.gc();
+					gcAndStats(bean);
+
+					
 				}
 				int delay = 100;
 				while (true) {
@@ -68,9 +83,30 @@ public final class GCRunner implements Runnable {
 					} catch (InterruptedException e) {
 						Assert.panic(e);
 					}
-					Util.log("GC");
-					System.gc();
+					gcAndStats(bean);
 				}
+			}
+
+			protected void gcAndStats(final MemoryMXBean bean) {
+				try {
+					Util.log(new TimedStmt("Force GC") {
+						@Override
+						public void run() throws Exception {
+							System.gc();
+							long peak = 0;
+							for (MemoryPoolMXBean b : ManagementFactory.getMemoryPoolMXBeans()) {
+								peak += b.getPeakUsage().getUsed();
+							}
+							long mem = bean.getHeapMemoryUsage().getUsed();
+							Util.logf("Mem Used %d\t Mem Peak %d",mem/1000000,peak/1000000);
+							if (!RR.targetFinished()) 
+								maxUsage.set(mem);
+						}
+					});
+				} catch (Exception e) { 
+					Assert.fail(e);
+				}
+				
 			}
 		}.start();
 	}

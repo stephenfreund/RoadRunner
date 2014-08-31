@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state.update;
 
@@ -46,11 +46,11 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 
 	private static final int LOCKS = 4096;
 	private static LockManager locks = new LockManager(LOCKS);
-	
+
 	public SafeFieldUpdater() {
-		
+
 	}
-	
+
 	/**
 	 * Put newGS in to the shadow location for the associated field of object o. 
 	 * If the expected guard state is not found there, don't do the update.  Return
@@ -61,6 +61,7 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 		int hash = hashCode(o);
 		synchronized(locks.get(hash)) {
 			try { 
+				if (expectedGS == newGS) return true;
 				set(o, newGS);
 			} catch (ClassCastException e) {
 				// This happens when two different class loaders load files with the exact same name.
@@ -69,7 +70,7 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 			return true;
 		}
 	}
-	
+
 
 	private String loaderChain(ClassLoader cl) {
 		if (cl == null) {
@@ -78,14 +79,14 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 			return Util.objectToIdentityString(cl) + " -> " + loaderChain(cl.getParent());
 		}
 	}
-	
-	
+
+
 	/**
 	 * Compute a hash code for o's shadow field.
 	 */ 
 	protected int hashCode(Object o) { 
 		return Util.identityHashCode(o == null ? this : o); 
 	}
-	
+
 
 }

@@ -45,13 +45,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.ClassWriter;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.loader.Loader;
 import acme.util.Assert;
@@ -65,7 +63,7 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 			Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] bytes) throws IllegalClassFormatException {
 
-		if (!(className.startsWith("rr/") || className.startsWith("rrtools/") || className.startsWith("java/") || className.startsWith("acme/") || className.startsWith("org/asm/") || className.startsWith("sun/"))) {
+		if (!(className.startsWith("rr/") || className.startsWith("rrtools/") || className.startsWith("java/") || className.startsWith("acme/") || className.startsWith("sun/"))) {
 			if (hook != null) {
 				return hook.define(definingLoader, className, bytes);
 			}
@@ -92,15 +90,20 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 	final Set<String> classesToTransform = new HashSet<String>();
 
 	public void addField(ThreadStateFieldExtension f) {
+		for (ThreadStateFieldExtension o : fields) {
+			if (o.name.equals(f.name)) { 
+				Assert.warn("Potential ThreadState field extension name clash: '%s'", o.name);
+			}
+		}
 		fields.add(f);
 	}
 
-	private class ThreadStateClassVisitor extends ClassAdapter implements Opcodes {
+	private class ThreadStateClassVisitor extends ClassVisitor implements Opcodes {
 
 		final String className;
 
 		public ThreadStateClassVisitor(ClassVisitor cv, String className) {
-			super(cv);
+			super(ASM5, cv);
 			this.className = className;
 		}
 
@@ -141,20 +144,20 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 		classesToTransform.add(name);
 	}
 
-	private class WatchedClassMethodVisitor extends MethodAdapter implements Opcodes {
+	private class WatchedClassMethodVisitor extends MethodVisitor implements Opcodes {
 
 		String className;
 
 		public WatchedClassMethodVisitor(MethodVisitor mv, String className) {
-			super(mv);
+			super(ASM5, mv);
 			this.className = className;
 		}
 
 		@Override
-		public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-			if (owner.equals(className)) {
+		public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isInterface) {
+			//if (owner.equals(className)) {  Conflicts are now the user's problem...
 				for (ThreadStateFieldExtension f : fields) {
-					if (f.origin.equals(className)) {
+				//	if (f.origin.equals(className)) {
 						if (name.equals("ts_get_" + f.name)) {
 							super.visitFieldInsn(GETFIELD, f.owner, f.name + "_" + f.origin.replace("/", "_"), f.desc);
 							return;
@@ -162,19 +165,19 @@ public class StateExtensionTransformer implements ClassFileTransformer {
 							super.visitFieldInsn(PUTFIELD, f.owner, f.name + "_" + f.origin.replace("/", "_"), f.desc);
 							return;
 						} 
-					}
+				//	}
 				}
-			}
-			super.visitMethodInsn(opcode, owner, name, desc);
+			//}
+			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}
 
-	private class WatchedClassVisitor extends ClassAdapter implements Opcodes {
+	private class WatchedClassVisitor extends ClassVisitor implements Opcodes {
 
 		final String className;
 
 		public WatchedClassVisitor(ClassVisitor cv, String className) {
-			super(cv);
+			super(ASM5, cv);
 			this.className = className;
 		}
 

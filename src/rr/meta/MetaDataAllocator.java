@@ -45,6 +45,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import acme.util.Assert;
+import acme.util.Util;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.decorations.DefaultValue;
@@ -73,7 +75,8 @@ public class MetaDataAllocator<S extends MetaDataInfo> implements Iterable<S>, S
 	}
 
 	public S get(final int id) {
-		return mapById[id];
+		S s = mapById[id];
+		return s;
 	}
 
 	public int size() {

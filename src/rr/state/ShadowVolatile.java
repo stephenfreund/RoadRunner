@@ -39,10 +39,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.state;
 
 
+import java.lang.ref.WeakReference;
+
 import rr.RRMain;
 import rr.meta.FieldInfo;
+import acme.util.Assert;
 import acme.util.ResourceManager;
+import acme.util.WeakResourceManager;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.count.Counter;
 import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
@@ -70,13 +75,14 @@ public class ShadowVolatile extends Decoratable {
 
 	private static final Counter count = new Counter("ShadowVolatile", "objects");
 
-	private final Object target;
+	private final WeakReference<Object> target;
 	private final FieldInfo fd;
 
 	private final int hashCode;
 
 	private ShadowVolatile(Object target, FieldInfo fd) {
-		this.target = target;
+		// Assert.assertTrue(target != null || fd.isStatic());
+		this.target = new WeakReference<Object>(target);
 		this.fd = fd;
 		this.hashCode = Util.identityHashCode(target) + Util.identityHashCode(fd);
 		if (RRMain.slowMode()) count.inc();
@@ -89,26 +95,37 @@ public class ShadowVolatile extends Decoratable {
 
 	@Override
 	public String toString() {
-		return "LOCK " + Util.objectToIdentityString(this.getTarget()) + "." + getField().getName();
+		return "VOLATILE " + Util.objectToIdentityString(this.getTarget()) + "." + getField().getName();
 	}
 
+	/**
+	 * This may return null in two cases:
+	 *   1) if the field is a static field.
+	 *   2) if the owning object has already been garbage collected.
+	 */
 	public Object getTarget() {
-		return target;
+		Object l = target.get();
+		if (l == null && !fd.isStatic()) Yikes.yikes("Getting target of ShadowVolatile after target has been gc'd");
+		return l;
 	}
 
 	public FieldInfo getField() {
 		return fd;
 	}
 
-	private static class ByFieldTable extends ResourceManager<FieldInfo,ResourceManager<Object,ShadowVolatile>> {
+	/*
+	 * Use Weak Resource Managers to avoid pinning down objects
+	 * that could be collected.
+	 */
+	private static class ByFieldTable extends ResourceManager<FieldInfo,WeakResourceManager<Object,ShadowVolatile>> {
 
 		public ByFieldTable() {
 			super(11);
 		}
 
 		@Override
-		protected ResourceManager<Object, ShadowVolatile> make(final FieldInfo field) {
-			return new ResourceManager<Object, ShadowVolatile>(997) {
+		protected WeakResourceManager<Object, ShadowVolatile> make(final FieldInfo field) {
+			return new WeakResourceManager<Object, ShadowVolatile>() {
 
 				@Override
 				protected ShadowVolatile make(Object obj) {

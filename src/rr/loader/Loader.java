@@ -46,7 +46,7 @@ import java.util.Hashtable;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.Instrumentor;
 import rr.instrument.hooks.SpecialMethodListener;

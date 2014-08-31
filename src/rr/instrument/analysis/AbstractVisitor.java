@@ -69,8 +69,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package rr.instrument.analysis;
 
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.util.ASMifiable;
+import rr.org.objectweb.asm.Attribute;
+import rr.org.objectweb.asm.util.ASMifiable;
 
 import acme.util.Util;
 

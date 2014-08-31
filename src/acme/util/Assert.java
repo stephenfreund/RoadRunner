@@ -47,6 +47,7 @@ public class Assert {
 
 	static private int numWarnings = 0;
 	static private boolean failed = false;
+	static private String failedReason = "";
 	
 	public static void warn(String format, Object... args) {
 		synchronized(Util.class) {
@@ -97,6 +98,7 @@ public class Assert {
 
 	public static void fail(String s, Throwable e) {
 		Assert.failed = true;
+		Assert.failedReason = s;
 		synchronized(Util.class) {
 			Util.error("\n");
 			Util.error("%s ", s);
@@ -114,6 +116,8 @@ public class Assert {
 
 	public static void panic(String s) {
 		Assert.failed = true;
+		Assert.failedReason = s;
+
 		Util.error("\n");
 		Util.error("PANIC %s\n", s);
 		StackDump.printStack(Util.err, new Throwable(), Util.ERROR_PREFIX);
@@ -127,8 +131,10 @@ public class Assert {
 
 	public static void panic(Throwable e) {
 		Assert.failed = true;
+		String exc = e.toString();
+		Assert.failedReason = exc;
 		Util.error("\n");
-		Util.error("PANIC %s\n", e.toString());
+		Util.error("PANIC %s\n", exc);
 		StackDump.printStack(Util.err, e, Util.ERROR_PREFIX);
 		Throwable cause = e.getCause();
 		if (cause != null) {
@@ -142,6 +148,10 @@ public class Assert {
 
 	public static boolean getFailed() {
 		return Assert.failed;
+	}
+	
+	public static String getFailedReason() {
+		return Assert.failedReason;
 	}
 
 	/*****************/

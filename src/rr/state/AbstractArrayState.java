@@ -38,25 +38,57 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import java.lang.ref.WeakReference;
+
 import acme.util.Assert;
+import acme.util.StackDump;
 import acme.util.Util;
+import acme.util.Yikes;
 
 public abstract class AbstractArrayState {
 
-	final protected Object array;
+	// Must be a Weak Ref so that our shadow state does not
+	//   pin down objects that could otherwise be collected.
+	//
+	// @RRInternal
+	final private WeakReference<Object> array;
+	
 	protected final  int hashCode;
 	protected boolean warned = false;
 
 	public AbstractArrayState(Object array) {
-		this.array = array;
+		// Assert.assertTrue(array != null);
+		this.array = new WeakReference<Object>(array);
 		this.hashCode = Util.identityHashCode(array == null ? this : array);
 	}
 
+	/**
+	 * May return null if array has been collected.
+	 */
 	final public Object getArray() {
-		return array;
+		Object l = array.get();
+		if (l == null) {
+			Yikes.yikes("Getting array of AbstractArrayState after array has been gc'd.");
+		}
+		return l;
 	}
 	
-	public abstract void putState(int index, ShadowVar v);
+	/*
+	 * A version to use in caches where getting null can be expected.
+	 */
+	final Object getArrayNoCheck() {
+		return array.get();
+	}
+	
+	/** 
+	 * Update the shadow state for index.  Optimistic implementations can
+	 * fail and return false if the expected value is not found.
+	 */
+	public abstract boolean putState(int index, ShadowVar expected, ShadowVar v);
+	
+	/* 
+	 * Return the shadow state for a give index.
+	 */
 	public abstract ShadowVar getState(int index);
 
 	/** @RRInternal */
@@ -65,6 +97,7 @@ public abstract class AbstractArrayState {
 	/** @RRInternal */
 	public abstract void setShadowForNextDim(int i, AbstractArrayState s);
 
+	/** @RRInternal */
 	public void specialize() {
 		if (warned) return;
 		warned = true;
@@ -74,6 +107,10 @@ public abstract class AbstractArrayState {
 	@Override
 	public int hashCode() { return hashCode; }
 
+	public final int arrayLength() {
+		return lengthOf(getArray());
+	}
+	
 	public static int lengthOf(Object array) {
 		if (array instanceof Object[]) {
 			Object[] a = (Object[])array;
@@ -101,5 +138,13 @@ public abstract class AbstractArrayState {
 			}
 		}
 	}
+	
+	/**
+	 * Called when the array state is created by not needed due to a concurrent
+	 * creation of another array state for an array.
+	 */
+	public void forget() {
+		 
+	 }
 
 }

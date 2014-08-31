@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package tools.fasttrack;
 
 
-import org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Opcodes;
 
 import rr.annotations.Abbrev;
 import rr.barrier.BarrierEvent;
@@ -137,7 +137,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 	}
 
 
-	protected FastTrackGuardState createHelper(AccessEvent e) {
+	protected ShadowVar createHelper(AccessEvent e) {
 		return new FastTrackGuardState(e.isWrite(), ts_get_epoch(e.getThread()));
 	}
 

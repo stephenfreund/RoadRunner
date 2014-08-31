@@ -50,10 +50,11 @@ public class SafeArrayUpdater extends UnsafeArrayUpdater {
 	
 	@Override
 	public final boolean putState(AbstractArrayState o, int index, ShadowVar expectedGS, ShadowVar newGS) {
+		if (expectedGS == newGS) return true;
 		int hash = (o.hashCode() + index);
 		synchronized(locks.get(hash)) {
-			o.putState(index, newGS);
-			return true;
+			return o.putState(index, expectedGS, newGS);
+			//return true;
 		}
 	}
 	

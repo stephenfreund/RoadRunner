@@ -8,17 +8,15 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.EmptyVisitor;
+import rr.org.objectweb.asm.ClassReader;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.FieldVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
 
 import rr.instrument.Instrumentor;
+import rr.org.objectweb.asm.Label;
 import rr.state.agent.DefineClassListener;
 import acme.util.Assert;
 import acme.util.Util;
@@ -56,10 +54,10 @@ public class RepositoryBuildingDefineClassLoader implements DefineClassListener 
 	static private ConcurrentHashMap<String,ClassLoader> todo = new ConcurrentHashMap<String,ClassLoader>();
 	static private ClassLoader currentLoader;
 
-	private static class EagerNameClassVisitor extends ClassAdapter {
+	private static class EagerNameClassVisitor extends ClassVisitor {
 
 		public EagerNameClassVisitor() {
-			super(new EmptyVisitor());
+			super(Opcodes.ASM5);
 		}
 
 		@Override
@@ -104,10 +102,10 @@ public class RepositoryBuildingDefineClassLoader implements DefineClassListener 
 
 	}
 
-	private static class EagerNameMethodVisitor extends MethodAdapter {
+	private static class EagerNameMethodVisitor extends MethodVisitor {
 
 		public EagerNameMethodVisitor(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM5, mv);
 		}
 
 		@Override
@@ -120,13 +118,13 @@ public class RepositoryBuildingDefineClassLoader implements DefineClassListener 
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name,
-				String desc) {
+				String desc, boolean isInterface) {
 			addName(owner);
 			visitType(Type.getReturnType(desc));
 			for (Type t : Type.getArgumentTypes(desc)) {
 				visitType(t);
 			}
-			super.visitMethodInsn(opcode, owner, name, desc);
+			super.visitMethodInsn(opcode, owner, name, desc,opcode == Opcodes.INVOKEINTERFACE);
 		}
 
 		@Override

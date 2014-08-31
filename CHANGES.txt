@@ -35,6 +35,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+Aug 30, 2014: This is a large update:
+
+              Various bug fixes.  This includes corner cases in FT_CAS,
+              the instrumentor, and the shadow state representation of 
+              arrays (most notably in long-running programs with large
+              heap sizes --- see ArrayStateFactory.java).
+              
+              Arrays are now tracked in fine-grained mode by default
+              rather than being untracked by default.
+              
+              Performance: RoadRunner's shadow state could pin 
+              down objects that otherwise could be collected.  All Shadow
+              State objects (ShadowVolatile, ShadowLock, ArrayState, ...)
+              now refer back to real state via WeakReferences to avoid
+              such issues.  Some caches for array states do not use
+              weak references to avoid a run-time performance hit, but
+              could perhaps be improved in some additional way in the
+              future.
+              
+              Tools can now have more specialized fast path methods for
+              array and field accesses.  See Tool.java.
+
+July 8, 2014: Various small changes and bug fixes in instrumentation.
+              
+              New experimental CAS-based updaters.
+              
+              Updated to ASM version 5 and moved it into the rr package 
+              to enable targets using ASM to be properly loaded.
+              
 Jan 9, 2012:  Fixed typo in message reporting code for HB tool.
 
 Jan 6, 2012:  Committed change for -lines option.  It now applies to
@@ -45,12 +74,7 @@ Jan 5, 2012:  Committed change for -lines option.  It now applies to
               array ops, field ops, and lock acquire/release.
   
 
-Oct 3, 2011:  
-			  Committed and pushed small code edits from various places.
+Oct 3, 2011:  Committed and pushed small code edits from various places.
               There were some conflicts that should have been resolved 
               correctly.  If problems exist, please use the version from
               June 20.
-              
-    
-
-              

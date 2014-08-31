@@ -38,11 +38,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.methods;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
-
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 import acme.util.Util;
-
 import rr.instrument.Constants;
 import rr.loader.RRTypeInfo;
 import rr.meta.FieldAccessInfo;
@@ -50,11 +50,15 @@ import rr.meta.FieldInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.meta.OperationInfo;
 
 public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 
+	protected static boolean instrument;
+
 	public GuardStateInstructionAdapter(final MethodVisitor mv, MethodInfo m) {
 		super(mv, m);
+		instrument = true;
 	}
 
 	public void visitAccessMethod(String owner, String fName, String desc, boolean isPut, boolean isStatic, int fad, int tdLoc) {
@@ -70,7 +74,7 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 			}
 		}
 	}
-	
+		
 	@Override
 	public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
 		FieldInfo f = RRTypeInfo.resolveFieldDescriptor(owner, name, desc);
@@ -83,7 +87,7 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 				boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
 				boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
 				FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
-				if (!InstrumentationFilter.shouldInstrument(access)) {
+				if (!shouldInstrument(access)) {
 					Util.log("Skipping field access: " + access);
 					super.visitFieldInsn(opcode, owner, name, desc);
 				} else { 
@@ -94,5 +98,9 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 			}
 		}
 		super.visitFieldInsn(opcode, owner, name, desc);
+	}
+
+	protected boolean shouldInstrument(OperationInfo access) {
+		return InstrumentationFilter.shouldInstrument(access) && instrument;
 	}
 }

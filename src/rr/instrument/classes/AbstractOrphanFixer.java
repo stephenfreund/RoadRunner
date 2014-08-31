@@ -38,11 +38,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.instrument.classes;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.org.objectweb.asm.Type;
+import rr.org.objectweb.asm.commons.Method;
 
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
@@ -64,7 +64,8 @@ public class AbstractOrphanFixer extends RRClassAdapter {
 			MethodVisitor mv = super.visitMethod(access & ~Opcodes.ACC_ABSTRACT, name, desc, signature, exceptions);
 			Type type = Type.getReturnType(desc);
 			mv.visitLdcInsn("Dispatched abstract method " + owner + "." + name + ":" + desc + " -- did you not instrument a subclass of instrumented class???");
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "acme/util/Yikes", "yikes", Method.getMethod("boolean yikes(Object)").getDescriptor());
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "acme/util/Yikes", "yikes", Method.getMethod("boolean yikes(Object)").getDescriptor(), false);
+			mv.visitInsn(Opcodes.POP);
 			mv.visitVarInsn(Opcodes.ALOAD, 0);
 			Type args[] = Type.getArgumentTypes(desc);
 			int n;
@@ -83,8 +84,9 @@ public class AbstractOrphanFixer extends RRClassAdapter {
 
 			name = Constants.recoverOriginalNameFromMangled(name);
 			mv.visitMaxs(10,  10);
-			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner.getName(), name, Type.getMethodDescriptor(Type.getReturnType(desc), args2));
+			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner.getName(), name, Type.getMethodDescriptor(Type.getReturnType(desc), args2), false);
 			mv.visitInsn(ASMUtil.returnInstr(type));
+			mv.visitEnd();
 			return mv;
 		} else {
 			return super.visitMethod(access, name, desc, signature, exceptions);
