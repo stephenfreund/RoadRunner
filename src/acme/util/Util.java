@@ -467,6 +467,9 @@ public class Util {
 							}
 						}
 					});
+				} catch (OutOfMemoryError e) {
+					System.err.println("## Out of Memory");
+					Runtime.getRuntime().halt(17);
 				} catch (Exception e) {
 					Assert.panic(e);
 				}

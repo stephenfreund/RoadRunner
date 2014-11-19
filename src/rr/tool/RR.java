@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.CompilationMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -51,6 +52,10 @@ import java.lang.management.MemoryPoolMXBean;
 import java.net.URL;
 import java.util.Date;
 import java.util.List;
+
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
 
 import rr.RRMain;
 import rr.error.ErrorMessage;
@@ -104,6 +109,9 @@ public class RR {
 	public static CommandLineOption<Boolean> nofastPathOption = 
 			CommandLine.makeBoolean("noFP", false, CommandLineOption.Kind.STABLE, "Do not use in-lined tool fastpath code for reads/writes.");
 
+	public static CommandLineOption<Boolean> noShutdownHookOption = 
+			CommandLine.makeBoolean("noShutdownHook", false, CommandLineOption.Kind.EXPERIMENTAL, "Don't register shutdown hook.");
+
 	public static CommandLineOption<Boolean> noEnterOption = 
 			CommandLine.makeBoolean("noEnter", false, CommandLineOption.Kind.STABLE, "Do not generate Enter and Exit events.");
 
@@ -133,6 +141,27 @@ public class RR {
 
 	public static final CommandLineOption<Boolean> noEventReuseOption = 
 			CommandLine.makeBoolean("noEventReuse", false, CommandLineOption.Kind.EXPERIMENTAL, "Turn of Event Reuse.");
+
+	public static final CommandLineOption<Boolean> trackMemoryUsageOption = 
+			CommandLine.makeBoolean("trackMemoryUsage", false, CommandLineOption.Kind.EXPERIMENTAL, "Install monitors on GC to track Memory Usage",
+					new Runnable() { 
+				public void run() { 
+					final MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+
+					NotificationListener listener = new javax.management.NotificationListener() {
+						public void handleNotification(Notification notification, Object handback)  {
+							updateMemoryUsage(bean);
+						}
+					};
+
+					for (GarbageCollectorMXBean gc: ManagementFactory.getGarbageCollectorMXBeans()) {
+						Util.log("Adding Memory Tracking Listener to GC " + gc.getName());
+						NotificationEmitter emitter = (NotificationEmitter) gc;
+						emitter.addNotificationListener(listener, null, null);
+					}
+				} } );					
+
+
 
 	public static final StringMatcher toolCode = new StringMatcher(StringMatchResult.REJECT, "+acme..*", "+rr..*", "+java..*");
 
@@ -234,6 +263,26 @@ public class RR {
 
 	public static void startUp() {
 
+		/* 
+		 * Set a default handler to bail quickly if we run out of memory.
+		 * Otherwise, the shutdown routine will run and sometimes hang due to 
+		 * lack of memory.
+		 */
+		Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+			@Override
+			public void uncaughtException(Thread t, Throwable e) {
+				if (e instanceof OutOfMemoryError) {
+					try {
+						System.err.println("## Out of Memory");
+					} finally {
+						Runtime.getRuntime().halt(17);
+					}
+				} else {
+					Assert.panic(e);
+				}
+			}
+		});
+
 		Runtime.getRuntime().addShutdownHook(new Thread("RR Shutdown") {
 			@Override
 			public void run() {
@@ -258,13 +307,16 @@ public class RR {
 			endTimer(); // call here in case the target didn't exit cleanly
 		}
 
+		// always always always print time
+		boolean tmp = Util.quietOption.get();
+		Util.quietOption.set(false);
 		Util.logf("Total Time: %d", (endTime - startTime));
-		Util.log("Tool Fini()");
-		applyToTools(new ToolVisitor() {
-			public void apply(Tool t) {
-				t.fini();
+		Util.quietOption.set(tmp);
+
+		if (RR.noShutdownHookOption.get()) {
+			return;
 			}
-		});
+
 		xml();
 		Util.quietOption.set(false);
 		Util.logf("Time = %d", endTime - startTime);
@@ -298,6 +350,21 @@ public class RR {
 		}
 	}
 
+	/******************/
+
+
+	static volatile long maxMemCommitted = 0;
+	static volatile long maxMemUsed = 0;
+	static volatile long maxTotalMemory = 0;
+
+	private static final double M = 1024 * 1024;
+
+	protected static synchronized void updateMemoryUsage(final MemoryMXBean bean) {
+		java.lang.management.MemoryUsage m = bean.getHeapMemoryUsage();
+		maxMemCommitted = Math.max(m.getCommitted(), maxMemCommitted);
+		maxMemUsed = Math.max(m.getUsed(), maxMemUsed);
+		maxTotalMemory = Math.max(maxTotalMemory, Runtime.getRuntime().totalMemory());
+	}
 
 
 	/*** XML ***/
@@ -314,16 +381,10 @@ public class RR {
 		"user.dir"
 	};
 
-	//	Keep some memory here.  If we run out of memory, System.exit gets called,
-	//	but we can free up this memory to hopefully permit us to still dump the XML
-	//	data.
-	@SuppressWarnings("unused")
-	private static char rainyDayFund[] = new char[1024 * 32];
 	private static volatile boolean inXml = false;
 	private static void xml() {
 		if (inXml) return;
 		inXml = true;
-		rainyDayFund = null;
 
 		StringWriter sOut = new StringWriter();
 		Writer outputWriter = noxmlOption.get() ? Util.openLogFile(xmlFileOption.get()) :
@@ -344,6 +405,7 @@ public class RR {
 
 		Loader.printXML(xml);
 		Counter.printAllXML(xml);
+		Yikes.printXML(xml);
 
 		applyToTools(new ToolVisitor() {
 			public void apply(Tool t) {
@@ -401,16 +463,22 @@ public class RR {
 			xml.printWithFixedWidths("name", s, -35, "value", System.getProperty(s), -15);
 		}
 
-		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
-		CompilationMXBean cbean = ManagementFactory.getCompilationMXBean();
+		xml.print("availableProcs", Runtime.getRuntime().availableProcessors());
 
-		long peak = 0;
-		for (MemoryPoolMXBean b : ManagementFactory.getMemoryPoolMXBeans()) {
-			peak += b.getPeakUsage().getUsed();
-		}
-		xml.print("memPeak",peak/1000000);
-		xml.print("memUsed",bean.getHeapMemoryUsage().getUsed()/1000000);
-		xml.print("memMax",bean.getHeapMemoryUsage().getMax()/1000000);
+		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+		updateMemoryUsage(bean);
+
+
+		xml.print("memUsed",(int)Math.ceil(bean.getHeapMemoryUsage().getUsed()/M));
+
+		updateMemoryUsage(bean);
+		xml.print("memCommitted",(int)Math.ceil(maxMemCommitted/M));
+		xml.print("memUsed",(int)Math.ceil(maxMemUsed/M));
+		xml.print("memTotal",(int)Math.ceil(maxTotalMemory/M));
+
+		xml.print("memMax",(int)Math.ceil(bean.getHeapMemoryUsage().getMax()/M));
+
+		CompilationMXBean cbean = ManagementFactory.getCompilationMXBean();
 		if (cbean!=null) xml.print("compileTime",cbean.getTotalCompilationTime());
 		for (GarbageCollectorMXBean gcb : ManagementFactory.getGarbageCollectorMXBeans()) { 
 			xml.printInsideScope("gc", "name",gcb.getName(), "time", gcb.getCollectionTime());
@@ -433,10 +501,6 @@ public class RR {
 
 	public static Tool getTool() {
 		return tool;
-	}
-
-	public static ShadowThread currentThread() {
-		return ShadowThread.getCurrentShadowThread();
 	}
 
 	public static ToolLoader getToolLoader() {

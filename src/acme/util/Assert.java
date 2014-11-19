@@ -131,18 +131,25 @@ public class Assert {
 
 	public static void panic(Throwable e) {
 		Assert.failed = true;
+		if (e instanceof OutOfMemoryError) {
+			System.err.println("## Out of Memory");
+			System.err.flush();
+		} else {
 		String exc = e.toString();
 		Assert.failedReason = exc;
 		Util.error("\n");
 		Util.error("PANIC %s\n", exc);
 		StackDump.printStack(Util.err, e, Util.ERROR_PREFIX);
 		Throwable cause = e.getCause();
-		if (cause != null) {
-			Util.error("Caused by...\n");
+			while (cause != null) {
+				Util.error("Caused by[%s]...\n", cause.getClass());
+				Util.error("%s\n", cause.getCause());
 			Util.error("%s\n", cause.getMessage());
 			StackDump.printStack(Util.err, cause, Util.ERROR_PREFIX);
+				cause = cause.getCause();
 		}
 		Util.err.flush();
+		}
 		Runtime.getRuntime().halt(17);
 	}
 

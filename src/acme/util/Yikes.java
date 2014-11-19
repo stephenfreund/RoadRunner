@@ -39,6 +39,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package acme.util;
 
 import java.util.HashMap;
+import java.util.Map.Entry;
+
+import acme.util.io.XMLWriter;
 
 /**
  * Routines to print "yikes" messages -- unusual internal circumstances 
@@ -112,5 +115,14 @@ public class Yikes {
 				return 0;
 			}
 		}
+	}
+	
+	public static synchronized void printXML(XMLWriter out) {
+		out.push("yikes");
+		for (Entry<String,Integer> e : yikesMessages.entrySet()) {
+			String key = e.getKey();
+			out.printWithFixedWidths("message", key.substring(0,Math.min(key.length(), 35)), -35, "count", e.getValue(), -15);
+		}
+		out.pop();
 	}
 }
