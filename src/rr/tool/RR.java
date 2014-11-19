@@ -315,7 +315,7 @@ public class RR {
 
 		if (RR.noShutdownHookOption.get()) {
 			return;
-			}
+		}
 
 		xml();
 		Util.quietOption.set(false);
@@ -468,7 +468,6 @@ public class RR {
 		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
 		updateMemoryUsage(bean);
 
-
 		xml.print("memUsed",(int)Math.ceil(bean.getHeapMemoryUsage().getUsed()/M));
 
 		updateMemoryUsage(bean);
@@ -515,5 +514,4 @@ public class RR {
 	public static boolean targetFinished() {
 		return shuttingDown;
 	}
-	
 }

@@ -152,7 +152,7 @@ public class ArrayShadowFrame extends Frame {
 	}
 
 	public boolean getArrayShadow(ArrayShadowValue value) {
-		Assert.assertTrue(value.id > -1, "Problem: " + value.getType() + " with loc " + value.id);
+		Assert.assertTrue(value.id > -1);
 		return this.arrayShadowInited.contains(value.id);
 	}
 

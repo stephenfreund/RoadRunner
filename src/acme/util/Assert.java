@@ -144,8 +144,8 @@ public class Assert {
 			while (cause != null) {
 				Util.error("Caused by[%s]...\n", cause.getClass());
 				Util.error("%s\n", cause.getCause());
-			Util.error("%s\n", cause.getMessage());
-			StackDump.printStack(Util.err, cause, Util.ERROR_PREFIX);
+				Util.error("%s\n", cause.getMessage());
+				StackDump.printStack(Util.err, cause, Util.ERROR_PREFIX);
 				cause = cause.getCause();
 		}
 		Util.err.flush();

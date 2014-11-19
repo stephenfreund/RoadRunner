@@ -38,6 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package acme.util;
 
+import java.lang.ref.WeakReference;
+import java.util.Vector;
+
 import acme.util.identityhash.ConcurrentIdentityHashMap;
 import acme.util.identityhash.WeakIdentityHashMap;
 
@@ -51,8 +54,14 @@ public abstract class WeakResourceManager<K,V> {
 	private final WeakIdentityHashMap<K,V> attic = new WeakIdentityHashMap<K,V>();
 	private final ConcurrentIdentityHashMap<K,V> table = new ConcurrentIdentityHashMap<K,V>();
 
-	{
-		new Thread() {
+	private static final Vector<WeakReference<WeakResourceManager<?,?>>> managers = new Vector<WeakReference<WeakResourceManager<?,?>>>();
+
+	public WeakResourceManager() {
+		managers.add(new WeakReference<WeakResourceManager<?,?>>(this));
+	}
+
+	static {
+		new Thread("Weak Resource Cleaner") {
 			public void run() {
 				while (true) {
 					try {
@@ -60,8 +69,25 @@ public abstract class WeakResourceManager<K,V> {
 					} catch (Exception e) {
 						Assert.panic(e);
 					}
-					synchronized(this) {
-						table.clear();
+
+					// remove gc'd
+					synchronized (managers) {
+						for (int i = managers.size() - 1; i >= 0; i--) {
+							if (managers.get(i).get() == null) {
+								managers.remove(i);
+							} 
+						}
+					}
+					
+					// clear each
+					for (int i = 0; i < managers.size(); i++) {
+						WeakReference<WeakResourceManager<?,?>> manager = managers.get(i);
+						WeakResourceManager<?,?> ptr = manager.get();
+						if (ptr != null) {
+							synchronized(ptr) {
+								ptr.table.clear();
+							}
+						}
 					}
 				}
 			}

@@ -57,7 +57,7 @@ import acme.util.decorations.DefaultValue;
 
 /**
  * The state associated with a volatile memory location.  Tools should save information about volatiles as decorations
- * on the ShadowVar object.
+ * on the ShadowVolatile object.
  */
 public class ShadowVolatile extends Decoratable {
 
