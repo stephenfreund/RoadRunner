@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
-Aug 30, 2014: Version 1.1:  This is a large update:
+Aug 30, 2014: This is a large update:
 
               Various bug fixes.  This includes corner cases in FT_CAS,
               the instrumentor, and the shadow state representation of 

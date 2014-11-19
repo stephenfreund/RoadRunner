@@ -37,17 +37,16 @@ Notes on Major Updates
 
   * Version 1.1: committed on 8/30/2014.
   
-                 All users should update to this version.  
+		 All users should update to this version or later.
                  
                  It fixes many bugs and corner cases, has a variety of 
                  small functionality enhancements for fastpath code, and 
                  improves scalability of the shadow state data 
                  structures.  Instrumentation now uses ASM version 5.
                  
-                 
   * Version 1.0: initial release.
 
-See CHANGES.txt for more details.
+    	    	 See CHANGES.txt for more details.
 
 Installation and Running
 ========================
