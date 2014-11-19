@@ -45,15 +45,15 @@ final public class ThreadLocalCounter extends AbstractCounter {
 	
 	public ThreadLocalCounter(String group, String name, int n) {
 		super(group, name);
-		counts = new long[n];
+		counts = new long[8 * n];  // 8 * 8 == size of cache line
 	}
 		
 	public void inc(int tid) {
-		counts[tid]++;
+		counts[tid << 3]++;
 	}
 	
 	public void add(int tid, long n) {
-		counts[tid] += n;
+		counts[tid << 3] += n;
 	}
 	
 	public long total() {

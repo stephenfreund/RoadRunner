@@ -282,6 +282,14 @@ public class ArrayShadowFrame extends Frame {
 			case Opcodes.ASTORE: {
 				value1 = interpreter.copyOperation(insn, pop());
 				var = ((VarInsnNode) insn).var;
+				
+				// Must clear array shadow for dest if it is an array.  Otherwise the cached value will
+				// be the one for the old array, not the new one.
+				int id2 = ((ArrayShadowValue)this.getLocal(var)).id;
+				if (id2 > -1) {
+					this.clearArrayShadow(id2);
+				}
+				
 				setLocal(var, value1);
 
 				int id = ((ArrayShadowValue)value1).id;

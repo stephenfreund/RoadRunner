@@ -89,6 +89,13 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 	private static final Type arrayMapType = Type.getType(ArrayStateFactory.class);
 	private static final Method mapAllocMethod = Method.getMethod("rr.state.AbstractArrayState make(Object)");
 
+	/* 
+	 * If true, then the shadow will be created as soon as the array is created.  Benefit: fewer
+	 * extra allocs when multiple threads perform concurrent first accesses to array.  Downside:
+	 * you may never access that array... 
+	 */
+	private static final boolean PRE_ALLOC_SHADOW = false;
+
 
 	public FancyArrayInstructionAdapter(final MethodVisitor mv, MethodInfo m) {
 		super(mv, m);
@@ -423,9 +430,11 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 		switch (opcode) {
 		case NEWARRAY: {
 			super.visitIntInsn(opcode, operand);
-			this.dup();
-			this.invokeStatic(arrayMapType, mapAllocMethod);
-			this.pop();
+			if (PRE_ALLOC_SHADOW) {
+				this.dup();
+				this.invokeStatic(arrayMapType, mapAllocMethod);
+				this.pop();
+			}
 			break;
 		}
 		default:
@@ -438,9 +447,11 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 		switch (opcode) {
 		case ANEWARRAY: {
 			super.visitTypeInsn(opcode, desc);
-			this.dup();
-			this.invokeStatic(arrayMapType, mapAllocMethod);
-			this.pop();
+			if (PRE_ALLOC_SHADOW) {
+				this.dup();
+				this.invokeStatic(arrayMapType, mapAllocMethod);
+				this.pop();
+			}
 			break;
 		}
 		default:

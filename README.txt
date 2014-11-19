@@ -35,9 +35,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Notes on Major Updates
 ========================
 
+  * Version 1.2: committed on 11/19/2014.
+  
+                 Various small bug fixes and memory performance improvements.
+  
   * Version 1.1: committed on 8/30/2014.
   
-		 All users should update to this version or later.
+		         All users should update to this version or later.
                  
                  It fixes many bugs and corner cases, has a variety of 
                  small functionality enhancements for fastpath code, and 

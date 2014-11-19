@@ -185,9 +185,14 @@ public abstract class AnalyzedMethodNode extends MethodNode implements MethodVis
 			int m = instructions.size();
 			for (int k = 0; k < m; k++) {
 				final int opcode = instructions.get(k).getOpcode();
-				if (frames[k] == null) {
-				//	frames[k] = new ArrayShadowFrame(0, 0);
-				}
+				
+				// For debugging the instrumentor...			
+				// Textifier tt = new Textifier();
+				// TraceMethodVisitor t = new TraceMethodVisitor(tt);
+				// if (frames[k] != null) t.visitAnalysisFrame(frames[k]);
+				// instructions.get(k).accept(t);
+				// Util.log(tt.getText());
+				
 				((MethodVisitorWithAnalysisFrames)mv).visitAnalysisFrame(frames[k]);
 				instructions.get(k).accept(mv);
 			}

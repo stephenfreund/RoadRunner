@@ -62,10 +62,12 @@ final public class Timer extends AbstractCounter {
 		return System.nanoTime(); 
 	}
 
-	final synchronized public void stop(long startTime) {
+	final public synchronized long stop(long startTime) {
 		long endTime = System.nanoTime();
-		totalTime += (endTime - startTime);
+		long elapsed = endTime - startTime;
+		totalTime += elapsed;
 		count++;
+		return elapsed;
 	}
 
 	@Override

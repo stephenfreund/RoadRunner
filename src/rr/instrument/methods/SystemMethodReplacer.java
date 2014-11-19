@@ -60,6 +60,11 @@ import rr.meta.WaitInfo;
 import acme.util.Assert;
 import acme.util.Util;
 
+/*
+ * System Methods that are replace should be called within the replacement, just in case
+ * the invocation is actually going to dispatch an overridden version.  The exception
+ * is if the system method is final.  System methods can also only be in package java/lang.
+ */
 public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 
 	public SystemMethodReplacer(final MethodVisitor mv, MethodInfo m) {
@@ -77,13 +82,15 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 			MethodInfo m = RRTypeInfo.resolveMethodDescriptor(owner, name, desc);
 
 			if (!m.isSynthetic()) {
-				if (!owner.startsWith("[")) {
+				if (!owner.startsWith("[") && !name.startsWith("<")) {
 					for (ClassInfo c : RRTypeInfo.declaringClassesForMethodDescriptor(RRTypeInfo.resolveMethodDescriptor(owner, name, desc))) {
-						for (Replacement r : systemReplacements) {
-							if (r.matches(opcode, c.getName(), name, desc)) {
-								Util.logf("Replace %s.%s%s", c.getName(), name, desc);
-								r.replace(opcode, this);
-								return;
+						if (c.getName().startsWith("java/lang")) {
+							for (Replacement r : systemReplacements) {
+								if (r.matches(opcode, c.getName(), name, desc)) {
+									Util.logf("Replace %s.%s%s", c.getName(), name, desc);
+									r.replace(opcode, this);
+									return;
+								}
 							}
 						}
 					}
@@ -177,7 +184,8 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(onlyStaticOpcode, Constants.SYSTEM_TYPE, new Method("exit","(I)V")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
-				gen.invokeStatic(Constants.ACME_UTIL_TYPE,new Method("exit",Type.VOID_TYPE, new Type[] {  Type.INT_TYPE }));
+				// exit goes to RRMain, so that we can run the usual shutdown steps.
+				gen.invokeStatic(Constants.RR_MAIN_TYPE,new Method("exit",Type.VOID_TYPE, new Type[] {  Type.INT_TYPE }));
 			}
 		},
 
@@ -241,6 +249,13 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 		new Replacement(onlyStaticOpcode, Constants.SYSTEM_TYPE, Method.getMethod("void gc()")) {
 			@Override
 			public void replace(int opcode, RRMethodAdapter gen) { 
+			}
+		},
+
+		new Replacement(onlyVirtualOpcode, Constants.RUNTIME_TYPE, new Method("availableProcessors","()I")) {
+			@Override
+			public void replace(int opcode, RRMethodAdapter gen) { 
+				gen.invokeStatic(Constants.RR_MAIN_TYPE,new Method("availableProccesors",Type.INT_TYPE, new Type[] {  Constants.OBJECT_TYPE }));
 			}
 		},
 

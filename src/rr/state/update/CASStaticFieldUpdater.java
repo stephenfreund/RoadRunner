@@ -69,7 +69,7 @@ public class CASStaticFieldUpdater extends AbstractFieldUpdater {
 		base = unsafe.staticFieldBase(f);
 		offset = unsafe.staticFieldOffset(f);
 		this.f = f;
-		Assert.fail("Don't Use CASStaticFieldUpdater --- updates to field seems to get lost...");
+		Assert.panic("Don't Use CASStaticFieldUpdater --- updates to field seems to get lost...");
 	}
 
     static private final Unsafe unsafe = Unsafe.getUnsafe();
@@ -90,7 +90,7 @@ public class CASStaticFieldUpdater extends AbstractFieldUpdater {
 			return b;
 		} catch (ClassCastException e) {
 			Util.log(this.getClass() + " " + o.getClass());
-			Assert.fail(e);
+			Assert.panic(e);
 			return true;
 		}
 	}

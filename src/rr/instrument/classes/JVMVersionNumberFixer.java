@@ -1,6 +1,6 @@
 /******************************************************************************
 
-Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+	Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
                     and Stephen Freund (Williams College) 
 
 All rights reserved.  
@@ -36,55 +36,44 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************/
 
-package rr.state;
+package rr.instrument.classes;
 
+import java.lang.reflect.Field;
+
+import rr.org.objectweb.asm.ClassVisitor;
+import rr.org.objectweb.asm.MethodVisitor;
+import rr.org.objectweb.asm.Opcodes;
+import rr.instrument.Constants;
+import rr.loader.LoaderContext;
+import rr.state.ShadowVar;
+import acme.util.Assert;
+import acme.util.Util;
 import acme.util.Yikes;
+import acme.util.count.Counter;
+import acme.util.option.CommandLine;
+import acme.util.option.CommandLineOption;
 
-public final class CoarseArrayState extends AbstractArrayState {
 
-	protected ShadowVar shadowVar;
-	protected final AbstractArrayState[] nextDimension;
+/**
+ * Some target programs (eg DaCapo benchmarks) may contain class files with an 
+ * older version number, and those versions do not support some of the instruction
+ * forms RR uses in the instrumentor.  That leads to verification errors.  
+ * This class simply changes the version number embedded in old class files to 
+ * the minimal version supporting what we need.
+ */
+public class JVMVersionNumberFixer extends RRClassAdapter {
 
-	public CoarseArrayState(Object array) {
-		super(array);
-		int n = lengthOf(array);
-		if (array.getClass().getComponentType().isArray()) {
-			nextDimension = new AbstractArrayState[n];
-			Object[] objArray = (Object[])array;
-			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.COARSE, false);
-			}
-		} else {
-			nextDimension = null;
+	public JVMVersionNumberFixer(ClassVisitor cv) {
+		super(cv);
+	}
+	
+	@Override
+	public void visit(int version, int access, String name, String signature,
+			String superName, String[] interfaces) {
+		if ((version & 0xFFFF) < Opcodes.V1_5) {
+			Yikes.yikes("Old Version Number in class file. Updating to " + Opcodes.V1_5);
+			version = (version & ~0xFFFF) | Opcodes.V1_5;
 		}
+		super.visit(version, access, name, signature, superName, interfaces);
 	}
-
-
-	@Override
-	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
-		if (element != nextDimension[i].getArray()) {
-//			Yikes.yikes("Stale array entry for next dim");
-			nextDimension[i] = td.arrayStateFactory.get(element); 
-		} 
-		return nextDimension[i];
-	}
-
-	@Override
-	public void setShadowForNextDim(int i, AbstractArrayState s) {
-		nextDimension[i] = s; 
-	}
-
-	@Override
-	public final ShadowVar getState(int index) {
-		return shadowVar;
-	}
-
-	@Override
-	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (shadowVar != expected) return false;
-		shadowVar = v;
-		return true;
-	}
-
-
 }

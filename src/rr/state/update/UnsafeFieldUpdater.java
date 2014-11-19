@@ -77,7 +77,7 @@ public abstract class UnsafeFieldUpdater extends AbstractFieldUpdater {
 			}
 		} catch (ClassCastException e) {
 			Util.log(this.getClass() + " " + o.getClass());
-			Assert.fail(e);
+			Assert.panic(e);
 			return true;
 		}
 	}

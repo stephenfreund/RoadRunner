@@ -18,12 +18,21 @@ public abstract class AbstractArrayStateCache {
 
 	public static AbstractArrayStateCache make(String tag) {
 		if (count == caches.length) {
-			Assert.fail("Too many array accesses in code.  Change Constant in " + ArrayStateCache.class);
+			Assert.panic("Too many array accesses in code.  Change Constant in " + ArrayStateCache.class);
 		}
-		caches[count] = noOptimizedArrayLookupOption.get() ? new UnoptimizedArrayStateCache(tag, count) : new ArrayStateCache(tag, count);
+		caches[count] = noOptimizedArrayLookupOption.get() ? new UnoptimizedArrayStateCache(tag, count) : new ArrayStateCacheWeak(tag, count);
 		return caches[count++];
 	}
 
+	// clear out any cached array states for thread tid
+	public abstract void clear(int tid);
+	
+	public static void clearAll(int tid) {
+		for (int i = 0; i < count; i++)  {
+			caches[i].clear(tid);
+		}
+	}
+	
 	public static AbstractArrayState get(Object array, ShadowThread td, int cacheId) {
 		return caches[cacheId].get(array, td);
 	}

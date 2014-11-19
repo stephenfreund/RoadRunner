@@ -36,75 +36,39 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-package rr.state;
+package acme.util.count;
 
-import sun.misc.Unsafe;
-import acme.util.Yikes;
 
-/*
- * This updater uses Unsafe compare and swap operations.  It assumes that volatile 
- * semantics are enforced for cas and subsequent calls to getObjectVolatile on the
- * same memory location.
- * 
- * I believe this to be true on x86, but have not tested it thoroughly.
- *   
- * Use at your own risk.
- * 
- * @RRExperimental
+/**
+ * A simple integer counter.
  */
-public final class CASFineArrayState extends CASAbstractArrayState {
+public class ThreadSafeCounter extends AbstractCounter {
 
-	protected final ShadowVar[] shadowVar;
-	protected final AbstractArrayState[] nextDimension;
-
+	protected long count;
 	
-	public CASFineArrayState(Object array) {
-		super(array);
-		int n = lengthOf(array);
-		shadowVar = new ShadowVar[n];
-		if (array.getClass().getComponentType().isArray()) {
-			nextDimension = new AbstractArrayState[n];
-			Object[] objArray = (Object[])array;
-			for (int i = 0; i < n; i++) {
-				nextDimension[i] = ArrayStateFactory.make(objArray[i], ArrayStateFactory.ArrayMode.FINE, true);
-			}
-		} else {
-			nextDimension = null;
-		}
+	public ThreadSafeCounter(String group, String name) {
+		super(group, name);
+		count = 0;
 	}
-
-
+	
+	public ThreadSafeCounter(String name) {
+		this(null, name);
+	}
+	
+	final synchronized public void inc() {
+		count++;
+	}
+	
+	final synchronized  public void add(long n) {
+		count+=n;
+	}
+	
 	@Override
-	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
-		if (element != nextDimension[i].getArray()) {
-		//	Yikes.yikes("Stale array entry for next dim");
-			nextDimension[i] = td.arrayStateFactory.get(element); 
-		} 
-		return nextDimension[i];
+	public final synchronized String get() {
+		return String.format("%,d",count);
+	}	
+	
+	public final synchronized long getCount() {
+		return count;
 	}
-
-	@Override
-	public void setShadowForNextDim(int i, AbstractArrayState s) {
-		nextDimension[i] = s; 
-	}
-
-	@Override
-	public final ShadowVar getState(int index) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad shadow array get: out of bounds.  Using index 0...");
-			return get(shadowVar, 0);
-		}
-		return (ShadowVar) get(shadowVar, index);
-	}
-
-	@Override
-	public final boolean putState(int index, ShadowVar expected, ShadowVar v) {
-		if (index >= shadowVar.length) {
-			Yikes.yikes("Bad array set: out of bounds. ");
-			return true;
-		}
-		return cas(shadowVar, index, expected, v);
-	}
-
-
 }

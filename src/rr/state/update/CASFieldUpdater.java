@@ -83,7 +83,7 @@ public class CASFieldUpdater extends AbstractFieldUpdater {
 			return b;
 		} catch (ClassCastException e) {
 			Util.log(this.getClass() + " " + o.getClass());
-			Assert.fail(e);
+			Assert.panic(e);
 			return true;
 		}
 	}

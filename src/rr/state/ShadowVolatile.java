@@ -42,8 +42,9 @@ package rr.state;
 import java.lang.ref.WeakReference;
 
 import rr.RRMain;
+import rr.meta.FieldAccessInfo;
 import rr.meta.FieldInfo;
-import acme.util.Assert;
+import rr.meta.MetaDataInfoMaps;
 import acme.util.ResourceManager;
 import acme.util.WeakResourceManager;
 import acme.util.Util;
@@ -146,6 +147,16 @@ public class ShadowVolatile extends Decoratable {
 	public static ShadowVolatile get(Object target, FieldInfo fd) {
 		return byField.get(fd).get(target);
 
+	}
+	
+	/**
+	 * @RRInternal
+	 * Used in instrumentor to get the ShadowVolatile, which will be the lock to ensure
+	 * atomicity of access/event.
+	 */
+	public static ShadowVolatile get(Object target, int fieldAccessId) {
+		FieldAccessInfo fad = MetaDataInfoMaps.getFieldAccesses().get(fieldAccessId);
+		return ShadowVolatile.get(target, fad.getField());
 	}
 
 

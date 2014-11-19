@@ -43,7 +43,9 @@ import acme.util.Assert;
 public class System {
 
 	public static void arraycopy(java.lang.Object src, int srcIndex, java.lang.Object dst, int dstIndex, int length) {
-		if (src instanceof Object[]) {
+		if (src == null || dst == null) {
+			throw new NullPointerException();
+		} else if (src instanceof Object[]) {
 			_arraycopy((Object[])src, srcIndex, (Object[])dst, dstIndex, length);
 		} else if (src instanceof int[]) {
 			_arraycopy((int[])src, srcIndex, (int[])dst, dstIndex, length);

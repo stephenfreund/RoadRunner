@@ -57,6 +57,8 @@ import rr.state.agent.ThreadStateExtensionAgent;
 import rr.state.agent.ThreadStateExtensionAgent.InstrumentationMode;
 import rr.state.update.Updaters;
 import rr.tool.RR;
+import rr.tool.Tool;
+import rr.tool.ToolVisitor;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.io.URLUtils;
@@ -92,6 +94,14 @@ public class RRMain {
 	public static final CommandLineOption<Integer> infinitelyRunningThreadsOption = 
 		CommandLine.makeInteger("infThreads", 0, CommandLineOption.Kind.EXPERIMENTAL, "Number of threads that loop forever.");
 
+	public static final CommandLineOption<Integer> availableProcessorsOption = 
+		CommandLine.makeInteger("availableProcessors", 
+					Runtime.getRuntime().availableProcessors(), 
+					CommandLineOption.Kind.EXPERIMENTAL, 
+					"Number of procs RR says the machine has.");
+
+	
+	
 	public static RRMainLoader loader;
 
 	private static volatile int runningThreads;
@@ -125,8 +135,10 @@ public class RRMain {
 
 					}
 					method.invoke(null, new Object[] { argv });
-					RR.getTool().stop(ShadowThread.getThreadState(this));
+					RR.getTool().stop(ShadowThread.getShadowThread(this));
 
+					runFini();
+					
 					RR.endTimer();
 
 					Util.message("");
@@ -139,6 +151,15 @@ public class RRMain {
 		};
 		appMainThread.start();
 		appMainThread.join();
+	}
+
+	protected static void runFini() {
+		Util.log("Tool Fini()");
+		RR.applyToTools(new ToolVisitor() {
+			public void apply(Tool t) {
+				t.fini();
+			}
+		});
 	}
 
 
@@ -183,9 +204,10 @@ public class RRMain {
 		cl.add(ThreadDataThunkInserter.noConstructorOption);
 		cl.add(CloneFixer.noCloneOption);
 		cl.add(rr.tool.RR.noEnterOption);
+		cl.add(rr.tool.RR.noShutdownHookOption);
 		cl.add(Instrumentor.dumpClassOption);
-//		cl.add(InstrumentingDefineClassLoader.sanityOption);
 		cl.add(Instrumentor.fancyOption);
+		cl.add(Instrumentor.verifyOption);
 		cl.add(Instrumentor.trackArraySitesOption);
 		cl.add(ThreadStateExtensionAgent.noDecorationInline);
 		cl.addOrderConstraint(ThreadStateExtensionAgent.noDecorationInline, rr.tool.RR.toolOption);
@@ -209,11 +231,13 @@ public class RRMain {
 		cl.add(AbstractArrayStateCache.noOptimizedArrayLookupOption);
 		cl.add(infinitelyRunningThreadsOption);
 		cl.add(rr.instrument.methods.ThreadDataInstructionAdapter.callSitesOption);
+		cl.add(rr.tool.RR.trackMemoryUsageOption);
 
 		cl.addGroup("Limits");
 		cl.add(rr.tool.RR.timeOutOption);
 		cl.add(rr.tool.RR.memMaxOption);
 		cl.add(rr.tool.RR.maxTidOption);
+		cl.add(rr.RRMain.availableProcessorsOption);
 		cl.add(rr.error.ErrorMessage.maxWarnOption); 
 
 
@@ -225,6 +249,7 @@ public class RRMain {
 		int n = cl.apply(argv);
 
 		RR.createDefaultToolIfNecessary();
+		ArrayStateFactory.addAtticListener();
 
 		if (n >= argv.length) {
 			Assert.fail("Missing class name. Use -help for summary of options.");
@@ -234,7 +259,7 @@ public class RRMain {
 
 	private static void waitForAllThreads() {
 		while (runningThreads > infinitelyRunningThreadsOption.get()) {
-			acme.util.Util.logf("Waiting for Thread Count to reach %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
+			Util.logf("Waiting for Thread Count to reach %d.  Current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
 
 			try {
 				Thread.sleep(1000);
@@ -244,6 +269,21 @@ public class RRMain {
 		}
 	}
 
+	public static void exit(int i) {
+		if (runningThreads > infinitelyRunningThreadsOption.get()) {
+			Assert.warn("System.exit called, but some forked threads are still running: expected count: %d.  current Count: %d", infinitelyRunningThreadsOption.get(), runningThreads);
+		}
+		runFini();
+		Util.exit(i);
+	}
+	
+	public static int availableProccesors(Object runtime) {
+		int n = availableProcessorsOption.get();
+		Util.log("Target asked for available processors.  Giving back: " + n);
+		return n;
+	}
+
+	
 	/**
 	 * Default main method used as wrapper, expects the fully qualified class
 	 * name of the real class as the first argument.
@@ -278,6 +318,11 @@ public class RRMain {
 			}
 		} catch (RuntimeException e) {
 			Util.log("Cleaning up after RuntimeException " + e + "...");
+		} catch (OutOfMemoryError e) {
+			// no much we can do but exit quickly.  Even calling panic may 
+			//   require some memory or it may hang.
+			System.err.println("## Out of Memory");
+			Runtime.getRuntime().halt(17);
 		} catch (Exception e) {
 			Assert.panic(e);
 		}
@@ -351,6 +396,10 @@ public class RRMain {
 
 	public static synchronized void decThreads() {
 		runningThreads--;
+	}
+	
+	public static synchronized int numRunningThreads() {
+		return runningThreads;
 	}
 
 }

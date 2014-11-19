@@ -59,6 +59,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 	protected boolean alreadyAddedPerObjectGuard = false;
 
+	// Set to true to handle volatiles the old way (ie, their getter/putter methods are synchronized
+	//  to ensure atomicity of the access and check.  However, that way may cause deadlock/livelock, 
+	//  since the target program may also be using the lock on the receiver.
+	private static final boolean VOLATILE_METHODS_ARE_SYNC = false;
+	
 	public GuardStateInserter(final ClassVisitor cv) {
 		super(cv);
 	}
@@ -96,10 +101,11 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
+		final RRMethodAdapter mv = makeGenerator(access | (VOLATILE_METHODS_ARE_SYNC && isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		final int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
+
 		if ((access & ACC_FINAL) == 0) {
 			final Label success = new Label();
 
@@ -110,6 +116,22 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 2 + valueSize, success, field);
+
+			//
+			Label start = new Label(), end = new Label(), handler = new Label();
+			if (isVolatile) {
+				mv.visitVarInsn(ALOAD, 0);
+				// this
+				mv.visitVarInsn(ILOAD, 1 + valueSize);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				// shadow_vol
+				mv.dup();
+				// shadow_vol shadow_vol
+				mv.monitorEnter();
+				mv.visitLabel(start);
+			}
+
 			// 
 			mv.visitVarInsn(ALOAD, 0);
 			// this
@@ -136,10 +158,32 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			}
 
 			mv.visitLabel(success);
+
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitVarInsn(ASMUtil.loadInstr(desc), 1);
+			mv.visitFieldInsn(PUTFIELD, rrClass.getName(), name, desc);
+
+			// if we have a volatile, it will be on the stack here.
+			if (isVolatile) {
+				mv.monitorExit();
+				mv.goTo(end);
+				mv.visitLabel(handler);
+				mv.visitVarInsn(ALOAD, 0);
+				// this
+				mv.visitVarInsn(ILOAD, 1 + valueSize);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				mv.monitorExit();
+				mv.visitInsn(ATHROW);
+				mv.visitLabel(end);
+				mv.visitTryCatchBlock(start, end, handler, "java/lang/Exception");
+			}
+		} else {
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitVarInsn(ASMUtil.loadInstr(desc), 1);
+			mv.visitFieldInsn(PUTFIELD, rrClass.getName(), name, desc);
 		}
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitVarInsn(ASMUtil.loadInstr(desc), 1);
-		mv.visitFieldInsn(PUTFIELD, rrClass.getName(), name, desc);
+
 		mv.visitInsn(RETURN);
 		mv.visitMaxs(10,10);
 		mv.visitEnd();
@@ -153,7 +197,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		final RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		final RRMethodAdapter mv = makeGenerator(access | (VOLATILE_METHODS_ARE_SYNC && isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		if ((access & ACC_FINAL) == 0) {
@@ -167,6 +211,21 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 2, success, field);
+
+			Label start = new Label(), end = new Label(), handler = new Label();
+			if (isVolatile) {
+				mv.visitVarInsn(ALOAD, 0);
+				// this
+				mv.visitVarInsn(ILOAD, 1);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				// shadow_vol
+				mv.dup();
+				// shadow_vol shadow_vol
+				mv.monitorEnter();
+				mv.visitLabel(start);
+			}
+
 
 			mv.visitVarInsn(ALOAD, 0);
 			mv.visitVarInsn(ALOAD, 5);
@@ -187,9 +246,32 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 						isVolatile ? Constants.getVOLATILE_READ_ACCESS_METHOD() : Constants.getREAD_ACCESS_METHOD());
 			}
 			mv.visitLabel(success);
+
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitFieldInsn(GETFIELD, rrClass.getName(), name, desc);
+
+
+			// if we have a volatile, it will be on the stack here.
+			if (isVolatile) { 
+				mv.swap(Type.getObjectType("java/lang/Object"), Type.getType(desc));
+				mv.monitorExit();
+				mv.goTo(end);
+				mv.visitLabel(handler);
+				mv.visitVarInsn(ALOAD, 0);
+				// this
+				mv.visitVarInsn(ILOAD, 1);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				mv.monitorExit();
+				mv.visitInsn(ATHROW);
+				mv.visitLabel(end);
+				mv.visitTryCatchBlock(start, end, handler, "java/lang/Exception");
+			}
+
+		} else {
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitFieldInsn(GETFIELD, rrClass.getName(), name, desc);
 		}
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETFIELD, rrClass.getName(), name, desc);
 		mv.visitInsn(ASMUtil.returnInstr(desc));
 		mv.visitMaxs(10,10); 
 		mv.visitEnd();
@@ -203,7 +285,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
+		RRMethodAdapter mv = makeGenerator(access | (VOLATILE_METHODS_ARE_SYNC && isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, true);
 		int valueSize = ASMUtil.size(desc);
 
 		mv.visitCode();
@@ -216,6 +298,20 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			mv.visitVarInsn(ASTORE, 5);
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, true, 5, 1 + valueSize, success, field);
+
+			Label start = new Label(), end = new Label(), handler = new Label();
+			if (isVolatile) {
+				mv.visitLdcInsn(Type.getObjectType(rrClass.getName()));
+				// this
+				mv.visitVarInsn(ILOAD, 0 + valueSize);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				// shadow_vol
+				mv.dup();
+				// shadow_vol shadow_vol
+				mv.monitorEnter();
+				mv.visitLabel(start);
+			}
 
 			mv.visitInsn(ACONST_NULL);
 			mv.visitVarInsn(ALOAD, 5);			
@@ -235,9 +331,30 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 				mv.invokeStatic(Constants.MANAGER_TYPE, isVolatile ? Constants.getVOLATILE_WRITE_ACCESS_METHOD() : Constants.getWRITE_ACCESS_METHOD());
 			}
 			mv.visitLabel(success);
+			mv.visitVarInsn(ASMUtil.loadInstr(desc), 0);
+			mv.visitFieldInsn(PUTSTATIC, rrClass.getName(), name, desc);
+			
+			// if we have a volatile, it will be on the stack here.
+			if (isVolatile) { 
+				mv.monitorExit();
+				mv.goTo(end);
+				mv.visitLabel(handler);
+				mv.visitLdcInsn(Type.getObjectType(rrClass.getName()));
+				// this
+				mv.visitVarInsn(ILOAD, 0 + valueSize);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				mv.monitorExit();
+				mv.visitInsn(ATHROW);
+				mv.visitLabel(end);
+				mv.visitTryCatchBlock(start, end, handler, "java/lang/Exception");
+			}
+
+
+		} else {
+			mv.visitVarInsn(ASMUtil.loadInstr(desc), 0);
+			mv.visitFieldInsn(PUTSTATIC, rrClass.getName(), name, desc);
 		}
-		mv.visitVarInsn(ASMUtil.loadInstr(desc), 0);
-		mv.visitFieldInsn(PUTSTATIC, rrClass.getName(), name, desc);
 		mv.visitInsn(RETURN);
 		mv.visitMaxs(10,10); 
 		mv.visitEnd();
@@ -250,7 +367,7 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 		boolean isVolatile = (access & ACC_VOLATILE) != 0;
 
-		RRMethodAdapter mv = makeGenerator(access | (isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
+		RRMethodAdapter mv = makeGenerator(access | (VOLATILE_METHODS_ARE_SYNC && isVolatile ? ACC_SYNCHRONIZED : 0), name, desc, false);
 
 		mv.visitCode();
 		Label l0 = new Label();
@@ -264,6 +381,20 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 
 			// insert fast path code.
 			if (!isVolatile) ASMUtil.insertFastPathCode(mv, false, 5, 1, success, field);
+
+			Label start = new Label(), end = new Label(), handler = new Label();
+			if (isVolatile) {
+				mv.visitLdcInsn(Type.getObjectType(rrClass.getName()));
+				// this
+				mv.visitVarInsn(ILOAD, 0);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				// shadow_vol
+				mv.dup();
+				// shadow_vol shadow_vol
+				mv.monitorEnter();
+				mv.visitLabel(start);
+			}
 
 			mv.visitInsn(ACONST_NULL);
 
@@ -284,8 +415,27 @@ public class GuardStateInserter extends RRClassAdapter implements Opcodes {
 			}
 
 			mv.visitLabel(success);
+			mv.visitFieldInsn(GETSTATIC, rrClass.getName(), name, desc);
+			// if we have a volatile, it will be on the stack here.
+			if (isVolatile) { 
+				mv.swap(Type.getObjectType("java/lang/Object"), Type.getType(desc));
+				mv.monitorExit();
+				mv.goTo(end);
+				mv.visitLabel(handler);
+				mv.visitLdcInsn(Type.getObjectType(rrClass.getName()));
+				// this
+				mv.visitVarInsn(ILOAD, 0);
+				// this fadid
+				mv.invokeStatic(Constants.SHADOW_VOL_TYPE, Constants.SHADOW_VOL_GET_METHOD);
+				mv.monitorExit();
+				mv.visitInsn(ATHROW);
+				mv.visitLabel(end);
+				mv.visitTryCatchBlock(start, end, handler, "java/lang/Exception");
+			}
+
+		} else {
+			mv.visitFieldInsn(GETSTATIC, rrClass.getName(), name, desc);
 		}
-		mv.visitFieldInsn(GETSTATIC, rrClass.getName(), name, desc);
 		mv.visitInsn(ASMUtil.returnInstr(desc));
 		mv.visitMaxs(10,10); // must be computed auto
 		mv.visitEnd();

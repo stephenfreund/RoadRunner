@@ -133,7 +133,7 @@ public abstract class AbstractArrayState {
 			} else if (array instanceof float[]) {
 				return ((float[])array).length;
 			} else {
-				Assert.fail("Bad target:" + array);
+				Assert.panic("Bad target:" + array);
 				return 0;
 			}
 		}

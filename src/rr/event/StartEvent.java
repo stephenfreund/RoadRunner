@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.event;
 
+import rr.meta.StartInfo;
 import rr.state.ShadowThread;
 
 /** Represents a call to Thread.start() in the target program. */
@@ -46,6 +47,8 @@ public class StartEvent extends Event {
 
 	/** The thread being started. */
 	protected ShadowThread newThread;
+	
+	protected StartInfo info;
 	
 	public StartEvent (ShadowThread td) {
 		super(td);
@@ -65,5 +68,13 @@ public class StartEvent extends Event {
 		return newThread;
 	}
 
+	/** @RRInternal */
+	public void setInfo(StartInfo info) {
+		this.info = info;
+	}
+
+	public StartInfo getInfo() {
+		return this.info;
+	}
 
 }

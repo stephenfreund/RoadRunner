@@ -63,6 +63,7 @@ import rr.meta.InterruptInfo;
 import rr.meta.InvokeInfo;
 import rr.meta.MetaDataInfoMaps;
 import rr.meta.MethodInfo;
+import rr.meta.StartInfo;
 import rr.state.AbstractArrayState;
 import rr.state.ShadowLock;
 import rr.state.ShadowThread;
@@ -304,12 +305,12 @@ public class RREventGenerator extends RR {
 	public static void start(final ShadowThread newTD, int startId, ShadowThread td) {
 		try {
 			final Thread t = newTD.getThread();
+			StartInfo info = MetaDataInfoMaps.getStarts().get(startId);
 
 			StartEvent se = td.getStartEvent();
 			se.setNewThread(newTD);
+			se.setInfo(info);
 			getTool().preStart(se);
-
-			final AtomicFlag f = new AtomicFlag();
 
 			Thread stopper = new Thread("RR Waiter for " + newTD.getTid()) {
 				@Override
@@ -362,7 +363,7 @@ public class RREventGenerator extends RR {
 			if (thread != null) break;
 			Yikes.yikes("Join before start.  Retry...");				
 		}
-		join(ShadowThread.getThreadState(thread), millis, nanos, joinId, td);
+		join(ShadowThread.getShadowThread(thread), millis, nanos, joinId, td);
 	}
 
 	public static void join(ShadowThread thread, long millis, int nanos, int joinId, ShadowThread td) {
@@ -594,7 +595,7 @@ public class RREventGenerator extends RR {
 			ShadowThread td = ShadowThread.getCurrentShadowThread();
 			final InterruptInfo data = MetaDataInfoMaps.getInterrupts().get(interruptId);
 			final InterruptEvent me = td.getInterruptEvent();
-			me.setInterruptedThread(ShadowThread.getThreadState(target));
+			me.setInterruptedThread(ShadowThread.getShadowThread(target));
 			me.setInfo(data);
 			getTool().preInterrupt(me);
 			target.interrupt();
@@ -609,7 +610,7 @@ public class RREventGenerator extends RR {
 			if (!t.isAlive()) {
 				ShadowThread td = ShadowThread.getCurrentShadowThread();
 				JoinEvent je = td.getJoinEvent();
-				final ShadowThread shadowThread = ShadowThread.getThreadState(t);
+				final ShadowThread shadowThread = ShadowThread.getShadowThread(t);
 				if (shadowThread != null) {
 					//				Util.assertTrue(shadowThread != null);
 					je.setJoiningThread(shadowThread);

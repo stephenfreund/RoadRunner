@@ -119,7 +119,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		<echo file="${auto.dir}/bin/${run-script}" append="false" message="#!/bin/bash${line.separator}
 								  ${java.home}/bin/java -version ${line.separator}
 			                      echo ${line.separator}
-								  ${java.home}/bin/java ${rr.vmargs} -Xbootclasspath/p:${toString:rr.classpath}:$$RR_TOOLPATH: ${rr.main} $$*" />
+								  ${java.home}/bin/java ${rr.vmargs} -Xbootclasspath/p:${toString:rr.classpath}: ${rr.main} $$*" />
 		<chmod file="${auto.dir}/bin/${run-script}" perm="u+x" />
 
 		<antcall target="props" />

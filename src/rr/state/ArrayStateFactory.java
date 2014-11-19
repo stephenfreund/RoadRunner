@@ -39,11 +39,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.state;
 
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.BitSet;
 import java.util.HashMap;
 
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+
+import rr.RRMain;
 import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.meta.SourceLocation;
 import rr.state.update.Updaters;
@@ -63,16 +69,16 @@ public class ArrayStateFactory {
 
 	public static enum ArrayMode { NONE, FINE, COARSE, SPECIAL, USER };
 
-	protected static final ConcurrentIdentityHashMap<Object,AbstractArrayState> table = new ConcurrentIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11, (float) 0.5, 128);
-	
+	protected static final ConcurrentIdentityHashMap<Object,AbstractArrayState> table = new ConcurrentIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11, (float) 0.5, RR.maxTidOption.get());
+
 	/*
 	 * In previous versions that AbstractArrayState values were weak references, which could cause 
 	 * state for long-lived arrays in the attic to be remove if those arrays were not accesses often
 	 * enough to keep them in the other caches.
 	 */
-	private static final WeakIdentityHashMap<Object,AbstractArrayState> attic = new WeakIdentityHashMap<Object,AbstractArrayState>((1 << 18) - 11);
-	
-	
+	private static final WeakIdentityHashMap<Object,AbstractArrayState> attic = new WeakIdentityHashMap<Object,AbstractArrayState>((1 << 16) - 11);
+
+
 	private static int count = 0; // since ConcurrentHashMap size() is slow, approximate here...
 
 	public static CommandLineOption<ArrayMode> arrayOption = 
@@ -95,7 +101,7 @@ public class ArrayStateFactory {
 						Constructor<AbstractArrayState> x = c.getConstructor(Object.class);
 						set(x);
 					} catch (Exception e) {
-						Assert.fail("Invalid option for userArray: " + arg + ".  " + e);
+						Assert.panic("Invalid option for userArray: " + arg + ".  " + e);
 					}
 				}
 			};
@@ -117,6 +123,7 @@ public class ArrayStateFactory {
 	protected final ArrayMode defaultMode;
 	protected final boolean useCAS;
 
+	protected final ShadowThread owner;
 
 	private static int MAP_CHECK = 2000;
 	private static int MAP_MAX = 100000;
@@ -126,17 +133,17 @@ public class ArrayStateFactory {
 	private static final Timer atticTime = new Timer("ArrayStateFactory", "Attic Move Time");
 	private static final Counter atticHits = new Counter("ArrayStateFactory", "Attic Hits");
 
-
-	public ArrayStateFactory(ArrayMode defaultMode, boolean useCAS) {
+	public ArrayStateFactory(ShadowThread shadowThread, ArrayMode defaultMode, boolean useCAS) {
 		this.defaultMode = defaultMode;
 		this.useCAS = useCAS;
+		this.owner = shadowThread;
 		for (int i = 0; i < cache.length; i++) {
 			cache[i] = NULL;
 		}		
 	}
 
-	public ArrayStateFactory() {
-		this(arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
+	public ArrayStateFactory(ShadowThread shadowThread) {
+		this(shadowThread, arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
 	}
 
 	private static AbstractArrayState get0(Object array, ArrayMode mode, boolean useCAS) {
@@ -201,7 +208,7 @@ public class ArrayStateFactory {
 				return s; 
 			}
 		}
-
+		
 		state = get0(array, mode, useCAS);
 		cache[rotate] = state;
 		rotate = (rotate + 1) % cache.length;
@@ -219,7 +226,10 @@ public class ArrayStateFactory {
 		count++;
 		size.inc();
 		if (count % mapCheck == 0) {
-			moveToAttic();
+			synchronized (ArrayStateFactory.class) {
+				ArrayStateFactory.class.notify();
+			}
+			//			moveToAttic("Put");
 		}
 
 		return state;
@@ -240,12 +250,61 @@ public class ArrayStateFactory {
 				}
 				final AbstractArrayState remove = table.remove(a);
 			}
-			Util.logf("ArrayStateFactory Moved Entries to Attic.  Attic size: %d->%d.", oldAtticSize, attic.size());
-			atticTime.stop(start);
+			long elapsed = atticTime.stop(start) / 1000000;
+			Util.logf("ArrayStateFactory Moved Entries to Attic (%d ms).  Attic size: %d->%d.", elapsed, oldAtticSize, attic.size());
 		}
 	}	
 
 	public static AbstractArrayState make(Object array) {
 		return make(array, arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
+	}
+
+
+	static class AtticListener implements javax.management.NotificationListener {
+		public void handleNotification(Notification notification, Object handback)  {
+			//						String notifType = notification.getType();
+			//			Util.log(notification);
+			//			if (notification.getMessage().contains("MarkSweep")) {
+			synchronized (ArrayStateFactory.class) {
+				ArrayStateFactory.class.notify();
+			}
+			//			}
+		}
+	}
+
+	public static void addAtticListener() {
+		if (!RRMain.noInstrumentOption.get()) {
+			new Thread("Array Cleaner") {
+				public void run() {
+					while (true) {
+						synchronized (ArrayStateFactory.class) {
+							try {
+								ArrayStateFactory.class.wait();
+							} catch (InterruptedException e) {
+								Assert.panic(e);
+							}
+						}
+						for (ShadowThread t : ShadowThread.getThreads()) {
+							for (int i = 0; i < CACHE_SIZE; i++) {
+								t.arrayStateFactory.cache[i] = NULL;
+							}
+						}
+						moveToAttic();
+					}
+				}
+			}.start();
+
+
+
+			AtticListener listener = new AtticListener();
+			for (GarbageCollectorMXBean gc: ManagementFactory.getGarbageCollectorMXBeans()) {
+				//			if (gc.getName().contains("MarkSweep")) {
+				//				found = true;
+				Util.log("Adding Attic Listener to GC " + gc.getName());
+				NotificationEmitter emitter = (NotificationEmitter) gc;
+				emitter.addNotificationListener(listener, null, null);
+				//			}
+			}
+		}
 	}
 }

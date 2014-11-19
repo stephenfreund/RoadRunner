@@ -87,7 +87,7 @@ public final class CASCoarseArrayState extends CASAbstractArrayState {
 	@Override
 	public AbstractArrayState getShadowForNextDim(ShadowThread td, Object element, int i) {
 		if (element != nextDimension[i].getArray()) {
-			Yikes.yikes("Stale array entry for next dim");
+//			Yikes.yikes("Stale array entry for next dim");
 			nextDimension[i] = td.arrayStateFactory.get(element); 
 		} 
 		return nextDimension[i];

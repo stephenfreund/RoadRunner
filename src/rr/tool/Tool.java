@@ -214,7 +214,7 @@ public abstract class Tool  {
 
 	
 	/** Called for each thread stop event in the target program. 
-	 * Thus, thread creation events are not 'filtered' down the tool chain. 
+	 * <b>You MUST pass this event along</b> 
 	 * By default, this method does nothing.
 	 * */
 	public void stop(ShadowThread td) { 

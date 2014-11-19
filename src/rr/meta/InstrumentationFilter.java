@@ -123,7 +123,7 @@ public class InstrumentationFilter {
 			CommandLine.makeStringMatcher("classes", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies classes to instrument.  The default is all but standard libs.  Uses the StringMatcher scheme.  Examples:\n" + 
 					"   -classes=\"-.*cow.*\" ignores classes with cow in name.\n" +
 					"   -classes=\"+.*moo.*\" -classes=\"-.*cow.*\" ignores classes with cow in name, except if they have moo in the name",
-					"-java..*", "-javax..*", "-com.sun..*", "-sun..*", "-rr..*", "-rrtools..*", "-acme..*", "-.*__\\$rr_.*", "-org.xml..*");
+					"-java..*", "-javax..*", "-com.sun..*", "-sun..*", "-rr..*", "-tools..*", "-acme..*", "-.*__\\$rr_.*", "-org.xml..*");
 
 	public static CommandLineOption<StringMatcher> methodsSupportThreadStateParam  = 
 			CommandLine.makeStringMatcher("shadowThread", StringMatchResult.ACCEPT, CommandLineOption.Kind.DEPRECATED, "Specifies which methods can be tranformed into version that take a ShadowThread parameter.  No longer used --- JVMs have faster direct access to thread local data than before.",

@@ -404,7 +404,13 @@ public class ArrayShadowInterpreter extends Interpreter<ArrayShadowValue> implem
         	if (vv.getType().equals(ww.getType())) {
         		return vv;
         	} else {
-        		return ArrayShadowValue.SINGLE_VALUE;
+        		// We have two arrays, but they are of different type, so... create a new array
+        		// id and force a load since it will be fresh...
+        		if (vv.id > -1 && ww.id > -1) {
+        			return newValue(Type.getType(Object[].class));
+        		} else {
+        			return ArrayShadowValue.SINGLE_VALUE;
+        		}
         	}
         } else {
         	return v;

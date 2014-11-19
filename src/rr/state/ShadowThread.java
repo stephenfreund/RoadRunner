@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.state;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -76,6 +77,8 @@ import acme.util.decorations.Decoratable;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.decorations.DefaultValue;
+import acme.util.identityhash.WeakIdentityHashMap;
+import acme.util.identityhash.WeakIdentityHashMap.ValueFunction;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -109,10 +112,8 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/** 
 	 * The Java thread object for this ShadowThread object. 
 	 */
-	// Note: This should possibly be a weak ref to allow Thread objects to be garbed collected,
-	// but for now leave as is.
-	protected final Thread thread;
-	
+	private final WeakReference<Thread> thread;
+
 	/**
 	 * The ShadowThread for parent thread.
 	 */
@@ -137,7 +138,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * analysis when figuring out when we exit a block.
 	 * Basically we keep the call stack here.
 	 */
-	private final MethodEvent blockStack[] = new MethodEvent[1000];  // Used to be 10000
+	private final MethodEvent blockStack[] = RR.noEnterOption.get() ? new MethodEvent[0] : new MethodEvent[8*1024]; 
 	private int blockCount = 0;
 
 	/*** Creation ***/
@@ -149,7 +150,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * @RRInternal
 	 */
 	public final AbstractArrayUpdater arrayUpdater = createArrayUpdater();
-	public final ArrayStateFactory arrayStateFactory = new ArrayStateFactory();
+	public final ArrayStateFactory arrayStateFactory = new ArrayStateFactory(this);
 
 	/**
 	 * @RRInternal
@@ -210,7 +211,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 			Util.logf("New Thread %s with tid=%d.", thread.getName(), tid);
 			this.tid = tid;
 			this.parent = parent;
-			this.thread = thread;
+			this.thread = new WeakReference<Thread>(thread);
 		}
 		for (int i = 0; i < blockStack.length; i++) {
 			blockStack[i] = new MethodEvent(this);
@@ -326,7 +327,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * Return the number of threads being tracked.
 	 */
 	public static int numThreads() {
-		return threadToThreadDataMap.size();
+		synchronized (threadToThreadDataMap) {
+			return threadToThreadDataMap.size();
+		}
 	}
 
 	/**
@@ -336,21 +339,33 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public static int maxActiveThreads() {
 		return Integer.parseInt(maxCounter.get());
 	}
-	
+
 	/**
 	 * Return ThreadStates for all known threads.
 	 */
 	public static Collection<ShadowThread> getThreads() {
-		return threadToThreadDataMap.values();
-	}
+		synchronized (threadToThreadDataMap) {
+			final Vector<ShadowThread> result = new Vector<ShadowThread>();
 
+			threadToThreadDataMap.applyToAllActiveValues(new ValueFunction<ShadowThread>() {
+
+				@Override
+				public void apply(ShadowThread v) {
+					result.add(v);
+				}
+
+			});
+			return result;
+		}
+	}
 
 	public int getTid() {
 		return tid;
 	}
 
+	// may be null
 	public Thread getThread() {
-		return thread;
+		return thread.get();
 	}
 
 	public ShadowThread getParent() {
@@ -365,27 +380,32 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 
 
 	//	Map of Thread --> its ShadowThread for use in joining... and to bridge start/init
-	private static Map<Thread,ShadowThread> threadToThreadDataMap = Collections.synchronizedMap(new IdentityHashMap<Thread,ShadowThread>());
+	private static WeakIdentityHashMap<Thread,ShadowThread> threadToThreadDataMap = new WeakIdentityHashMap<Thread,ShadowThread>();
 
 	/**
 	 * Create a new ShadowThread for the thread, given the parent thread. 
 	 */
 	public static synchronized ShadowThread make(Thread thread, ShadowThread parent) {
 		final ShadowThread td = RR.noEventReuseOption.get() ? new ThreadStateNoEventReuse(thread, parent) : new ShadowThread(thread, parent); 
-		threadToThreadDataMap.put(thread, td);
+		synchronized (threadToThreadDataMap) {
+			threadToThreadDataMap.put(thread, td);
+		}
 		final NewThreadEvent e = new NewThreadEvent(td);
 		RR.getTool().create(e);
 		return td;
 	}
 
 	private static ThreadLocal<ShadowThread> shadowThread = 
-		new ThreadLocal<ShadowThread>() {
+			new ThreadLocal<ShadowThread>() {
 		@Override
 		protected  
 		ShadowThread initialValue() {
 			synchronized (ShadowThread.class) {
 				Thread thread = Thread.currentThread();
-				ShadowThread td = threadToThreadDataMap.get(thread);
+				ShadowThread td;
+				synchronized (threadToThreadDataMap) {
+					td = threadToThreadDataMap.get(thread);
+				}
 				if (td == null) { // Main thread case (no start() instrumented for it)
 					td = make(thread, null);
 				}
@@ -408,8 +428,11 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/**
 	 * Get the ShadowThread for the given Thread. 
 	 */
-	public static ShadowThread getThreadState(Thread t) {
-		ShadowThread td = threadToThreadDataMap.get(t);
+	public static ShadowThread getShadowThread(Thread t) {
+		ShadowThread td;
+		synchronized(threadToThreadDataMap) {
+			td = threadToThreadDataMap.get(t);
+		}
 		if (td == null) {
 			return null;
 		}
@@ -425,8 +448,8 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public static ShadowThread get(int tid) {
 		return tidMap[tid];
 	}
-	
-	
+
+
 	/**
 	 * Return a String representing the call stack for a thread in the target program. 
 	 */

@@ -242,7 +242,7 @@ public class ASMUtil implements Opcodes {
 						} else {
 							mv.visitVarInsn(ILOAD, indexVar);
 						}
-						mv.visitVarInsn(ALOAD, shadowStateVar);
+						mv.visitVarInsn(ALOAD, guardStateLoc);
 						mv.visitVarInsn(ALOAD, tdVar);
 						mv.invokeStatic(Type.getType(t.getClass()), 
 								isWrite ? Constants.ARRAY_WRITE_FP_METHOD : Constants.ARRAY_READ_FP_METHOD);

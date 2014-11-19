@@ -51,6 +51,11 @@ public class ArrayStateCache extends AbstractArrayStateCache {
 			shadowCache[j] = ArrayStateFactory.NULL;
 		}
 	}
+	
+	public void clear(int tid) {
+		arrayCache[tid] = null;
+		shadowCache[tid] = ArrayStateFactory.NULL;
+	}
 
 	@Override
 	public AbstractArrayState get(Object array, ShadowThread td) {

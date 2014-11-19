@@ -46,7 +46,6 @@ import rr.org.objectweb.asm.ClassReader;
 import rr.org.objectweb.asm.ClassVisitor;
 import rr.org.objectweb.asm.ClassWriter;
 import rr.org.objectweb.asm.Opcodes;
-
 import rr.instrument.classes.AbstractOrphanFixer;
 import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.instrument.classes.ClassInitNotifier;
@@ -54,6 +53,7 @@ import rr.instrument.classes.CloneFixer;
 import rr.instrument.classes.GuardStateInserter;
 import rr.instrument.classes.InterfaceThunkInserter;
 import rr.instrument.classes.InterruptFixer;
+import rr.instrument.classes.JVMVersionNumberFixer;
 import rr.instrument.classes.NativeMethodSanityChecker;
 import rr.instrument.classes.SyncAndMethodThunkInserter;
 import rr.instrument.classes.ThreadDataThunkInserter;
@@ -88,6 +88,9 @@ public class Instrumentor {
 
 	public static final CommandLineOption<Boolean> fancyOption = 
 			CommandLine.makeBoolean("fancy", false, CommandLineOption.Kind.EXPERIMENTAL, "Use a more complex instrumentor with some untested or experimental features.  The fancy version may yield faster code.");
+
+	public static final CommandLineOption<Boolean> verifyOption = 
+			CommandLine.makeBoolean("verify", false, CommandLineOption.Kind.EXPERIMENTAL, "Verify the instrumented class files.  (Used to debug instrumentor.)");
 
 	public static final CommandLineOption<Boolean> trackArraySitesOption = 
 			CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Track arrays only on given line locations.");
@@ -201,7 +204,8 @@ public class Instrumentor {
 				ClassVisitor cv = new SyncAndMethodThunkInserter(cv2, cv2forThunks);
 
 				cv = insertToolSpecificVisitors(cv);
-
+				cv = new JVMVersionNumberFixer(cv);
+				
 				cr.accept(cv, ClassReader.EXPAND_FRAMES);
 			} else {			
 				ClassVisitor cv = new InterfaceThunkInserter(cv0);

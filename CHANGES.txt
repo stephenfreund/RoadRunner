@@ -35,6 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+Nov 19, 2014: Various bug fixes and memory performance improvements.
+
 Aug 30, 2014: This is a large update:
 
               Various bug fixes.  This includes corner cases in FT_CAS,

@@ -53,8 +53,9 @@ import acme.util.count.Counter;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
-// Since Clone copies instrumentation fields, we need to wipe them...
-
+/**
+ * Generate interrupted events when a Thread gets interrupted.
+ */
 public class InterruptFixer extends RRClassAdapter implements Opcodes {
 
 	public static final CommandLineOption<Boolean> noInterruptOption = CommandLine.makeBoolean("noInterrupt", false, CommandLineOption.Kind.EXPERIMENTAL, "turn off special handling of interrupt");

@@ -51,21 +51,26 @@ public class Constants {
 	/***** TYPES *****/
 
 	public static final Type SYSTEM_TYPE = Type.getType(java.lang.System.class);
+	public static final Type RUNTIME_TYPE = Type.getType(java.lang.Runtime.class);
 	public static final Type RR_SYSTEM_TYPE = Type.getType(rr.instrument.java.lang.System.class);
 	public static final Type OBJECT_TYPE = Type.getType(java.lang.Object.class);
 	public static final Type THREAD_TYPE = Type.getType(java.lang.Thread.class);
 	public static final Type MANAGER_TYPE = Type.getType(rr.tool.RREventGenerator.class);
 	public static final Type MANAGER_VALUE_TYPE = Type.getType(rr.tool.RRValueEventGenerator.class);
+	public static final Type RR_MAIN_TYPE = Type.getType(rr.RRMain.class);
 	public static final Type ACME_UTIL_TYPE = Type.getType(acme.util.Util.class);
 	public static final Type THREAD_STATE_TYPE = Type.getObjectType("rr/state/ShadowThread");  // special to avoid loading before tools
 	public static final Type GUARD_STATE_TYPE = Type.getObjectType("rr/state/ShadowVar");
+	public static final Type SHADOW_VOL_TYPE = Type.getObjectType("rr/state/ShadowVolatile");
 
 	static {
 		try {
+			LoaderContext.bootLoaderContext.getRRClass(RR_MAIN_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(SYSTEM_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(OBJECT_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(MANAGER_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(THREAD_TYPE.getInternalName());
+			LoaderContext.bootLoaderContext.getRRClass(SHADOW_VOL_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(ACME_UTIL_TYPE.getInternalName());
 		} catch (ClassNotFoundException e) {
 			Assert.panic(e);
@@ -81,6 +86,8 @@ public class Constants {
 	private static final Method WRITE_ACCESS_METHOD = new Method("writeAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 	private static final Method VOLATILE_READ_ACCESS_METHOD = new Method("volatileReadAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
 	private static final Method VOLATILE_WRITE_ACCESS_METHOD = new Method("volatileWriteAccess", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
+
+	public static final Method SHADOW_VOL_GET_METHOD = new Method("get", SHADOW_VOL_TYPE, new Type[] { OBJECT_TYPE, Type.INT_TYPE });
 
 	// for multiple classloaders...
 	private static final Method READ_ACCESS_METHOD_ML = new Method("readAccessML", Type.VOID_TYPE, new Type[] { OBJECT_TYPE, GUARD_STATE_TYPE, Type.INT_TYPE, THREAD_STATE_TYPE });
@@ -109,8 +116,8 @@ public class Constants {
 
 	public static final Method READ_FP_METHOD = Method.getMethod("boolean readFastPath(rr.state.ShadowVar, rr.state.ShadowThread)");
 	public static final Method WRITE_FP_METHOD =  Method.getMethod("boolean writeFastPath(rr.state.ShadowVar, rr.state.ShadowThread)");
-	public static final Method ARRAY_READ_FP_METHOD = Method.getMethod("boolean arrayReadFastPath(int, rr.state.AbstractArrayState, rr.state.ShadowThread)");
-	public static final Method ARRAY_WRITE_FP_METHOD =  Method.getMethod("boolean arrayWriteFastPath(int, rr.state.AbstractArrayState, rr.state.ShadowThread)");
+	public static final Method ARRAY_READ_FP_METHOD = Method.getMethod("boolean arrayReadFastPath(int, rr.state.ShadowVar, rr.state.ShadowThread)");
+	public static final Method ARRAY_WRITE_FP_METHOD =  Method.getMethod("boolean arrayWriteFastPath(int, rr.state.ShadowVar, rr.state.ShadowThread)");
 	public static final Method FIELD_READ_FP_METHOD = Method.getMethod("boolean fieldReadFastPath(int, rr.state.ShadowVar, rr.state.ShadowThread)");
 	public static final Method FIELD_WRITE_FP_METHOD =  Method.getMethod("boolean fieldWriteFastPath(int, rr.state.ShadowVar, rr.state.ShadowThread)");
 
