@@ -39,8 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package tools.fasttrack_cas;
 
 
+import rr.RRMain;
 import rr.org.objectweb.asm.Opcodes;
-
 import rr.annotations.Abbrev;
 import rr.barrier.BarrierEvent;
 import rr.barrier.BarrierListener;
@@ -83,6 +83,8 @@ import acme.util.decorations.NullDefault;
 import acme.util.decorations.DecorationFactory.Type;
 import acme.util.io.XMLWriter;
 import acme.util.option.CommandLine;
+import tools.util.Epoch;
+import tools.util.EpochPair;
 
 /**
  * A version of FastTrack that uses an optimistic synchronization strategy
@@ -115,8 +117,14 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 	}
 
 	protected static int ts_get_epoch(ShadowThread ts) { Assert.panic("Bad");	return -1;	}
-	protected void ts_set_epoch(ShadowThread ts, int v) { Assert.panic("Bad");  }
+	protected static void ts_set_epoch(ShadowThread ts, int v) { Assert.panic("Bad");  }
 
+	static void setEpoch(ShadowThread shadow, int v) {
+		Assert.assertTrue(shadow.getTid() == Epoch.tid(v));
+		ts_set_epoch(shadow,v);
+	}
+
+	
 	protected static CV ts_get_cv(ShadowThread ts) { Assert.panic("Bad");	return null; }
 	protected static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
 
@@ -157,21 +165,21 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		CV cv = ts_get_cv(currentThread);
 		cv.max(other);
 		cv.inc(currentThread.getTid());
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
 	protected void maxEpochAndCV(ShadowThread currentThread, CV other, Event e) {
 		CV cv = ts_get_cv(currentThread);
 		cv.max(other);
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
 	protected void incEpochAndCV(ShadowThread currentThread, Event e) {
 		CV cv = ts_get_cv(currentThread);
 		cv.inc(currentThread.getTid());
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
@@ -441,7 +449,14 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		final ShadowThread td = je.getThread();
 		final ShadowThread joining = je.getJoiningThread();
 
+		// this test tells use whether the tid has been reused already or not.  Necessary
+		// to still account for stopped thread, even if that thread's tid has been reused,
+		// but good to know if this is happening alot...
 		if (joining.getTid() != -1) {
+			this.incEpochAndCV(joining, je);
+			this.maxEpochAndCV(td, ts_get_cv(joining), je);
+		} else {
+			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
 			this.incEpochAndCV(joining, je);
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		}

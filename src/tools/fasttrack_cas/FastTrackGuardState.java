@@ -43,6 +43,8 @@ import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import sun.misc.Unsafe;
 import tools.util.CV;
+import tools.util.Epoch;
+import tools.util.EpochPair;
 
 /*
  * Synchronization Rules:

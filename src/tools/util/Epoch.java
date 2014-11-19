@@ -36,37 +36,62 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************/
 
-package tools.fasttrack_cas;
+package tools.util;
 
 import rr.state.ShadowThread;
 
-/*
- * A pair of epochs encoded as a long.
- */
+public final class Epoch {
+	
+	public static final int CLOCK_BITS = 24;
+	public static final int MAX_CLOCK = (1 << CLOCK_BITS) - 1;
+	public static final int MAX_TID = (1 << (32 - CLOCK_BITS)) - 1;
+	
+	public static final int/*epoch*/ ZERO = 0;
+	public static final int/*epoch*/ READ_SHARED = -1;
+	
+	public static int tid(int epoch) {
+		return epoch >>> CLOCK_BITS;
+	}
+	
+	public static int clock(int epoch) {
+		return epoch & MAX_CLOCK;
+	}
 
-public final class EpochPair {
-	
-	public static final long make(int write, int read) {
-		return (((long)write) << 32) | (((long)read) & 0xFFFFFFFFL);
+	public static int make(int tid, int clock) {
+		return (tid << CLOCK_BITS) + clock;
 	}
 	
-	public static final int write(long pair) {
-		return (int)(pair >>> 32);
+
+	public static int make(ShadowThread td, int clock) {
+		return make(td.getTid(), clock);
 	}
 	
-	public static final int read(long pair) {
-		return (int)(pair & 0xFFFFFFFFL);
+	public static int tick(int epoch) {
+		return epoch + 1;
 	}
 	
-	public static String toString(long pair) {
-		System.out.printf("%X\n", pair);
-		return "(W=" + Epoch.toString(write(pair)) + ",R=" + Epoch.toString(read(pair));
+	public static String toString(int epoch) {
+		if (epoch == READ_SHARED) {
+			return "(--:--)";
+		} else {
+			return String.format("(%d:%X)", tid(epoch), clock(epoch));
+		}
 	}
-	
+
 	public static void main(String args[]) {
-		int e1 = Epoch.make(255, 111);
-		int e2 = Epoch.make(2, 111);
-		System.out.println(EpochPair.toString(EpochPair.make(e1,e2)));
+	{
+		int e = make(3,11);
+		System.out.println(toString(e));
 	}
+	{
+		int e = make(MAX_TID-1,11);
+		System.out.println(toString(e));
+		System.out.println(toString(tick(e)));
+	}
+	{
+		int e = make(MAX_TID+1,11);
+		System.out.println(toString(e));
+	}
+}
 
 }

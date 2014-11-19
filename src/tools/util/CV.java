@@ -182,7 +182,7 @@ public class CV implements Serializable {
 	@Override
 	public String toString() {
 		String r = "[";
-		for(int i=0; i<a.length; i++) r += (i > 0 ? " " : "") + String.format("%08X", a[i]);
+		for(int i=0; i<a.length; i++) r += (i > 0 ? " " : "") + Epoch.toString(a[i]); //String.format("%08X", a[i]);
 		return r+"]";
 	}
 

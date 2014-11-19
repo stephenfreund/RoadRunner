@@ -40,6 +40,7 @@ package tools.fasttrack;
 
 import rr.state.ShadowVar;
 import tools.util.CV;
+import tools.util.Epoch;
 
 
 public class FastTrackGuardState extends CV implements ShadowVar {

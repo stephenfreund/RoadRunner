@@ -50,7 +50,6 @@ package tools.fasttrack;
 
 
 import rr.org.objectweb.asm.Opcodes;
-
 import rr.annotations.Abbrev;
 import rr.barrier.BarrierEvent;
 import rr.barrier.BarrierListener;
@@ -82,8 +81,10 @@ import rr.state.ShadowVar;
 import rr.state.ShadowVolatile;
 import rr.tool.Tool;
 import tools.util.CV;
+import tools.util.Epoch;
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.decorations.DefaultValue;
@@ -122,6 +123,12 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 	static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
 
 
+	static void setEpoch(ShadowThread shadow, int v) {
+		Assert.assertTrue(shadow.getTid() == Epoch.tid(v));
+		ts_set_epoch(shadow,v);
+	}
+
+
 	static final Decoration<ShadowLock,FastTrackLockData> ftLockData = ShadowLock.makeDecoration("FastTrack:ShadowLock", DecorationFactory.Type.MULTIPLE,
 			new DefaultValue<ShadowLock,FastTrackLockData>() { public FastTrackLockData get(final ShadowLock ld) { return new FastTrackLockData(ld); }});
 
@@ -158,21 +165,21 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		CV cv = ts_get_cv(currentThread);
 		cv.max(other);
 		cv.inc(currentThread.getTid());
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
 	protected void maxEpochAndCV(ShadowThread currentThread, CV other, Event e) {
 		CV cv = ts_get_cv(currentThread);
 		cv.max(other);
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
 	protected void incEpochAndCV(ShadowThread currentThread, Event e) {
 		CV cv = ts_get_cv(currentThread);
 		cv.inc(currentThread.getTid());
-		ts_set_epoch(currentThread, cv.get(currentThread.getTid()));
+		setEpoch(currentThread, cv.get(currentThread.getTid()));
 	}
 
 
@@ -259,7 +266,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 					}
 
 					final int lastReadEpoch = x.lastRead;				
-					if (lastReadEpoch != Epoch.EMPTY) {
+					if (lastReadEpoch != Epoch.READ_SHARED) {
 						final int lastReader = Epoch.tid(lastReadEpoch);
 						if (lastReader != td.getTid() && lastReadEpoch > tdCV.get(lastReader)) {
 							error(fae, 2, "read-by-thread-", lastReader, "write-by-thread-", td.getTid());
@@ -282,7 +289,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 
 					if (lastReadEpoch == tdEpoch) {
 						return;
-					} else if (lastReadEpoch == Epoch.EMPTY) {
+					} else if (lastReadEpoch == Epoch.READ_SHARED) {
 						if (x.get(td.getTid()) == tdEpoch) {
 							return;
 						}
@@ -294,7 +301,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 						error(fae, 4, "write-by-thread-", lastWriter, "read-by-thread-", td.getTid());
 					}
 
-					if (lastReadEpoch != Epoch.EMPTY) {
+					if (lastReadEpoch != Epoch.READ_SHARED) {
 						final int lastReader = Epoch.tid(lastReadEpoch);
 						if (lastReadEpoch <= tdCV.get(lastReader)) {
 							x.lastRead = tdEpoch;
@@ -302,7 +309,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 							x.makeCV(INIT_CV_SIZE);
 							x.set(lastReader, lastReadEpoch);
 							x.set(td.getTid(), tdEpoch);
-							x.lastRead = Epoch.EMPTY;
+							x.lastRead = Epoch.READ_SHARED;
 						}
 					} else {
 						x.set(td.getTid(), tdEpoch);					
@@ -407,7 +414,14 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		final ShadowThread td = je.getThread();
 		final ShadowThread joining = je.getJoiningThread();
 
+		// this test tells use whether the tid has been reused already or not.  Necessary
+		// to still account for stopped thread, even if that thread's tid has been reused,
+		// but good to know if this is happening alot...
 		if (joining.getTid() != -1) {
+			this.incEpochAndCV(joining, je);
+			this.maxEpochAndCV(td, ts_get_cv(joining), je);
+		} else {
+			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
 			this.incEpochAndCV(joining, je);
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		}
@@ -507,7 +521,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				return false;
 			}
 
-			if (lastReadEpoch == Epoch.EMPTY) {
+			if (lastReadEpoch == Epoch.READ_SHARED) {
 				if (x.get(tid) != tdEpoch) {
 					synchronized(x) {
 						x.set(tid, tdEpoch);
@@ -535,7 +549,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 						x.makeCV(INIT_CV_SIZE);
 						x.set(lastReader, lastReadEpoch);
 						x.set(td.getTid(), tdEpoch);
-						x.lastRead = Epoch.EMPTY;
+						x.lastRead = Epoch.READ_SHARED;
 						return true;
 					}
 				}
@@ -573,7 +587,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				}
 			}
 
-			if (lastReadEpoch != Epoch.EMPTY) {
+			if (lastReadEpoch != Epoch.READ_SHARED) {
 				final int lastReader = Epoch.tid(lastReadEpoch);
 				if (lastReader != tid && lastReadEpoch > tdCV.get(lastReader)) {
 					return false;

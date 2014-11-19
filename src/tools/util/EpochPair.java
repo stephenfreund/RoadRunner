@@ -36,46 +36,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************/
 
-package tools.fasttrack;
+package tools.util;
 
 import rr.state.ShadowThread;
 
-public final class Epoch {
-	
-	public static final int CLOCK_BITS = 24;
-	public static final int MAX_CLOCK = (1 << CLOCK_BITS) - 1;
-	public static final int MAX_TID = (1 << (32 - CLOCK_BITS)) - 1;
-	
-	public static final int/*epoch*/ ZERO = 0;
-	public static final int/*epoch*/ EMPTY = -1;
-	
-	public static int tid(int epoch) {
-		return epoch >>> CLOCK_BITS;
-	}
-	
-	public static int clock(int epoch) {
-		return epoch & MAX_CLOCK;
-	}
+/*
+ * A pair of epochs encoded as a long.
+ */
 
-	public static int make(int tid, int clock) {
-		return (tid << CLOCK_BITS) + clock;
+public final class EpochPair {
+	
+	public static final long make(int write, int read) {
+		return (((long)write) << 32) | (((long)read) & 0xFFFFFFFFL);
 	}
 	
-
-	public static int make(ShadowThread td, int clock) {
-		return make(td.getTid(), clock);
+	public static final int write(long pair) {
+		return (int)(pair >>> 32);
 	}
 	
-	public static int tick(int epoch) {
-		return epoch + 1;
+	public static final int read(long pair) {
+		return (int)(pair & 0xFFFFFFFFL);
 	}
 	
-	public static String toString(int epoch) {
-		if (epoch == EMPTY) {
-			return "(--:--)";
-		} else {
-			return String.format("(%d:%X)", tid(epoch), clock(epoch));
-		}
+	public static String toString(long pair) {
+		System.out.printf("%X\n", pair);
+		return "(W=" + Epoch.toString(write(pair)) + ",R=" + Epoch.toString(read(pair));
+	}
+	
+	public static void main(String args[]) {
+		int e1 = Epoch.make(255, 111);
+		int e2 = Epoch.make(2, 111);
+		System.out.println(EpochPair.toString(EpochPair.make(e1,e2)));
 	}
 
 }
