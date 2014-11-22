@@ -36,6 +36,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
 Nov 19, 2014: Various bug fixes and memory performance improvements.
+              These include: more gracefully recovery from various 
+              failures, a more robust fastpath process for array 
+              accesses, and improved handling of shadow state for 
+              volatiles and threads.
 
 Aug 30, 2014: This is a large update:
 
