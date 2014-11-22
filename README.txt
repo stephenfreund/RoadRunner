@@ -35,11 +35,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Notes on Major Updates
 ========================
 
-  * Version 1.2: committed on 11/19/2014.
+  * Version 0.2: committed on 11/19/2014.
   
                  Various small bug fixes and memory performance improvements.
   
-  * Version 1.1: committed on 8/30/2014.
+  * Version 0.1: committed on 8/30/2014.
   
 		 All users should update to this version or later.
                  
@@ -48,7 +48,7 @@ Notes on Major Updates
                  improves scalability of the shadow state data 
                  structures.  Instrumentation now uses ASM version 5.
                  
-  * Version 1.0: initial release.
+  * Version 0.0: initial release.
 
     	    	 See CHANGES.txt for more details.
 
