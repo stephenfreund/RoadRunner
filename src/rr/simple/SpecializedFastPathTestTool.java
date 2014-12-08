@@ -164,11 +164,13 @@ final public class SpecializedFastPathTestTool extends Tool {
 	}
 
 	public static boolean arrayReadFastPath(int index, ShadowVar vs, ShadowThread ts) {
+		if (vs == null) return false;
 		Util.logf("Read FP %s[%d]", vs, index);
 		return true;
 	}
 
 	public static boolean arrayWriteFastPath(int index, ShadowVar vs, ShadowThread ts) {
+		if (vs == null) return false;
 		Util.logf("Write FP %s[%d]", vs, index);
 		return true;
 	}
