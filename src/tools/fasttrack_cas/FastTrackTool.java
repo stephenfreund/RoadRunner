@@ -597,7 +597,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			final int tdEpoch = ts_get_epoch(td);
 
 			final long orig = x.getWREpochs();
-			final int lastWriteEpoch = EpochPair.read(orig);
+			final int lastWriteEpoch = EpochPair.write(orig);
 
 			if (lastWriteEpoch == tdEpoch) {
 				return true;	// commit: same epoch
