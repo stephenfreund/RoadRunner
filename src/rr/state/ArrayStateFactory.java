@@ -220,7 +220,7 @@ public class ArrayStateFactory {
 		AbstractArrayState z = table.putIfAbsent(array, state, hash);
 		if (z != null) {
 			Yikes.yikes("Concurrent array state creation...");
-			z.forget();
+			state.forget(); // forget the new one that's not in table.
 			state = z;
 		}
 		count++;
