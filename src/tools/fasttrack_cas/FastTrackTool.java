@@ -457,7 +457,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		} else {
 			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
-			this.incEpochAndCV(joining, je);
+			//			this.incEpochAndCV(joining, je);
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		}
 
@@ -597,7 +597,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			final int tdEpoch = ts_get_epoch(td);
 
 			final long orig = x.getWREpochs();
-			final int lastWriteEpoch = EpochPair.read(orig);
+			final int lastWriteEpoch = EpochPair.write(orig);
 
 			if (lastWriteEpoch == tdEpoch) {
 				return true;	// commit: same epoch

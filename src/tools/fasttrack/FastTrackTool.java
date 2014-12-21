@@ -422,7 +422,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		} else {
 			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
-			this.incEpochAndCV(joining, je);
+			//			this.incEpochAndCV(joining, je);
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		}
 
