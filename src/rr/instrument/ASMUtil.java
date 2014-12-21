@@ -234,6 +234,11 @@ public class ASMUtil implements Opcodes {
 	// indexVar == -1 -> on stack
 	public static void insertArrayFastPathCode(final RRMethodAdapter mv, final boolean isWrite, final int shadowStateVar, final int guardStateLoc, final int tdVar, final Label success, final int indexVar) {
 		if (!RR.nofastPathOption.get()) {
+			
+			Label nullVarState = new Label();
+			mv.visitVarInsn(ALOAD, guardStateLoc);
+			mv.visitJumpInsn(IFNULL, nullVarState);
+
 			RR.applyToTools(new ToolVisitor() {
 				public void apply(Tool t) {
 					if (t.hasArrayFPMethod(isWrite)) {
@@ -256,6 +261,9 @@ public class ASMUtil implements Opcodes {
 					} 
 				}
 			});
+
+			mv.visitLabel(nullVarState);
+
 		}
 	}
 
