@@ -52,6 +52,7 @@ import acme.util.StringMatchResult;
 import acme.util.StringMatcher;
 import acme.util.Strings;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.collections.IterableIterator;
 
 /**
@@ -419,6 +420,7 @@ public class CommandLine {
 		add(Util.outputPathOption); 
 		add(Util.outputFileOption); 
 		add(Util.errorFileOption); 
+		add(Yikes.maxYikesOption);
 
 	}
 

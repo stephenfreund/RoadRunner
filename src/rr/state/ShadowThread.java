@@ -467,7 +467,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public void terminate() {
 		synchronized (ShadowThread.class) {
 			getIsStopped().setToTrue();
-			Util.message("Stopping"); 
+			Util.log("Stopping"); 
 			if (!RR.noTidGCOption.get()) {
 				tidMap[this.tid] = null;
 			}

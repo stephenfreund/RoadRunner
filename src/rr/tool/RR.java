@@ -468,14 +468,14 @@ public class RR {
 		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
 		updateMemoryUsage(bean);
 
-		xml.print("memUsed",(int)Math.ceil(bean.getHeapMemoryUsage().getUsed()/M));
+//		xml.print("memUsed",(int)Math.ceil(bean.getHeapMemoryUsage().getUsed()/M));
 
 		updateMemoryUsage(bean);
 		xml.print("memCommitted",(int)Math.ceil(maxMemCommitted/M));
 		xml.print("memUsed",(int)Math.ceil(maxMemUsed/M));
 		xml.print("memTotal",(int)Math.ceil(maxTotalMemory/M));
 
-		xml.print("memMax",(int)Math.ceil(bean.getHeapMemoryUsage().getMax()/M));
+//		xml.print("memMax",(int)Math.ceil(bean.getHeapMemoryUsage().getMax()/M));
 
 		CompilationMXBean cbean = ManagementFactory.getCompilationMXBean();
 		if (cbean!=null) xml.print("compileTime",cbean.getTotalCompilationTime());

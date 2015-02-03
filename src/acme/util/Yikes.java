@@ -42,6 +42,8 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import acme.util.io.XMLWriter;
+import acme.util.option.CommandLine;
+import acme.util.option.CommandLineOption;
 
 /**
  * Routines to print "yikes" messages -- unusual internal circumstances 
@@ -49,7 +51,9 @@ import acme.util.io.XMLWriter;
  */
 public class Yikes {
 
-	private static final int YIKES_MAX = 5;
+	public static final CommandLineOption<Integer> maxYikesOption = 
+			CommandLine.makeInteger("maxYikes", 5, CommandLineOption.Kind.STABLE, "Maximum number of each yikes message printed.");
+
 	private static int numYikes = 0;
 	private static HashMap<String, Integer> yikesMessages = new HashMap<String,Integer>();
 
@@ -64,10 +68,10 @@ public class Yikes {
 			}
 			numYikes++;
 			yikesMessages.put(msg, n);
-			if (n <= Yikes.YIKES_MAX) {
+			if (n <= Yikes.maxYikesOption.get()) {
 				Util.pad();
 				Util.error("YIKES: " + msg);
-				if (n== Yikes.YIKES_MAX) {
+				if (n== Yikes.maxYikesOption.get()) {
 					Util.error("Suppressing further yikes messages like that one."); 
 				}
 				Util.err.println();	 

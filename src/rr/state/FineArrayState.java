@@ -90,7 +90,8 @@ public final class FineArrayState extends AbstractArrayState {
 			Yikes.yikes("Bad shadow array set: out of bounds.");
 			return true;
 		}
-		if (expected != shadowVar[index]) return false;
+		if (shadowVar[index] != expected) return false;
+
 		shadowVar[index] = v;
 		return true;
 	}

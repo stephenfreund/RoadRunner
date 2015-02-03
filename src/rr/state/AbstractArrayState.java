@@ -101,7 +101,7 @@ public abstract class AbstractArrayState {
 	public void specialize() {
 		if (warned) return;
 		warned = true;
-		Assert.warn("Can't specialize array state " + this.getClass());
+		Util.log("Can't specialize array state " + this.getClass());
 	}	
 
 	@Override
