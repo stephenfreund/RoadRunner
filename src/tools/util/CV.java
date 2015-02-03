@@ -77,6 +77,7 @@ public class CV implements Serializable {
 		if (a == null) {
 			if (RRMain.slowMode()) cvCount.inc();
 			a = new int[i];
+			for(int j=0;j<a.length; j++) a[j] = Epoch.make(j, 0); // new cv must have valid epochs!
 		}
 	}
 
@@ -84,7 +85,9 @@ public class CV implements Serializable {
 	final private synchronized void resize(int len) {
 		if (len < a.length) return;
 		int[] b = new int[len];
-		for(int i=0;i<a.length; i++) b[i]=a[i];
+		int i;
+		for(i=0;i<a.length; i++) b[i]=a[i];
+		for(; i<b.length; i++)   b[i] = Epoch.make(i, 0); // new cv must have valid epochs!
 		a=b;
 	}
 
