@@ -54,12 +54,14 @@ import acme.util.Assert;
 import acme.util.StringMatchResult;
 import acme.util.StringMatcher;
 import acme.util.identityhash.ConcurrentIdentityHashMap;
+import acme.util.identityhash.WeakIdentityHashMap;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
 public class ArrayAllocSiteTracker extends RRClassAdapter {
 	
-	public static final ConcurrentIdentityHashMap<Object, SourceLocation> allocSites = new ConcurrentIdentityHashMap<Object,SourceLocation>();
+//	public static final ConcurrentIdentityHashMap<Object, SourceLocation> allocSites = new ConcurrentIdentityHashMap<Object,SourceLocation>();
+	private static final WeakIdentityHashMap<Object, ArrayAllocSourceLocation> allocSites = new WeakIdentityHashMap<Object,ArrayAllocSourceLocation>();
 
 	private ClassInfo currentClass;
 
@@ -128,17 +130,64 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 			return super.visitMethod(access, name, desc, signature, exceptions);
 		}
 	}
+	
+	public static ArrayAllocSourceLocation get(Object o) {
+		synchronized(allocSites) {
+			return allocSites.get(o);
+		}
+	}
+	
+	public static class ArrayAllocSourceLocation extends SourceLocation {
+		final private int dimension;
+		public ArrayAllocSourceLocation(String file, int line, int offset, int dim) {
+			super(file, line, offset);
+			this.dimension = dim;
+		}
 
-	public static final void __$rr_array(Object o, int byteCodeIndex, int line, String file) {
+		public int getDimension() {
+			return dimension;
+		}
+		
+		public String toString() {
+			return super.toString() + ":" + getDimension();
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + dimension;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ArrayAllocSourceLocation other = (ArrayAllocSourceLocation) obj;
+			if (dimension != other.dimension)
+				return false;
+			return true;
+		}
+		
+		
+	}
+
+	// this version takes the dimension too.
+	public static final void __$rr_array(Object o, int byteCodeIndex, int line, String file, int dimension) {
 		try {
-			final SourceLocation loc = new SourceLocation(file, line, byteCodeIndex);
-			allocSites.put(o, loc);
+			final ArrayAllocSourceLocation loc = new ArrayAllocSourceLocation(file, line, byteCodeIndex, dimension);
+			synchronized(allocSites) { allocSites.put(o, loc); }
 
 			if (o instanceof Object[]) {
 				Object[] a = (Object[])o;
 				for (Object aa : a) {
 					if (aa != null && aa.getClass().isArray()) {
-						__$rr_array(aa, byteCodeIndex, line, file);
+						__$rr_array(aa, byteCodeIndex, line, file, dimension + 1);
 					}
 				}
 			}
@@ -146,6 +195,11 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 		} catch (Exception e) {
 			Assert.panic(e);
 		}
+	}
+
+	
+	public static final void __$rr_array(Object o, int byteCodeIndex, int line, String file) {
+		__$rr_array(o, byteCodeIndex, line, file, 0);
 	}
 
 }

@@ -47,6 +47,7 @@ import java.util.Vector;
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
@@ -331,6 +332,15 @@ public abstract class Tool  {
 	 */
 	public void classInitialized(ClassInitializedEvent e) {
 		next.classInitialized(e);
+	}
+
+	/** Called right before any final static field of a class is read by a thread
+	 * for the first time.  This is necessary to ensure a tool can add a synchronizing
+	 * edges from the initialization of final fields to the first uses of those fields
+	 * in other threads.
+	 */
+	public void classAccessed(ClassAccessedEvent e) {
+		next.classAccessed(e);
 	}
 
 

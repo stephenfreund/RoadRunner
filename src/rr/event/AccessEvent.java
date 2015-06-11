@@ -52,7 +52,7 @@ public abstract class AccessEvent extends Event {
 	 * ARRAY: to an array element; 
 	 * or VOLATILE to a (static or non-static) volatile field.
 	 */
-	public static enum Kind { FIELD, ARRAY, VOLATILE }
+	public static enum Kind { FIELD, ARRAY, VOLATILE, SPECIAL }
 
 	/** For arrays and non-static (volatile or non-volatile) field accesses, indicates the array or object being accessed. 
 	 * Is null for static field accesses.

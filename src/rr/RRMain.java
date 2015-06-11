@@ -48,6 +48,7 @@ import rr.instrument.Instrumentor;
 import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.instrument.classes.CloneFixer;
 import rr.instrument.classes.ThreadDataThunkInserter;
+import rr.loader.InstrumentingDefineClassLoader;
 import rr.meta.InstrumentationFilter;
 import rr.replay.RRReplay;
 import rr.state.AbstractArrayStateCache;
@@ -60,6 +61,7 @@ import rr.tool.RR;
 import rr.tool.Tool;
 import rr.tool.ToolVisitor;
 import acme.util.Assert;
+import acme.util.StackDump;
 import acme.util.Util;
 import acme.util.io.URLUtils;
 import acme.util.option.CommandLine;
@@ -144,7 +146,7 @@ public class RRMain {
 					Util.message("");
 					Util.message("----- ----- ----- -----      Thpthpthpth.     ----- ----- ----- -----");
 				} catch (Exception e) {
-					e.printStackTrace();
+				//	e.printStackTrace();
 					Assert.panic(e);
 				}
 			}
@@ -206,9 +208,11 @@ public class RRMain {
 		cl.add(rr.tool.RR.noEnterOption);
 		cl.add(rr.tool.RR.noShutdownHookOption);
 		cl.add(Instrumentor.dumpClassOption);
+		cl.add(InstrumentingDefineClassLoader.sanityOption);
 		cl.add(Instrumentor.fancyOption);
 		cl.add(Instrumentor.verifyOption);
 		cl.add(Instrumentor.trackArraySitesOption);
+		cl.add(Instrumentor.trackReflectionOption);
 		cl.add(ThreadStateExtensionAgent.noDecorationInline);
 		cl.addOrderConstraint(ThreadStateExtensionAgent.noDecorationInline, rr.tool.RR.toolOption);
 

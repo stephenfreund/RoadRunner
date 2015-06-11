@@ -44,6 +44,7 @@ import rr.meta.MethodInfo;
 import rr.tool.Tool;
 import acme.util.StringMatchResult;
 import acme.util.StringMatcher;
+import acme.util.Util;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
 import acme.util.option.CommandLine;
@@ -87,6 +88,7 @@ public abstract class MethodMonitoringTool extends Tool {
 	}
 	
 	protected boolean watch(MethodInfo info) {
-		return shouldWatch.get(info) == MethodStatus.WATCH;
+		boolean b = shouldWatch.get(info) == MethodStatus.WATCH;
+		return b;
 	}
 }

@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package tools.fasttrack_cas;
 
+import acme.util.Util;
 import acme.util.Yikes;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
@@ -47,6 +48,11 @@ import tools.util.Epoch;
 import tools.util.EpochPair;
 
 /*
+ * See FastTrack paper for description.  
+ * This state encodes R/W epochs as a long and inherits and 
+ * vector clock for use in ReadShared mode.
+ * 
+ * 
  * Synchronization Rules:
  *    - wrEpochs = (write,read) epochs.  They must be updated 
  *         atomically with cas() method
@@ -57,23 +63,23 @@ import tools.util.EpochPair;
  */
 
 public class FastTrackGuardState extends CV implements ShadowVar {
-	
-	private volatile long wrEpochs;
-	
+
+	protected volatile long wrEpochs;
+
 	public FastTrackGuardState() {
 		super(0);
 	}
-	
+
 	public FastTrackGuardState(boolean isWrite, int epoch) {
 		super(0);
 		init(isWrite, epoch);
 	} 
-	
+
 	public FastTrackGuardState(CV cv, long epochs) {
 		super(cv);
 		this.wrEpochs = epochs;
 	}
-	
+
 	public void init(boolean isWrite, int epoch) {
 		if (isWrite) {
 			setWREpochs(EpochPair.make(epoch, Epoch.ZERO));
@@ -92,14 +98,14 @@ public class FastTrackGuardState extends CV implements ShadowVar {
 		return String.format("[W=%s R=%s CV=%s]", Epoch.toString(getLastWrite()), Epoch.toString(getLastRead()), a == null ? "null" : super.toString());
 	}
 
-	private int/*epoch*/ getLastWrite() {
+	protected int/*epoch*/ getLastWrite() {
 		return EpochPair.write(getWREpochs());
 	}
 
-	private int/*epoch*/ getLastRead() {
+	protected int/*epoch*/ getLastRead() {
 		return EpochPair.read(getWREpochs());
 	}
-	
+
 	public boolean cas(long expected, int write, int read) {
 		final boolean b = unsafe.compareAndSwapLong(this, epochsOffset, expected, EpochPair.make(write, read));
 		if (!b) Yikes.yikes("Atomic updated failed.");
@@ -115,14 +121,14 @@ public class FastTrackGuardState extends CV implements ShadowVar {
 	}
 
 	// setup to use Unsafe.compareAndSwapLong for updates
-    private static final Unsafe unsafe = Unsafe.getUnsafe();
-    private static final long epochsOffset;
-    
-    static {
-      try {
-    	  epochsOffset = unsafe.objectFieldOffset(FastTrackGuardState.class.getDeclaredField("wrEpochs"));
-      } catch (Exception ex) { throw new Error(ex); }
-    }
+	private static final Unsafe unsafe = Unsafe.getUnsafe();
+	private static final long epochsOffset;
+
+	static {
+		try {
+			epochsOffset = unsafe.objectFieldOffset(FastTrackGuardState.class.getDeclaredField("wrEpochs"));
+		} catch (Exception ex) { throw new Error(ex); }
+	}
 
 
 

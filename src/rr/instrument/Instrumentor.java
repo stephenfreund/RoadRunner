@@ -92,6 +92,9 @@ public class Instrumentor {
 	public static final CommandLineOption<Boolean> verifyOption = 
 			CommandLine.makeBoolean("verify", false, CommandLineOption.Kind.EXPERIMENTAL, "Verify the instrumented class files.  (Used to debug instrumentor.)");
 
+	public static final CommandLineOption<Boolean> trackReflectionOption = 
+			CommandLine.makeBoolean("trackReflection", false, CommandLineOption.Kind.EXPERIMENTAL, "Instrument calls to reflection methods that access fields/arrays to generate events.");
+
 	public static final CommandLineOption<Boolean> trackArraySitesOption = 
 			CommandLine.makeBoolean("arraySites", false, CommandLineOption.Kind.STABLE, "Track arrays only on given line locations.");
 
@@ -194,7 +197,7 @@ public class Instrumentor {
 				cv1 = new GuardStateInserter(cv1);
 				cv1 = new InterruptFixer(cv1);
 				cv1 = new CloneFixer(cv1);
-				cv1 = new ClassInitNotifier(currentClass, cv1);
+				cv1 = new ClassInitNotifier(currentClass, loader, cv1);
 				if (trackArraySitesOption.get()) {
 					cv1 = new ArrayAllocSiteTracker(currentClass, cv1);
 				}

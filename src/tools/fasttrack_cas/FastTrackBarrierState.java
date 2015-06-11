@@ -42,10 +42,15 @@ import rr.state.ShadowLock;
 import tools.util.CV;
 
 public class FastTrackBarrierState {
-	
+
+	// clock vector marking when all threads enter 
+	// the barrier.
 	private CV entering = new CV(8);
 	
 	
+	// change to a new entering clock vector
+	// if no other thread has beat us to it.
+	// Used when threads are released from the barrier.
 	public synchronized void reset(CV old) {
 		if (getEntering() == old) {
 			setEntering(new CV(8));

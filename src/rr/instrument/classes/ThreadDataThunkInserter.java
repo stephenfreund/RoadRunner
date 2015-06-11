@@ -55,6 +55,7 @@ import rr.instrument.methods.FancyArrayInstructionAdapter;
 import rr.instrument.methods.GuardStateInstructionAdapter;
 import rr.instrument.methods.NoOpMethodReplacer;
 import rr.instrument.methods.RRMethodAdapter;
+import rr.instrument.methods.ReflectionMethodReplacer;
 import rr.instrument.methods.SimpleArrayInstructionAdapter;
 import rr.instrument.methods.SimpleArrayWithValuesInstructionAdapter;
 import rr.instrument.methods.SpecialMethodReplacer;
@@ -167,6 +168,9 @@ public class ThreadDataThunkInserter extends RRClassAdapter implements Opcodes {
 			mv = new SpecialMethodReplacer(mv, newMethod);
 			mv = new SystemMethodReplacer(mv, newMethod);
 			mv = new NoOpMethodReplacer(mv, newMethod);
+			if (Instrumentor.trackReflectionOption.get()) {
+				mv = new ReflectionMethodReplacer(mv, newMethod);
+			}
 			mv = new JSRInlinerAdapter(mv, access, newName, newDesc, signature, exceptions);
 
 			return mv;

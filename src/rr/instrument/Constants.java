@@ -55,6 +55,12 @@ public class Constants {
 	public static final Type RR_SYSTEM_TYPE = Type.getType(rr.instrument.java.lang.System.class);
 	public static final Type OBJECT_TYPE = Type.getType(java.lang.Object.class);
 	public static final Type THREAD_TYPE = Type.getType(java.lang.Thread.class);
+	
+	public static final Type REFLECT_FIELD_TYPE = Type.getType(java.lang.reflect.Field.class);
+	public static final Type REFLECT_ARRAY_TYPE = Type.getType(java.lang.reflect.Array.class);
+	public static final Type RR_REFLECT_TYPE = Type.getType(rr.instrument.methods.ReflectionMethodReplacer.class);
+	
+	
 	public static final Type MANAGER_TYPE = Type.getType(rr.tool.RREventGenerator.class);
 	public static final Type MANAGER_VALUE_TYPE = Type.getType(rr.tool.RRValueEventGenerator.class);
 	public static final Type RR_MAIN_TYPE = Type.getType(rr.RRMain.class);
@@ -67,6 +73,9 @@ public class Constants {
 		try {
 			LoaderContext.bootLoaderContext.getRRClass(RR_MAIN_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(SYSTEM_TYPE.getInternalName());
+			LoaderContext.bootLoaderContext.getRRClass(REFLECT_FIELD_TYPE.getInternalName());
+			LoaderContext.bootLoaderContext.getRRClass(REFLECT_ARRAY_TYPE.getInternalName());
+			LoaderContext.bootLoaderContext.getRRClass(RR_REFLECT_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(OBJECT_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(MANAGER_TYPE.getInternalName());
 			LoaderContext.bootLoaderContext.getRRClass(THREAD_TYPE.getInternalName());

@@ -48,6 +48,7 @@ import java.util.Vector;
 import rr.RRMain;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.FieldAccessEvent;
 import rr.event.InterruptEvent;
@@ -168,6 +169,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	private final NotifyEvent				notifyEvent				= new NotifyEvent(this);
 	private final SleepEvent					sleepEvent				= new SleepEvent(this);
 	private final ClassInitializedEvent		classInitEvent			= new ClassInitializedEvent(this);
+	private final ClassAccessedEvent		classAccessedEvent			= new ClassAccessedEvent(this);
 	private final InterruptedEvent		interruptedEvent			= new InterruptedEvent(this);
 
 	/**
@@ -521,7 +523,11 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public ClassInitializedEvent getClassInitEvent() {
 		return classInitEvent;
 	}
-	
+
+	public ClassAccessedEvent getClassAccessedEvent() {
+		return classAccessedEvent;
+	}
+
 	public InterruptedEvent getInterruptedEvent() {
 		return interruptedEvent;
 	}

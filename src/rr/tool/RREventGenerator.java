@@ -41,6 +41,7 @@ package rr.tool;
 import rr.RRMain;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.FieldAccessEvent;
 import rr.event.InterruptEvent;
@@ -634,6 +635,17 @@ public class RREventGenerator extends RR {
 			ClassInitializedEvent e = td.getClassInitEvent();
 			e.setRRClass(c);
 			getTool().classInitialized(e);
+		} catch (Throwable e) {
+			Assert.panic(e);
+		}
+
+	}
+
+	public static void classAccessEvent(ClassInfo c, ShadowThread td) {
+		try {
+			ClassAccessedEvent e = td.getClassAccessedEvent();
+			e.setRRClass(c);
+			getTool().classAccessed(e);
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}

@@ -208,11 +208,13 @@ public class LoaderContext {
 				if (isStatic) {
 					// Fix because CA updaters don't work properly on static fields -- seems to be VM issue
 					//   on all platforms...
-					UpdateMode x = Updaters.updateOptions.get();
-					Updaters.updateOptions.set(UpdateMode.SAFE);
-					Class c = getGuardStateThunkClass(className, fieldName, isStatic, isVolatile);
-					Updaters.updateOptions.set(x);
-					return (AbstractFieldUpdater)c.newInstance();
+					synchronized (Updaters.updateOptions) {
+						UpdateMode x = Updaters.updateOptions.get();
+						Updaters.updateOptions.set(UpdateMode.SAFE);
+						Class c = getGuardStateThunkClass(className, fieldName, isStatic, isVolatile);
+						Updaters.updateOptions.set(x);
+						return (AbstractFieldUpdater)c.newInstance();
+					}
 				} else {
 					return new CASFieldUpdater(f);
 				}
@@ -224,17 +226,17 @@ public class LoaderContext {
 	}
 
 
-//	
-//	public Class<?> getGuardStateThunk(final String className, final String fieldName, final boolean isStatic, final boolean isVolatile)  {
-//		final String thunkName = Constants.getUpdateThunkName(className, fieldName);
-//		Class<?> c = loader.findLoadedClass(thunkName);
-//		if (c != null) return c;
-//		byte b[] = Loader.readFromFileCache("updaters", thunkName);
-//		if (b == null) {
-//			b = GuardStateModifierCreator.dump(className, fieldName, isStatic, isVolatile);
-//		}
-//		return defineClass(thunkName, b);
-//	}
+	//	
+	//	public Class<?> getGuardStateThunk(final String className, final String fieldName, final boolean isStatic, final boolean isVolatile)  {
+	//		final String thunkName = Constants.getUpdateThunkName(className, fieldName);
+	//		Class<?> c = loader.findLoadedClass(thunkName);
+	//		if (c != null) return c;
+	//		byte b[] = Loader.readFromFileCache("updaters", thunkName);
+	//		if (b == null) {
+	//			b = GuardStateModifierCreator.dump(className, fieldName, isStatic, isVolatile);
+	//		}
+	//		return defineClass(thunkName, b);
+	//	}
 
 	public synchronized Class<?> defineClass(final String className, byte[] bytes) {
 

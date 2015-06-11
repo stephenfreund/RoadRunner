@@ -50,6 +50,7 @@ import rr.error.ErrorMessages;
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.Event;
 import rr.event.FieldAccessEvent;
@@ -124,7 +125,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		ts_set_epoch(shadow,v);
 	}
 
-	
+
 	protected static CV ts_get_cv(ShadowThread ts) { Assert.panic("Bad");	return null; }
 	protected static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
 
@@ -238,15 +239,18 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		final ShadowThread td = fae.getThread();
 
 		if (var instanceof FastTrackGuardState) {
-			
+
+
 			// load the error guard state set by the fast path if it exists.
 			final FastTrackGuardState isItAnError = ts_get_preStateOnError(td);
 			final FastTrackGuardState x = (isItAnError != null) ? isItAnError : 
 				(FastTrackGuardState)var;
 			ts_set_preStateOnError(td, null);
-			
+
 			final int tdEpoch = ts_get_epoch(td);
 			final CV tdCV = ts_get_cv(td);
+
+			//			Util.log(tdCV + " " + x);
 
 			Object target = fae.getTarget();
 			if (target == null) {
@@ -380,17 +384,19 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				final ShadowThread currentThread = fae.getThread();
 				final Object target = fae.getTarget();
 
-				fieldErrors.error(currentThread,
-						fd,
-						"Guard State", 					fae.getOriginalShadow(),
-						"Current Thread",				toString(currentThread), 
-						"Class",						target==null?fd.getOwner():target.getClass(),
-								"Field",						Util.objectToIdentityString(target) + "." + fd, 
-								"Prev Op",						prevOp + prevTid,
-								"Cur Op",						curOp + curTid, 
-								"Case", 						"#" + errorCase,
-								"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
-				);
+				if (fieldErrors.stillLooking(fd)) {
+					fieldErrors.error(currentThread,
+							fd,
+							"Guard State", 					fae.getOriginalShadow(),
+							"Current Thread",				toString(currentThread), 
+							"Class",						target==null?fd.getOwner():target.getClass(),
+									"Field",						Util.objectToIdentityString(target) + "." + fd, 
+									"Prev Op",						prevOp + prevTid,
+									"Cur Op",						curOp + curTid, 
+									"Case", 						"#" + errorCase,
+									"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
+							);
+				}
 				if (!fieldErrors.stillLooking(fd)) {
 					advance(ae);
 					return;
@@ -402,17 +408,20 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 
 				ShadowThread prevShadowThread = ShadowThread.get(prevTid);
 				Thread prevThread = prevShadowThread == null ? null : prevShadowThread.getThread();
-				arrayErrors.error(currentThread,
-						aae.getInfo(),
-						"Alloc Site", 					ArrayAllocSiteTracker.allocSites.get(aae.getTarget()),
-						"Guard State", 					aae.getOriginalShadow(),
-						"Current Thread",				toString(currentThread), 
-						"Array",						Util.objectToIdentityString(target) + "[" + aae.getIndex() + "]",
-						"Prev Op",						prevOp + prevTid + ("name = " + prevThread == null ? prevThread.getName(): ""),
-						"Cur Op",						curOp + curTid + ("name = " + ShadowThread.get(curTid).getThread().getName()), 
-						"Case", 						"#" + errorCase,
-						"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
-				);
+
+				if (arrayErrors.stillLooking(aae.getInfo())) {
+					arrayErrors.error(currentThread,
+							aae.getInfo(),
+							"Alloc Site", 					ArrayAllocSiteTracker.get(aae.getTarget()),
+							"Guard State", 					aae.getOriginalShadow(),
+							"Current Thread",				toString(currentThread), 
+							"Array",						Util.objectToIdentityString(target) + "[" + aae.getIndex() + "]",
+							"Prev Op",						prevOp + prevTid, //+ ("name = " + prevThread == null ? prevThread.getName(): ""),
+							"Cur Op",						curOp + curTid, // + ("name = " + ShadowThread.get(curTid).getThread().getName()), 
+							"Case", 						"#" + errorCase,
+							"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
+							);
+				}
 
 				aae.getArrayState().specialize();
 
@@ -493,7 +502,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 
 
 	private final Decoration<ShadowThread, CV> cvForExit = 
-		ShadowThread.makeDecoration("FT:barrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, CV>());
+			ShadowThread.makeDecoration("FT:barrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, CV>());
 
 	public void preDoBarrier(BarrierEvent<FastTrackBarrierState> be) {
 		FastTrackBarrierState ftbe = be.getBarrier();
@@ -522,6 +531,12 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		super.classInitialized(e);
 	}
 
+	@Override
+	public void classAccessed(ClassAccessedEvent e) {
+		CV initTime = classInitTime.get(e.getRRClass());
+		ShadowThread currentThread = e.getThread();
+		this.maxEpochAndCV(currentThread, initTime, e); 
+	}
 
 	@Override
 	public void printXML(XMLWriter xml) {
@@ -583,7 +598,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
 				return false;
 			}
-			
+
 			return true;
 
 		} else {
@@ -602,7 +617,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			if (lastWriteEpoch == tdEpoch) {
 				return true;	// commit: same epoch
 			} 
-			
+
 			final int tid = td.getTid();
 			final CV tdCV = ts_get_cv(td);
 
@@ -628,13 +643,13 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 					}
 				}
 			}
-			
+
 			final int lastWriter = Epoch.tid(lastWriteEpoch);
 			if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
 				ts_set_preStateOnError(td, new FastTrackGuardState(x, orig));
 				return false;				
 			}
-			
+
 			return true;
 		} else {
 			return false;

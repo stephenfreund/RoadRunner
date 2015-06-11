@@ -317,7 +317,12 @@ public class RR {
 			return;
 		}
 
-		xml();
+		if (false) {
+			shortXML();
+			return;
+		} else {
+			xml();
+		}
 		Util.quietOption.set(false);
 		Util.logf("Time = %d", endTime - startTime);
 		final String dump = Instrumentor.dumpClassOption.get();
@@ -440,6 +445,69 @@ public class RR {
 	}
 
 
+	private static void shortXML() {
+		if (inXml) return;
+		inXml = true;
+
+		StringWriter sOut = new StringWriter();
+		Writer outputWriter = noxmlOption.get() ? Util.openLogFile(xmlFileOption.get()) :
+			new SplitOutputWriter(sOut, Util.openLogFile((xmlFileOption.get())));
+		PrintWriter stringOut = new PrintWriter(outputWriter);
+
+		final XMLWriter xml = new XMLWriter(stringOut);
+
+		xml.push("entry");
+//		xml.print("date", new Date()); 
+//		xml.print("mode", RRMain.modeName());
+		xml.print("timeout", timeOut ? "YES" : "NO");
+
+		xml.push("system");
+
+		xml.print("availableProcs", Runtime.getRuntime().availableProcessors());
+
+		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+		updateMemoryUsage(bean);
+		xml.print("memCommitted",(int)Math.ceil(maxMemCommitted/M));
+		xml.print("memUsed",(int)Math.ceil(maxMemUsed/M));
+		xml.print("memTotal",(int)Math.ceil(maxTotalMemory/M));
+		xml.pop();	
+//		Loader.printXML(xml);
+//		Counter.printAllXML(xml);
+//		Yikes.printXML(xml);
+
+//		applyToTools(new ToolVisitor() {
+//			public void apply(Tool t) {
+//				xml.push("tool");
+//				xml.print("name", t.toString());
+//				t.printXML(xml);
+//				xml.pop();			
+//			}
+//		});
+
+		xml.print("threadCount", ShadowThread.numThreads());
+		xml.print("threadMaxActive", ShadowThread.maxActiveThreads());
+		xml.print("errorTotal", ErrorMessage.getTotalNumberOfErrors());
+		xml.print("distinctErrorTotal", ErrorMessage.getTotalNumberOfDistinctErrors());
+//		ErrorMessages.xmlErrorsByMethod(xml);
+//		ErrorMessages.xmlErrorsByField(xml);
+//		ErrorMessages.xmlErrorsByArray(xml);
+//		ErrorMessages.xmlErrorsByLock(xml);
+//		ErrorMessages.xmlErrorsByFieldAccess(xml);
+//		ErrorMessages.xmlErrorsByErrorType(xml);
+		xml.print("warningsTotal", Assert.getNumWarnings());
+		xml.print("yikesTotal", Yikes.getNumYikes());
+		xml.print("failed", Assert.getFailed());
+		xml.print("failedReason", Assert.getFailedReason());
+
+
+		xml.print("time", endTime - startTime);
+		xml.pop();
+		xml.close();
+
+		Util.printf("%s", sOut.toString());
+	}
+	
+	
 	public static void timeOut() {
 		if (!shuttingDown) {
 			timeOut = true;
@@ -468,14 +536,10 @@ public class RR {
 		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
 		updateMemoryUsage(bean);
 
-//		xml.print("memUsed",(int)Math.ceil(bean.getHeapMemoryUsage().getUsed()/M));
-
 		updateMemoryUsage(bean);
 		xml.print("memCommitted",(int)Math.ceil(maxMemCommitted/M));
 		xml.print("memUsed",(int)Math.ceil(maxMemUsed/M));
 		xml.print("memTotal",(int)Math.ceil(maxTotalMemory/M));
-
-//		xml.print("memMax",(int)Math.ceil(bean.getHeapMemoryUsage().getMax()/M));
 
 		CompilationMXBean cbean = ManagementFactory.getCompilationMXBean();
 		if (cbean!=null) xml.print("compileTime",cbean.getTotalCompilationTime());

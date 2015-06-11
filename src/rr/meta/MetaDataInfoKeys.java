@@ -55,7 +55,7 @@ public class MetaDataInfoKeys {
 	}
 
 	public static String getFieldKey(String rrClass, String fieldName, String descriptor) {
-		return rrClass + "." + fieldName + "_" + descriptor.replace("[", "\\["); 
+		return (rrClass + "." + fieldName + "_" + descriptor.replace("[", "\\[")).intern(); 
 	}
 
 	public static String getMethodKey(ClassInfo rrClass, String methodName, String signature) {
@@ -63,19 +63,19 @@ public class MetaDataInfoKeys {
 	}
 
 	public static String getMethodKey(String rrClass, String methodName, String signature) {
-		return rrClass + "." + methodName + signature; 
+		return (rrClass + "." + methodName + signature).intern(); 
 	}
 
 	private static String getLockKey(String fileName, int line, int offset, boolean isAcquire) {
-		return (isAcquire ? "acq":"rel") + "_lock@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
+		return ((isAcquire ? "acq":"rel") + "_lock@" + SourceLocation.toKeyString(fileName, line) + ":" + offset).intern(); 
 	}
 	
 	public static String getArrayAccessKey(String fileName, int line, int offset, boolean isWrite) {
-		return (isWrite ? "wr":"rd") + "_array@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
+		return ((isWrite ? "wr":"rd") + "_array@" + SourceLocation.toKeyString(fileName, line) + ":" + offset).intern(); 
 	}
 
 	public static String getFieldAccessKey(String fileName, int line, int offset, FieldInfo field, boolean isWrite) {
-		return (isWrite ? "wr":"rd") + "_" + (field == null ? "null" : field.getKey()) + "@" + SourceLocation.toKeyString(fileName, line) + ":" + offset + ""; 
+		return ((isWrite ? "wr":"rd") + "_" + (field == null ? "null" : field.getKey()) + "@" + SourceLocation.toKeyString(fileName, line) + ":" + offset).intern(); 
 	}
 
 	public static String getJoinKey(String fileName, int line) {
@@ -83,20 +83,20 @@ public class MetaDataInfoKeys {
 	}
 
 	public static String getStartKey(String fileName, int line) {
-		return "start@" + SourceLocation.toKeyString(fileName, line); 
+		return ("start@" + SourceLocation.toKeyString(fileName, line)).intern(); 
 	}
 
 	public static String getWaitKey(String fileName, int line) {
-		return "wait@" + SourceLocation.toKeyString(fileName, line); 
+		return ("wait@" + SourceLocation.toKeyString(fileName, line)).intern(); 
 	}
 
 	public static String getInterruptKey(String fileName, int line) {
-		return "interrupt@" + SourceLocation.toKeyString(fileName, line); 
+		return ("interrupt@" + SourceLocation.toKeyString(fileName, line)).intern(); 
 	}
 	
 
 	public static String getInvokeKey(String fileName, int line, int offset, MethodInfo m) {
-		return "call_" + (m == null ? "null" : m.getKey()) + "@" + SourceLocation.toKeyString(fileName, line, offset); 
+		return ("call_" + (m == null ? "null" : m.getKey()) + "@" + SourceLocation.toKeyString(fileName, line, offset)).intern(); 
 	}
 	
 	public static String getLockKey(SourceLocation loc, boolean isAcquire) {

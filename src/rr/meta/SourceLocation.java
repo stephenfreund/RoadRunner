@@ -40,10 +40,10 @@ package rr.meta;
 
 import java.io.Serializable;
 
+import acme.util.Util;
+
 public class SourceLocation implements Serializable, Comparable<SourceLocation> {
 
-	private static final boolean SHORT_NAMES = true; 
-	
 	public static final SourceLocation NULL = new SourceLocation("?", -1, -1);
 	
 	protected final String file;
@@ -63,11 +63,11 @@ public class SourceLocation implements Serializable, Comparable<SourceLocation> 
 
 	@Override
 	public String toString() {
-		return this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? ":" + offset : "");
+		return (this == NULL ? "NullLoc" : file.substring(file.lastIndexOf('/')+1) + ":" + line + (offset > -1 ? ":" + offset : "")).intern();
 	}
 
 	public static String toKeyString(String file, int line, int offset) {
-		return file + ":" + line + (offset == -1 ? "" : ":" + offset);
+		return (file + ":" + line + (offset == -1 ? "" : ":" + offset)).intern();
 	}
 
 	public static String toKeyString(String file, int line) {
@@ -93,7 +93,24 @@ public class SourceLocation implements Serializable, Comparable<SourceLocation> 
 	public int compareTo(SourceLocation loc) {
 		int x = file.compareTo(loc.file);
 		if (x == 0) x = line - loc.line;
+		if (x == 0) x = offset - loc.offset;
 		return x;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((file == null) ? 0 : file.hashCode());
+		result = prime * result + line;
+		result = prime * result + offset;
+	
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return this.compareTo((SourceLocation)obj) == 0;
 	}
 	
 }

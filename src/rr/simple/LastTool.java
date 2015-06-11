@@ -40,6 +40,7 @@ package rr.simple;
 
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
@@ -157,6 +158,9 @@ final public class LastTool extends Tool {
 
 	@Override
 	public void classInitialized(ClassInitializedEvent e) { }
+	
+	@Override
+	public void classAccessed(ClassAccessedEvent e) { }
 
 	@Override
 	public ShadowVar cloneState(ShadowVar v) {

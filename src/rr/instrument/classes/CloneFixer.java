@@ -95,7 +95,7 @@ public class CloneFixer extends RRClassAdapter {
 		Class<?> c = o.getClass();
 		for (Field f : c.getFields()) {
 			String name = f.getName();
-			if (Constants.isSyntheticName(name) && f.getType() == rr.state.ShadowVar.class) {
+			if (Constants.isSyntheticName(name) && f.getType() == rr.state.ShadowVar.class && ((f.getModifiers() & Opcodes.ACC_STATIC) == 0)) {
 				try {
 					final ShadowVar shadowVar = (ShadowVar)f.get(o);
 					ShadowVar v = rr.tool.RREventGenerator.cloneVariableState(shadowVar);

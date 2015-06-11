@@ -64,7 +64,7 @@ public class ArrayFilterTool extends Tool {
 	private Vector<Object> bad = new Vector<Object>();
 
 	boolean ok(Object o) {
-		boolean b =ArrayAllocSiteTracker.allocSites.containsKey(o);
+		boolean b =ArrayAllocSiteTracker.get(o) != null;
 		return b;
 	}
 
