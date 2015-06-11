@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 To Install:
 -----------
 
-1. You will need Ant, Java 1.6 or 1.7, and cpp to build RoadRunner. 
+1. You will need Ant, Java 1.7, and cpp to build RoadRunner. 
    The $JAVA_HOME environment variable must point to the proper
    Java distribution.  (Depending on the Java version, you may need
    to add tools.jar from the JDK to your classpath in build.xml or
@@ -56,7 +56,7 @@ To Run:
 2. source msetup
 
 	Note: this sets up environment variables and configures 
-	      everything for Java 1.6.  
+	      everything for Java 1.7.  
 	      
 3. Test it:
 

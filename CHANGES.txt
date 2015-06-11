@@ -35,6 +35,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+June 11, 2015: Various small bug fixes and memory performance improvements.
+
+               Now requires Java 1.7.
+
+               Now coordinates clearing out internal caches when GC
+                 is performed.
+                 
+               The -trackReflection is a first attempt at generating
+                 events for reflective field/array accesses.
+
+               Now generates ClassAccessed events when a static final
+               variable is accesses.  This is to track the ordering
+               between the initialization of a static final field 
+               and reads of it.  Without that event, spurious warnings
+               can happen.
+
+              
+
 Nov 19, 2014: Various bug fixes and memory performance improvements.
               These include: more gracefully recovery from various 
               failures, a more robust fastpath process for array 

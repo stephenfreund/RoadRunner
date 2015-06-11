@@ -35,6 +35,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Notes on Major Updates
 ========================
 
+  * Version 0.3: committed on 6/11/2015.
+  
+                 Various small bug fixes and memory performance improvements.
+                 
+                 *** Now requires Java 1.7. ***
+                 
   * Version 0.2: committed on 11/19/2014.
   
                  Various small bug fixes and memory performance improvements.

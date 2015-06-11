@@ -229,7 +229,6 @@ public class ArrayStateFactory {
 			synchronized (ArrayStateFactory.class) {
 				ArrayStateFactory.class.notify();
 			}
-			//			moveToAttic("Put");
 		}
 
 		return state;
@@ -259,16 +258,14 @@ public class ArrayStateFactory {
 		return make(array, arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
 	}
 
+	
+	/* Add listeners to clean up caches on gc */
 
 	static class AtticListener implements javax.management.NotificationListener {
 		public void handleNotification(Notification notification, Object handback)  {
-			//						String notifType = notification.getType();
-			//			Util.log(notification);
-			//			if (notification.getMessage().contains("MarkSweep")) {
 			synchronized (ArrayStateFactory.class) {
 				ArrayStateFactory.class.notify();
 			}
-			//			}
 		}
 	}
 
@@ -298,12 +295,9 @@ public class ArrayStateFactory {
 
 			AtticListener listener = new AtticListener();
 			for (GarbageCollectorMXBean gc: ManagementFactory.getGarbageCollectorMXBeans()) {
-				//			if (gc.getName().contains("MarkSweep")) {
-				//				found = true;
 				Util.log("Adding Attic Listener to GC " + gc.getName());
 				NotificationEmitter emitter = (NotificationEmitter) gc;
 				emitter.addNotificationListener(listener, null, null);
-				//			}
 			}
 		}
 	}
