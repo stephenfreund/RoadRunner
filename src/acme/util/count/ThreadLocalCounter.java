@@ -56,6 +56,10 @@ final public class ThreadLocalCounter extends AbstractCounter {
 		counts[tid << 3] += n;
 	}
 	
+	public long getCount() {
+		return total();
+	}
+	
 	public long total() {
 		long total = 0;
 		for (long x : counts) {

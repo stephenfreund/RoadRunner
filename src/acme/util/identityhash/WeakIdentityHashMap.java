@@ -323,6 +323,7 @@ public class WeakIdentityHashMap<K,V> {
                     else
                         prev.next = next;
                     e.next = null;  // Help GC
+                    expunged(e.value);
                     e.value = null; //  "   "
                     size--;
                     break;
@@ -332,6 +333,11 @@ public class WeakIdentityHashMap<K,V> {
             }
         }
     }
+    
+    /**
+     * Notify that a key was expunged.
+     */
+    protected void expunged(V v) {   }
 
     /**
      * Return the table after first expunging stale entries

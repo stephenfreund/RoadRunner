@@ -42,6 +42,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Vector;
 
+import acme.util.Assert;
 import acme.util.io.XMLWriter;
 
 /**
@@ -73,6 +74,12 @@ public abstract class AbstractCounter implements Comparable<AbstractCounter> {
 	
 	/** Get the string representation of a counters "value" */
 	public abstract String get();
+	
+	/** Get the numeric rep. of counter */
+	public long getCount() {
+		Assert.panic("Not Implemented");
+		return 0;
+	}
 	
 	private String fullRep() {
 		return (group == null ? name : group + ": " + name);
