@@ -225,19 +225,6 @@ public class LoaderContext {
 		}
 	}
 
-
-	//	
-	//	public Class<?> getGuardStateThunk(final String className, final String fieldName, final boolean isStatic, final boolean isVolatile)  {
-	//		final String thunkName = Constants.getUpdateThunkName(className, fieldName);
-	//		Class<?> c = loader.findLoadedClass(thunkName);
-	//		if (c != null) return c;
-	//		byte b[] = Loader.readFromFileCache("updaters", thunkName);
-	//		if (b == null) {
-	//			b = GuardStateModifierCreator.dump(className, fieldName, isStatic, isVolatile);
-	//		}
-	//		return defineClass(thunkName, b);
-	//	}
-
 	public synchronized Class<?> defineClass(final String className, byte[] bytes) {
 
 		Class<?> c = loader.findLoadedClass(className);

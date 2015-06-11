@@ -369,6 +369,16 @@ public class RR {
 		maxMemCommitted = Math.max(m.getCommitted(), maxMemCommitted);
 		maxMemUsed = Math.max(m.getUsed(), maxMemUsed);
 		maxTotalMemory = Math.max(maxTotalMemory, Runtime.getRuntime().totalMemory());
+		
+//		Util.logf("   Mem Committed %d", maxMemCommitted / 1000000);
+//		
+//		long total = 0;
+//		for (MemoryPoolMXBean x : ManagementFactory.getMemoryPoolMXBeans()) {
+//			long y = x.getUsage().getCommitted() / 1000000;
+//			Util.logf("      %s %d",  x.getName(), y);
+//			total += y;
+//		}
+//		Util.logf("   Total %d", total);
 	}
 
 
