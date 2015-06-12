@@ -250,13 +250,10 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			final int tdEpoch = ts_get_epoch(td);
 			final CV tdCV = ts_get_cv(td);
 
-			//			Util.log(tdCV + " " + x);
-
 			Object target = fae.getTarget();
 			if (target == null) {
 				CV initTime = classInitTime.get(((FieldAccessEvent)fae).getInfo().getField().getOwner());
 				this.maxEpochAndCV(td, initTime, fae);
-				//tdCV.max(initTime);
 			}
 			if (!fae.isWrite()) {
 				// READ
@@ -466,7 +463,6 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		} else {
 			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
-			//			this.incEpochAndCV(joining, je);
 			this.maxEpochAndCV(td, ts_get_cv(joining), je);
 		}
 
