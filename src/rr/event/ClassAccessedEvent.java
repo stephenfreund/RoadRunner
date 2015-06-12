@@ -42,8 +42,10 @@ import rr.meta.ClassInfo;
 import rr.state.ShadowThread;
 
 /**
- * An event generated when the JVM finishes initializing the static fields of a 
- * class.
+ * An event generated when the JVM reads a static field.  This is
+ * necessary to ensure that reads of final fields can be ordered 
+ * with respect to their initialization.  See FastTrack reference
+ * implementation for an example.
  */
 public class ClassAccessedEvent extends Event {
 	
