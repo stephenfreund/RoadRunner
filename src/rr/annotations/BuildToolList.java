@@ -44,12 +44,14 @@ import java.io.PrintWriter;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-
+import javax.tools.Diagnostic;
 
 /**
  * This class is used to run an annotation processor that lists class
@@ -59,25 +61,38 @@ import javax.lang.model.element.TypeElement;
  */
 @SupportedAnnotationTypes({"rr.annotations.Abbrev"})
 public class BuildToolList extends AbstractProcessor {
-	private PrintWriter out;
-	
-	public BuildToolList() throws IOException {
-		out = new PrintWriter(new FileWriter("rrtools.properties"));
-	}
-	
+
+	private static final String RRTOOLS_PROPERTIES = "rrtools.properties";
+
 	@Override
 	public SourceVersion getSupportedSourceVersion() {
 		return SourceVersion.latestSupported();
 	}
 
+	private Messager messager;
+
+	@Override
+	public synchronized void init(ProcessingEnvironment processingEnv) {
+		super.init(processingEnv);
+		messager = processingEnv.getMessager();
+	}
+
 	public boolean process(Set<? extends TypeElement> annotations,
               RoundEnvironment env) {
-		for (Element e : env.getElementsAnnotatedWith(Abbrev.class)) {
-			TypeElement te = (TypeElement)e;
-			Abbrev a = te.getAnnotation(Abbrev.class);
-			if (a != null) {
-				out.println(a.value() + "=" + te.getQualifiedName());
+		try {
+			PrintWriter out = new PrintWriter(new FileWriter(RRTOOLS_PROPERTIES, true));
+			for (Element e : env.getElementsAnnotatedWith(Abbrev.class)) {
+				TypeElement te = (TypeElement)e;
+				Abbrev a = te.getAnnotation(Abbrev.class);
+				if (a != null) {
+					out.println(a.value() + "=" + te.getQualifiedName());
+				}
 			}
+			out.close();
+		} catch (IOException err) {
+			messager.printMessage(
+					Diagnostic.Kind.ERROR,
+					String.format("Error writing to file %s", RRTOOLS_PROPERTIES));
 		}
 		return true;
 	}
