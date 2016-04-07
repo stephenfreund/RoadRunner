@@ -523,10 +523,13 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			if (lastReadEpoch == Epoch.READ_SHARED) {
 				if (x.get(tid) != tdEpoch) {
 					synchronized(x) {
+						if (x.lastRead != lastReadEpoch) return false;
 						x.set(tid, tdEpoch);
+						return true;
 					}
+				} else {
+					return true;
 				}
-				return true;
 			} else {
 				final int lastReader = Epoch.tid(lastReadEpoch);
 				if (lastReader == tid) {
@@ -591,17 +594,22 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				if (lastReader != tid && lastReadEpoch > tdCV.get(lastReader)) {
 					return false;
 				}
-			} else {
-				if (x.anyGt(tdCV)) {
-					return false;
+				synchronized(x) {
+					if (x.lastWrite != lastWriteEpoch) return false;
+					if (x.lastRead != lastReadEpoch) return false;
+					x.lastWrite = tdEpoch;
+					x.lastRead = tdEpoch;
+					return true;
 				}
-			}
-			synchronized(x) {
-				if (x.lastWrite != lastWriteEpoch) return false;
-				if (x.lastRead != lastReadEpoch) return false;
-				x.lastWrite = tdEpoch;
-				x.lastRead = tdEpoch;
-				return true;
+			} else {
+				synchronized(x) {
+					if (x.lastWrite != lastWriteEpoch) return false;
+					if (x.lastRead != lastReadEpoch) return false;
+					if (x.anyGt(tdCV)) return false;
+					x.lastWrite = tdEpoch;
+					x.lastRead = tdEpoch;
+					return true;
+				}
 			}
 		}
 		return false;
