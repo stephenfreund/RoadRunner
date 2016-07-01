@@ -161,7 +161,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		final ShadowThread currentThread = re.getThread();
 		final ShadowLock shadowLock = re.getLock();
 		synchronized(shadowLock) {
-			get(shadowLock).max(get(currentThread));
+			get(shadowLock).assign(get(currentThread));
 		}
 		tick(currentThread);
 		super.release(re);

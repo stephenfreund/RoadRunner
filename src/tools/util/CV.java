@@ -57,7 +57,7 @@ public class CV implements Serializable {
 		int[] ca = cv.a;
 		if (ca != null) {
 		    makeCV(ca.length);
-		    assign(cv);
+		    assignInternal(cv);
 		}
 	}
 
@@ -68,7 +68,7 @@ public class CV implements Serializable {
 	}
 
 	// check that a.length < len before calling.
-	final public synchronized void assign(CV cv) {
+	final public synchronized void assignInternal(CV cv) {
 		int[] ca = cv.a;
 		for(int i=0; i<a.length;i++) a[i]=ca[i]; 
 	}
@@ -91,11 +91,50 @@ public class CV implements Serializable {
 		a=b;
 	}
 
+
+	final public synchronized void assign(CV c) {
+		if (RRMain.slowMode()) cvOps.inc();
+		int[] ca = c.a;
+		if (a.length<ca.length) this.resize(ca.length);
+		if (a.length>ca.length) {
+			c.resize(a.length);
+			ca = c.a;
+		}
+		int[] thisa = this.a;
+		switch (ca.length) {
+			default: slowAssign(c);
+			case 8: thisa[7]=ca[7];
+			case 7: thisa[6]=ca[6];
+			case 6: thisa[5]=ca[5];
+			case 5: thisa[4]=ca[4];
+			case 4: thisa[3]=ca[3];
+			case 3: thisa[2]=ca[2];
+			case 2: thisa[1]=ca[1];
+			case 1: thisa[0]=ca[0];
+			case 0:  
+		}
+	}
+
+	/* Requires this.a.length <= c.a.length */
+	final private void slowAssign(CV c) {
+		int[] ca = c.a;
+		int[] thisa = this.a;
+		// iterate until thisa.length since someone may have extended ca since
+		// we verified it was long enough.
+		for(int i = FAST; i < thisa.length; i++) {
+			thisa[i] = ca[i];
+		}
+	}
+
+	
 	final public synchronized void max(CV c) {
 		if (RRMain.slowMode()) cvOps.inc();
 		int[] ca = c.a;
 		if (a.length<ca.length) this.resize(ca.length);
-		if (a.length>ca.length) c.resize(a.length);
+		if (a.length>ca.length) {
+			c.resize(a.length);
+			ca = c.a;
+		}
 		int[] thisa = this.a;
 		switch (ca.length) {
 			default: slowMax(c);

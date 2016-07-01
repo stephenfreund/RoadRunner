@@ -225,7 +225,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 		final FastTrackLockData fhbLockData = get(shadowLock);
 
 		CV cv = ts_get_cv(td);
-		fhbLockData.cv.max(cv);
+		fhbLockData.cv.assign(cv);
 		this.incEpochAndCV(td, re);
 
 		super.release(re);
