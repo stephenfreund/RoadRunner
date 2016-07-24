@@ -38,25 +38,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr.annotations;
 
-import static com.sun.mirror.util.DeclarationVisitors.NO_OP;
-import static com.sun.mirror.util.DeclarationVisitors.getDeclarationScanner;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.unmodifiableCollection;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Set;
 
-import com.sun.mirror.apt.AnnotationProcessor;
-import com.sun.mirror.apt.AnnotationProcessorEnvironment;
-import com.sun.mirror.apt.AnnotationProcessorFactory;
-import com.sun.mirror.declaration.AnnotationTypeDeclaration;
-import com.sun.mirror.declaration.ClassDeclaration;
-import com.sun.mirror.declaration.TypeDeclaration;
-import com.sun.mirror.util.SimpleDeclarationVisitor;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
 
 /**
  * This class is used to run an annotation processor that lists class
@@ -64,64 +59,41 @@ import com.sun.mirror.util.SimpleDeclarationVisitor;
  * can be used when specifying the tool chain.  See the Tool class for more
  * info.
  */
-public class BuildToolList implements AnnotationProcessorFactory {
-	// Process any set of annotations
-	private static final Collection<String> supportedAnnotations = unmodifiableCollection(Arrays.asList("*"));
+@SupportedAnnotationTypes({"rr.annotations.Abbrev"})
+public class BuildToolList extends AbstractProcessor {
 
-	// No supported options
-	private static final Collection<String> supportedOptions = emptySet();
+	private static final String RRTOOLS_PROPERTIES = "rrtools.properties";
 
-	public Collection<String> supportedAnnotationTypes() {
-		return supportedAnnotations;
+	@Override
+	public SourceVersion getSupportedSourceVersion() {
+		return SourceVersion.latestSupported();
 	}
 
-	public Collection<String> supportedOptions() {
-		return supportedOptions;
+	private Messager messager;
+
+	@Override
+	public synchronized void init(ProcessingEnvironment processingEnv) {
+		super.init(processingEnv);
+		messager = processingEnv.getMessager();
 	}
 
-	public AnnotationProcessor getProcessorFor(Set<AnnotationTypeDeclaration> atds, AnnotationProcessorEnvironment env) {
-		return new ListClassAp(env);
-	}
-
-	private static class ListClassAp implements AnnotationProcessor {
-
-		private final AnnotationProcessorEnvironment env;
-		protected PrintWriter out;
-
-		ListClassAp(AnnotationProcessorEnvironment env) {
-			this.env = env;
-			try {
-				out = new PrintWriter(new FileWriter("rrtools.properties"));
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-		}
-
-		public void process() {
-			for (TypeDeclaration typeDecl : env.getSpecifiedTypeDeclarations())
-				typeDecl.accept(getDeclarationScanner(new ListClassVisitor(),
-						NO_OP));
-			out.close();
-		}
-
-		private class ListClassVisitor extends SimpleDeclarationVisitor {
-			@Override
-			public void visitClassDeclaration(ClassDeclaration d) {
-				Abbrev a = d.getAnnotation(Abbrev.class);
-//				File file = d.getPosition().file();
-//				try {
-//					final String command = "wcb " + file.getAbsolutePath();
-//					Process p = Runtime.getRuntime().exec(command);
-//					DataInputStream in = new DataInputStream(p.getInputStream());
-//					System.out.println(d.getQualifiedName() + " " + in.readLine());
-//				} catch (Exception e) {
-//					Assert.fail(e);
-//				}
+	public boolean process(Set<? extends TypeElement> annotations,
+              RoundEnvironment env) {
+		try {
+			PrintWriter out = new PrintWriter(new FileWriter(RRTOOLS_PROPERTIES, true));
+			for (Element e : env.getElementsAnnotatedWith(Abbrev.class)) {
+				TypeElement te = (TypeElement)e;
+				Abbrev a = te.getAnnotation(Abbrev.class);
 				if (a != null) {
-					out.println(a.value() + "=" + d.getQualifiedName());
+					out.println(a.value() + "=" + te.getQualifiedName());
 				}
 			}
+			out.close();
+		} catch (IOException err) {
+			messager.printMessage(
+					Diagnostic.Kind.ERROR,
+					String.format("Error writing to file %s", RRTOOLS_PROPERTIES));
 		}
+		return true;
 	}
 }

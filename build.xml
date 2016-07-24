@@ -116,6 +116,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 			<compilerarg value="-Xbootclasspath/p:${classes.dir}" />
 			<compilerarg value="-XDignore.symbol.file" />
 		</javac>
+		<echo file="${classes.dir}/META-INF/services/javax.annotation.processing.Processor" append="false" message="rr.annotations.BuildToolList" />
 		<echo file="${auto.dir}/bin/${run-script}" append="false" message="#!/bin/bash${line.separator}
 								  ${java.home}/bin/java -version ${line.separator}
 			                      echo ${line.separator}
@@ -127,13 +128,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 	<target name="props" depends="">
-		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/tools">
+		<javac classpathref="rr.classpath" srcdir="${src.dir}/tools">
+		  <compilerarg value="-proc:only" />
 		  <compilerarg value="-XDignore.symbol.file" />
-		</apt>
-
+		</javac>
 		<move file="rrtools.properties" todir="${classes.dir}/tools" />
 
-		<apt factorypathref="rr.classpath" compile="false" classpathref="rr.classpath" factory="rr.annotations.BuildToolList" srcdir="${src.dir}/rr/simple" />
+		<javac classpathref="rr.classpath" srcdir="${src.dir}/rr/simple">
+		  <compilerarg value="-proc:only" />
+		  <compilerarg value="-XDignore.symbol.file" />
+		</javac>
 		<move file="rrtools.properties" todir="${classes.dir}/rr/simple" />
 	</target>
 
@@ -165,14 +169,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 	<target name="javadoc">
-		<javadoc classpathref="rr.classpath" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true">
-			<tag name="RRInternal" description="RR Internal Element. Do Not Use." />
-			<tag name="RRExperimental" description="RR Experimental Element. Do Not Use." />
-			<fileset dir="${rr.basedir}" includesfile="${src.dir}/api.txt" casesensitive="yes" />
-
-			<link href="http://download.oracle.com/javase/6/docs/api/" />
-			
-		</javadoc>
+          <!-- Starting with Java8 Javadoc checks for valid html. We disable it only for Java8 because older verions doesn't know the property -->
+          <condition property="javadoc.additionalparams" value="-Xdoclint:none">
+            <contains string="${ant.java.version}" substring="1.8"/>
+          </condition>
+	  
+          <condition property="javadoc.additionalparams" value="">
+            <not>
+              <contains string="${ant.java.version}" substring="1.8"/>
+            </not>
+          </condition>
+	  
+	  <javadoc classpathref="rr.classpath" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" additionalparam="${javadoc.additionalparams}">
+	    <tag name="RRInternal" description="RR Internal Element. Do Not Use." />
+	    <tag name="RRExperimental" description="RR Experimental Element. Do Not Use." />
+	    <fileset dir="${rr.basedir}" includesfile="${src.dir}/api.txt" casesensitive="yes" />
+	    
+	    <link href="http://download.oracle.com/javase/6/docs/api/" />
+	  </javadoc>
 	</target>
 
 
