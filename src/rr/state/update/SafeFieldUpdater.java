@@ -41,6 +41,7 @@ package rr.state.update;
 import rr.state.ShadowVar;
 import acme.util.LockManager;
 import acme.util.Util;
+import acme.util.Yikes;
 
 public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 
@@ -62,7 +63,14 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 		synchronized(locks.get(hash)) {
 			try { 
 				if (expectedGS == newGS) return true;
-				set(o, newGS);
+				ShadowVar current = get(o);
+				if (current != expectedGS) {
+					Yikes.yikes("SafeFieldUpdater: Concurrent update.");
+					return false;
+				} else {
+					set(o, newGS);
+					return true;
+				}
 			} catch (ClassCastException e) {
 				// This happens when two different class loaders load files with the exact same name.
 				acme.util.Assert.panic("Bad update cast: from: %s [%s] to %s [%s].\nFix by alpha-renaming one of the classes to be unique.", o.getClass(), loaderChain(o.getClass().getClassLoader()), this.getClass(), loaderChain(this.getClass().getClassLoader()));
@@ -85,7 +93,13 @@ public abstract class SafeFieldUpdater extends UnsafeFieldUpdater {
 	 * Compute a hash code for o's shadow field.
 	 */ 
 	protected int hashCode(Object o) { 
-		return Util.identityHashCode(o == null ? this : o); 
+		// Fix for bug reported by Jake Roemer and Mike Bond.
+		// We must call this.hashCode for static fields since there may be multiple SafeFieldUpdaters
+		//   for the same static field.  That hashCode method will return a unique value
+		//   for all updaters for the same static field, unlike Util.identityHashCode(this),
+		//   which will return a different value for each instance.  The hashCode method
+		//   is auto-generated for subclasses in GuardStateModifierCreator.
+		return o == null ? this.hashCode() : Util.identityHashCode(o);
 	}
 
 
