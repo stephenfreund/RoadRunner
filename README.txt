@@ -35,6 +35,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Notes on Major Updates
 ========================
 
+  * Version 0.4: committed on 7/27/2016.
+  
+                 Various small bug fixes and performance improvements to
+		 infrastructure and tools.
+
+		 Eliminated reliance on depcrated sun classes.
+
+		 Now works with Java 1.7 or 1.8.
+                 
   * Version 0.3: committed on 6/11/2015.
   
                  Various small bug fixes and memory performance improvements.
