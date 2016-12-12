@@ -523,6 +523,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 			if (lastReadEpoch == Epoch.READ_SHARED) {
 				if (x.get(tid) != tdEpoch) {
 					synchronized(x) {
+						if (x.lastWrite != lastWriteEpoch) return false;
 						if (x.lastRead != lastReadEpoch) return false;
 						x.set(tid, tdEpoch);
 						return true;
@@ -534,6 +535,7 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				final int lastReader = Epoch.tid(lastReadEpoch);
 				if (lastReader == tid) {
 					synchronized(x) {
+						if (x.lastWrite != lastWriteEpoch) return false;
 						if (x.lastRead != lastReadEpoch) return false;
 						x.lastRead = tdEpoch;
 						return true;
@@ -541,12 +543,14 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 				}
 				if (lastReadEpoch <= fhbCV.get(lastReader)) {
 					synchronized(x) {
+						if (x.lastWrite != lastWriteEpoch) return false;
 						if (x.lastRead != lastReadEpoch) return false;
 						x.lastRead = tdEpoch;
 						return true;
 					}
 				} else {
 					synchronized(x) {
+						if (x.lastWrite != lastWriteEpoch) return false;
 						if (x.lastRead != lastReadEpoch) return false;
 						x.makeCV(INIT_CV_SIZE);
 						x.set(lastReader, lastReadEpoch);
