@@ -101,13 +101,17 @@ public class ClassInitNotifier extends RRClassAdapter {
 		public void visitFieldInsn(int opcode, String owner, String name,
 				String desc) {
 			
+
+			super.visitFieldInsn(opcode, owner, name, desc);
+			
 			// only get because put -> not final, so normal
+			// and do this *after* the access, because otherwise the initializer may not be
+			//   finished.
 			if (opcode == Opcodes.GETSTATIC) {
 				ClassInfo class1 = MetaDataBuilder.preLoad(owner);
 				super.visitLdcInsn(ClassInitNotifier.getClass(owner).id);
 				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ClassInitNotifier", "__$rr_static_access", "(I)V", false);
 			}
-			super.visitFieldInsn(opcode, owner, name, desc);
 		} 
 
 	}
