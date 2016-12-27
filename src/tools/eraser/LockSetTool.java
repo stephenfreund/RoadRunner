@@ -117,7 +117,7 @@ final public class LockSetTool extends Tool {
 					}
 				}
 
-				if (ls.isEmpty()) {
+				if (ls2.isEmpty()) {
 					error(fae, g);
 				}
 				return;
