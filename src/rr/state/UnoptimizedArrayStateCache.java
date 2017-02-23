@@ -51,10 +51,6 @@ public class UnoptimizedArrayStateCache extends AbstractArrayStateCache {
 	public UnoptimizedArrayStateCache(String tag, int id) {
 		super(tag, id);
 	}
-
-	public void clear(int tid) {
-		
-	}
 	
 	@Override
 	public AbstractArrayState get(Object array, ShadowThread td) {
@@ -64,5 +60,9 @@ public class UnoptimizedArrayStateCache extends AbstractArrayStateCache {
 			map.put(array, state);
 		}
 		return state;
+	}
+
+	@Override
+	public void clear(int tid) {
 	}	
 }

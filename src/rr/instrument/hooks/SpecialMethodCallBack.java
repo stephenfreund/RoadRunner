@@ -51,10 +51,12 @@ public class SpecialMethodCallBack {
 	protected final Method method;
 	protected final String key;
 	protected Vector<SpecialMethodListener> listeners = new Vector<SpecialMethodListener>();
+	protected final Pattern pattern;
 
 	public SpecialMethodCallBack(String classPattern, String methodString) {
 		method = Method.getMethod(methodString);
 		key = MetaDataInfoKeys.getMethodKey(classPattern, method.getName(), method.getDescriptor()).replaceAll("\\(", "\\\\(").replaceAll("\\)","\\\\)");
+		pattern = Pattern.compile(key);
 	}
 
 	public void addListener(SpecialMethodListener l) {
@@ -84,7 +86,7 @@ public class SpecialMethodCallBack {
 	}
 
 	public boolean matches(String other) {
-		return Pattern.matches(key, other);
+		return pattern.matcher(other).matches();
 	}	
 	
 	public String toString() {

@@ -202,11 +202,16 @@ public class Instrumentor {
 					cv1 = new ArrayAllocSiteTracker(currentClass, cv1);
 				}
 				cv1 = new AbstractOrphanFixer(cv1);
+				
+				// do here instead of below at (*), so that we have the proper context for the thunks...
+				cv1 = insertToolSpecificVisitors(cv1);
 				ClassVisitor cv2 = new ThreadDataThunkInserter(cv1, true);
 				ClassVisitor cv2forThunks = new ThreadDataThunkInserter(cv1, false);
 				ClassVisitor cv = new SyncAndMethodThunkInserter(cv2, cv2forThunks);
 
-				cv = insertToolSpecificVisitors(cv);
+				// (*) cv = insertToolSpecificVisitors(cv); 
+				
+				
 				cv = new JVMVersionNumberFixer(cv);
 				
 				cr.accept(cv, ClassReader.EXPAND_FRAMES);

@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.state;
 
 import acme.util.Assert;
+import acme.util.Util;
 
 public class ArrayStateCache extends AbstractArrayStateCache {
 
@@ -52,10 +53,11 @@ public class ArrayStateCache extends AbstractArrayStateCache {
 		}
 	}
 	
+	@Override
 	public void clear(int tid) {
 		arrayCache[tid] = null;
 		shadowCache[tid] = ArrayStateFactory.NULL;
-	}
+	}	
 
 	@Override
 	public AbstractArrayState get(Object array, ShadowThread td) {
@@ -64,6 +66,11 @@ public class ArrayStateCache extends AbstractArrayStateCache {
 			if (this.arrayCache[n] == array) {
 				AbstractArrayState as = shadowCache[n];
 				return as;
+			}
+
+			if (td.clearCaches) {
+				clearAll(td.getTid());
+				td.clearCaches = false;
 			}
 
 			AbstractArrayState as = td.arrayStateFactory.get(array);

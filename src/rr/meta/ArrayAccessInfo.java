@@ -46,7 +46,7 @@ import rr.state.ArrayStateCache;
 public class ArrayAccessInfo extends AccessInfo {
 
 	/** @RRInternal */
-	protected transient AbstractArrayStateCache cache;
+	protected transient volatile AbstractArrayStateCache cache;
 
 
 	public ArrayAccessInfo(int id, SourceLocation loc, MethodInfo enclosing, boolean isWrite) { 

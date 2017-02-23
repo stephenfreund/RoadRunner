@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package rr;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -63,11 +65,41 @@ import rr.tool.ToolVisitor;
 import acme.util.Assert;
 import acme.util.StackDump;
 import acme.util.Util;
+import acme.util.count.Counter;
 import acme.util.io.URLUtils;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 import acme.util.time.TimedStmt;
 
+/*
+ * The Main class for RoadRunner: creates tool chain, processes flags, 
+ * runs the target program.
+ * 
+ * There are two flags to enable repeated runs of the target.  This
+ * approached is inspired by the DaCapo test harness and is still
+ * being refined --- feedback welcome.To use this feature, run as follows:
+ *    
+ *     rrrun -benchmark=10 -warmup=3 -tool=FT2 Target 
+ *
+ * where Target is some class that supports the following methods:
+ *   - public Target(String args[])
+ *   - public void preIteration()
+ *   - public void iteration()
+ *   - public void postIteration()
+ *   - public void cleanup()
+ * RR then runs the equivalent of:
+ *   Target t = new Target(command-line-arguments);
+ *   for (int i = 0; i < warmup; i++) {
+ *     t.preIteration(); t.iteration(); t.postIteration();
+ *   }
+ *   for (int i = 0; i < benchmark; i++) {
+ *     t.preIteration(); t.iteration(); t.postIteration();
+ *   }
+ *   t.cleanup()
+ * Only the calls to iteration are timed.  RR runs the garbage collector 
+ * between iterations.  The XML at the end of the run contains timings
+ * for each iteration and also the average of the benchmark iterations.
+ */
 public class RRMain {
 
 	public static final class RRMainLoader extends URLClassLoader {
@@ -87,23 +119,31 @@ public class RRMain {
 	}
 
 	public static final CommandLineOption<Boolean> noInstrumentOption = 
-		CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.STABLE, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
+			CommandLine.makeBoolean("noinst", false, CommandLineOption.Kind.STABLE, "Do not instrument any class files.", new Runnable() { public void run() { instrumentOption.set(InstrumentationMode.NOINST); } });
 
 	public static final CommandLineOption<InstrumentationMode> instrumentOption = 
-		CommandLine.makeEnumChoice("inst", InstrumentationMode.INST, CommandLineOption.Kind.STABLE, "Instrument mode: ISNT for instrument; NOINST for no instrument; REP for build repository", InstrumentationMode.class, 
+			CommandLine.makeEnumChoice("inst", InstrumentationMode.INST, CommandLineOption.Kind.STABLE, "Instrument mode: ISNT for instrument; NOINST for no instrument; REP for build repository", InstrumentationMode.class, 
 					new Runnable() { public void run() { ThreadStateExtensionAgent.addInstrumenter(instrumentOption.get());} });
 
 	public static final CommandLineOption<Integer> infinitelyRunningThreadsOption = 
-		CommandLine.makeInteger("infThreads", 0, CommandLineOption.Kind.EXPERIMENTAL, "Number of threads that loop forever.");
+			CommandLine.makeInteger("infThreads", 0, CommandLineOption.Kind.EXPERIMENTAL, "Number of threads that loop forever.");
+
+	public static final CommandLineOption<Integer> benchmarkOption = 
+			CommandLine.makeInteger("benchmark", 0, CommandLineOption.Kind.EXPERIMENTAL, "Benchmark...");
+
+	public static final CommandLineOption<Integer> warmUpOption = 
+			CommandLine.makeInteger("warmup", 3, CommandLineOption.Kind.EXPERIMENTAL, "Warm Up...");
+
+
 
 	public static final CommandLineOption<Integer> availableProcessorsOption = 
-		CommandLine.makeInteger("availableProcessors", 
+			CommandLine.makeInteger("availableProcessors", 
 					Runtime.getRuntime().availableProcessors(), 
 					CommandLineOption.Kind.EXPERIMENTAL, 
 					"Number of procs RR says the machine has.");
 
-	
-	
+
+
 	public static RRMainLoader loader;
 
 	private static volatile int runningThreads;
@@ -120,7 +160,7 @@ public class RRMain {
 					RR.startTimer();
 
 					Class<?> cl = loader.findClass(className);
-					
+
 					Method method = method = cl.getMethod("main", new Class[] { argv.getClass() });
 
 					/*
@@ -137,16 +177,16 @@ public class RRMain {
 
 					}
 					method.invoke(null, new Object[] { argv });
-					RR.getTool().stop(ShadowThread.getShadowThread(this));
+					ShadowThread.terminate(this);
 
 					runFini();
-					
+
 					RR.endTimer();
 
 					Util.message("");
 					Util.message("----- ----- ----- -----      Thpthpthpth.     ----- ----- ----- -----");
 				} catch (Exception e) {
-				//	e.printStackTrace();
+					//	e.printStackTrace();
 					Assert.panic(e);
 				}
 			}
@@ -175,9 +215,9 @@ public class RRMain {
 				Util.error("\n\nEnvironment Variables");
 				Util.error("---------------------");
 				Util.error("  RR_MODE        either FAST or SLOW.  All asserts, logging, and debugging statements\n" +
-				"                 should be nested inside a test ensuring that RR_MODE is SLOW.");
+						"                 should be nested inside a test ensuring that RR_MODE is SLOW.");
 				Util.error("  RR_META_DATA   The directory created on previous run by -dump from which to reload\n" +
-				"                 cached metadata and instrumented class files.\n");
+						"                 cached metadata and instrumented class files.\n");
 				cl.usage();
 				Util.exit(0);
 			}
@@ -191,6 +231,10 @@ public class RRMain {
 		cl.add(rr.tool.RR.printToolsOption); 
 
 		cl.add(rr.loader.LoaderContext.repositoryPathOption);
+
+		cl.addGroup("Benchmarking");
+		cl.add(benchmarkOption);
+		cl.add(warmUpOption);
 
 		cl.addGroup("Instrumentor");
 		cl.add(noInstrumentOption); 
@@ -232,7 +276,7 @@ public class RRMain {
 		cl.add(Instrumentor.fieldOption);
 		cl.add(rr.barrier.BarrierMonitor.noBarrier);
 		cl.add(RR.noEventReuseOption);
-		cl.add(AbstractArrayStateCache.noOptimizedArrayLookupOption);
+		cl.add(AbstractArrayStateCache.cacheTypeOption);
 		cl.add(infinitelyRunningThreadsOption);
 		cl.add(rr.instrument.methods.ThreadDataInstructionAdapter.callSitesOption);
 		cl.add(rr.tool.RR.trackMemoryUsageOption);
@@ -280,14 +324,14 @@ public class RRMain {
 		runFini();
 		Util.exit(i);
 	}
-	
+
 	public static int availableProccesors(Object runtime) {
 		int n = availableProcessorsOption.get();
 		Util.log("Target asked for available processors.  Giving back: " + n);
 		return n;
 	}
 
-	
+
 	/**
 	 * Default main method used as wrapper, expects the fully qualified class
 	 * name of the real class as the first argument.
@@ -316,7 +360,11 @@ public class RRMain {
 
 			System.arraycopy(argv, n + 1, newArgv, 0, newArgv.length);
 			if (!fileName.endsWith(".rrlog")) {
-				runNormally(fileName, newArgv);
+				if (benchmarkOption.get() == 0) {
+					runNormally(fileName, newArgv);
+				} else {
+					runBenchmark(fileName, newArgv);
+				}
 			} else {
 				replay(fileName, newArgv);
 			}
@@ -358,6 +406,123 @@ public class RRMain {
 		});
 	}
 
+	private static void runBenchmark(final String className, final String[] argv) throws Exception {
+		final Thread appMainThread = new Thread("main") {
+			Class<?> cl;
+			Constructor<?> construct;
+			Class<?>[] emptyParams;
+			Method preIteration;
+			Method iterate;
+			Method postIteration;
+			Method cleanup;
+
+			Object benchmark;
+
+			@Override
+			public void run() {
+				try {
+					cl = loader.findClass(className);
+					construct = cl.getConstructor(new Class[] { argv.getClass() });
+					emptyParams = new Class[] { };
+					preIteration = cl.getMethod("preIteration", emptyParams);
+					iterate = cl.getMethod("iterate", emptyParams);
+					postIteration = cl.getMethod("postIteration", emptyParams);
+					cleanup = cl.getMethod("cleanup", emptyParams);
+
+					benchmark = construct.newInstance((Object)argv);
+
+					RR.startTimer();
+
+					for (int i = 0; i < warmUpOption.get(); i++) {
+						doOneIteration("Warmup " + (i+1));
+					}
+
+					long total = 0;
+					final int iterations = benchmarkOption.get();
+
+					for (int i = 0; i < iterations; i++) {
+						total += doOneIteration("Iter " + (i+1));
+					}
+
+					cleanup.invoke(benchmark);
+
+					Counter c = new Counter("RRBench", "Average");
+					c.add(total / iterations);
+
+					ShadowThread.terminate(this);
+
+					runFini();
+
+					RR.endTimer();
+				} catch (Exception e) {
+					//	e.printStackTrace();
+					Assert.panic(e);
+				}
+			}
+
+			protected long doOneIteration(String name) throws Exception {
+
+				Util.message("");
+				Util.message("");
+				Util.message("");
+				Util.message("----- ----- -----     Pre-Benchmark GC    ----- ----- -----", name);
+				Util.message("");
+
+				Util.log(new TimedStmt("Benchmark GC") {
+					public void run() throws Exception {
+						ArrayStateFactory.clearAll();
+						// Twice to clear out internal RR caches and gc them.
+						System.gc();
+						System.gc();
+					}
+				});
+
+				Util.message("----- ----- -----     Benchmark Meep Meep: %s.    ----- ----- -----", name);
+				Util.message("");
+
+				preIteration.invoke(benchmark);
+				long d = Util.log(new TimedStmt("Benchmark Iteration") {
+					public void run() throws Exception {
+						iterate.invoke(benchmark);
+
+						Util.log(new TimedStmt("Cleaning up Any ShadowThreads") {
+							public void run() throws Exception {
+								for (ShadowThread st : ShadowThread.getThreads()) {
+									final Thread thread = st.getThread();
+									if (thread == null || !thread.isAlive()) {
+										Util.log("Thread " + st + " is not alive.  Telling Tool it has stopped.");
+										st.terminate();
+									}
+								}
+							}
+						});
+					
+					}
+				});
+				postIteration.invoke(benchmark);
+
+				Util.message("");
+				Util.message("----- ----- -----     Benchmark Thpthpthpth: %d.    ----- ----- -----", d);
+				Util.message("");
+				Util.message("");
+				Util.message("");
+				Counter c = new Counter("RRBench", name);
+				c.add(d);
+				
+				return d;
+			}
+		};
+		Util.log(new TimedStmt("Running target in Benchmark Mode") {
+			public void run() {
+				try {
+					appMainThread.start();
+					appMainThread.join();
+				} catch (Exception e) {
+					Assert.panic(e);
+				}
+			}
+		});
+	}
 
 	/***********/
 
@@ -401,7 +566,7 @@ public class RRMain {
 	public static synchronized void decThreads() {
 		runningThreads--;
 	}
-	
+
 	public static synchronized int numRunningThreads() {
 		return runningThreads;
 	}

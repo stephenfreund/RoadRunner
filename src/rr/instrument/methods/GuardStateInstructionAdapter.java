@@ -43,6 +43,7 @@ import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.Type;
 import rr.org.objectweb.asm.commons.Method;
 import acme.util.Util;
+import rr.RRMain;
 import rr.instrument.Constants;
 import rr.loader.RRTypeInfo;
 import rr.meta.FieldAccessInfo;
@@ -77,26 +78,28 @@ public class GuardStateInstructionAdapter extends ThreadDataInstructionAdapter {
 		
 	@Override
 	public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
-		FieldInfo f = RRTypeInfo.resolveFieldDescriptor(owner, name, desc);
-		if (InstrumentationFilter.shouldInstrument(f)) {
-			switch (opcode) {
-			case GETFIELD: 
-			case PUTFIELD: 				
-			case GETSTATIC: 
-			case PUTSTATIC: 
-				boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
-				boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
-				FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
-				if (!shouldInstrument(access)) {
-					Util.log("Skipping field access: " + access);
-					super.visitFieldInsn(opcode, owner, name, desc);
-				} else { 
-					int fad = access.getId();
-					this.visitAccessMethod(owner, name, desc, isWrite, isStatic, fad, threadDataLoc);
+		if (!name.contains("$rr")) {
+			FieldInfo f = RRTypeInfo.resolveFieldDescriptor(owner, name, desc);
+			if (InstrumentationFilter.shouldInstrument(f)) {
+				switch (opcode) {
+				case GETFIELD: 
+				case PUTFIELD: 				
+				case GETSTATIC: 
+				case PUTSTATIC: 
+					boolean isWrite = opcode == PUTSTATIC || opcode == PUTFIELD;
+					boolean isStatic = opcode == PUTSTATIC || opcode == GETSTATIC;
+					FieldAccessInfo access = MetaDataInfoMaps.makeFieldAccess(this.getLocation(), this.getMethod(), isWrite, f);
+					if (!shouldInstrument(access)) {
+						if (RRMain.slowMode()) Util.log("Skipping field access: " + access);
+						super.visitFieldInsn(opcode, owner, name, desc);
+					} else { 
+						int fad = access.getId();
+						this.visitAccessMethod(owner, name, desc, isWrite, isStatic, fad, threadDataLoc);
+					}
+					return;
 				}
-				return;
 			}
-		}
+		} 
 		super.visitFieldInsn(opcode, owner, name, desc);
 	}
 

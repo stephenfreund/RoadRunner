@@ -158,6 +158,7 @@ public class ShadowLock extends Decoratable {
 	 * This may return null if the object has been collected.
 	 */
 	public Object getLock() {
+		if (lock == null) return null;
 		Object l = lock.get();
 		if (l == null) Yikes.yikes("Getting target of ShadowLock after target has been gc'd");		
 		return l;

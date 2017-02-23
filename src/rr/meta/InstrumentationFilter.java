@@ -114,7 +114,7 @@ public class InstrumentationFilter {
 					);
 
 	public static CommandLineOption<StringMatcher> fieldsToWatch  = 
-			CommandLine.makeStringMatcher("fields", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which fields to instrument.  The default is all.", "-.*this\\$.*");
+			CommandLine.makeStringMatcher("fields", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which fields to instrument.  The default is all.", "-.*this\\$.*", "-$.*__\\$rr.*");
 
 	public static CommandLineOption<StringMatcher> linesToWatch  = 
 			CommandLine.makeStringMatcher("lines", StringMatchResult.ACCEPT, CommandLineOption.Kind.STABLE, "Specifies which lines to instrument (only affects field/array operations).  The default is all.  (Form is 'test/Test.java:48')");

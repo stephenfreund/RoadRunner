@@ -44,7 +44,7 @@ import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.Type;
 import rr.org.objectweb.asm.commons.Method;
-
+import rr.RRMain;
 import rr.instrument.Constants;
 import rr.loader.LoaderContext;
 import rr.loader.MethodResolutionException;
@@ -87,7 +87,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 						if (c.getName().startsWith("java/lang")) {
 							for (Replacement r : systemReplacements) {
 								if (r.matches(opcode, c.getName(), name, desc)) {
-									Util.logf("Replace %s.%s%s", c.getName(), name, desc);
+									if (RRMain.slowMode()) Util.logf("Replace %s.%s%s", c.getName(), name, desc);
 									r.replace(opcode, this);
 									return;
 								}
@@ -97,7 +97,7 @@ public class SystemMethodReplacer extends RRMethodAdapter implements Opcodes {
 				}
 			}
 		} catch (MethodResolutionException e) {
-			Assert.warn("Can't find method in System Method Replacer: " + e);
+			Util.log("Can't find method in System Method Replacer: " + e);
 		}
 		super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 	}

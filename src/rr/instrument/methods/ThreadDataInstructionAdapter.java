@@ -55,6 +55,7 @@ import rr.meta.ReleaseInfo;
 import rr.org.objectweb.asm.Label;
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
 
@@ -115,7 +116,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 					this.invokeStatic(Constants.MANAGER_TYPE, Constants.INVOKE_METHOD);
 				}
 			} catch (MethodResolutionException e) {
-				Assert.warn("Can't find method in Thread Data Instruction Adapter: " + e);
+				Yikes.yikes("Can't find method in Thread Data Instruction Adapter: " + e);
 			}
 		}
 
@@ -133,7 +134,7 @@ public class ThreadDataInstructionAdapter extends RRMethodAdapter implements Opc
 					super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 				}
 			} catch (MethodResolutionException e) {
-				Assert.warn("Can't find method in Thread Data Instruction Adapter: " + e);
+				Yikes.yikes("Can't find method in Thread Data Instruction Adapter: " + e);
 				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} else {

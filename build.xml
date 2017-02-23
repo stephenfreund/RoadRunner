@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+<!-- Copyright (c) 2016, Cormac Flanagan (University of California, Santa Cruz)
                     and Stephen Freund (Williams College) 
 
 All rights reserved.  
@@ -109,7 +109,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		</exec>
 	</target>
 
-	<target name="compile" depends="bootstrap-loader,cup,jflex,values">
+	<target name="ft" depends="">
+		<exec executable="bash">
+			<arg line="-c 'scripts/ft2ftl.sh'" />
+		</exec>
+	</target>
+
+
+	<target name="compile" depends="bootstrap-loader,cup,jflex,values,ft">
 		<mkdir dir="${classes.dir}" />
 		<mkdir dir="${auto.dir}/bin" />
 		<javac srcdir="${src.dir}:${auto.dir}" destdir="${classes.dir}" classpathref="rr.classpath" debug="true">
@@ -128,15 +135,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 	<target name="props" depends="">
-		<javac classpathref="rr.classpath" srcdir="${src.dir}/tools">
-		  <compilerarg value="-proc:only" />
-		  <compilerarg value="-XDignore.symbol.file" />
+		<javac classpathref="rr.classpath" srcdir="${src.dir}/tools:${auto.dir}/tools">
+			<compilerarg value="-proc:only" />
+			<compilerarg value="-XDignore.symbol.file" />
 		</javac>
 		<move file="rrtools.properties" todir="${classes.dir}/tools" />
 
 		<javac classpathref="rr.classpath" srcdir="${src.dir}/rr/simple">
-		  <compilerarg value="-proc:only" />
-		  <compilerarg value="-XDignore.symbol.file" />
+			<compilerarg value="-proc:only" />
+			<compilerarg value="-XDignore.symbol.file" />
 		</javac>
 		<move file="rrtools.properties" todir="${classes.dir}/rr/simple" />
 	</target>
@@ -169,24 +176,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 	<target name="javadoc">
-          <!-- Starting with Java8 Javadoc checks for valid html. We disable it only for Java8 because older verions doesn't know the property -->
-          <condition property="javadoc.additionalparams" value="-Xdoclint:none">
-            <contains string="${ant.java.version}" substring="1.8"/>
-          </condition>
-	  
-          <condition property="javadoc.additionalparams" value="">
-            <not>
-              <contains string="${ant.java.version}" substring="1.8"/>
-            </not>
-          </condition>
-	  
-	  <javadoc classpathref="rr.classpath" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" additionalparam="${javadoc.additionalparams}">
-	    <tag name="RRInternal" description="RR Internal Element. Do Not Use." />
-	    <tag name="RRExperimental" description="RR Experimental Element. Do Not Use." />
-	    <fileset dir="${rr.basedir}" includesfile="${src.dir}/api.txt" casesensitive="yes" />
-	    
-	    <link href="http://download.oracle.com/javase/6/docs/api/" />
-	  </javadoc>
+		<!-- Starting with Java8 Javadoc checks for valid html. We disable it only for Java8 because older verions doesn't know the property -->
+		<condition property="javadoc.additionalparams" value="-Xdoclint:none">
+			<contains string="${ant.java.version}" substring="1.8"/>
+		</condition>
+
+		<condition property="javadoc.additionalparams" value="">
+			<not>
+				<contains string="${ant.java.version}" substring="1.8"/>
+			</not>
+		</condition>
+
+		<javadoc classpathref="rr.classpath" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" additionalparam="${javadoc.additionalparams}">
+			<tag name="RRInternal" description="RR Internal Element. Do Not Use." />
+			<tag name="RRExperimental" description="RR Experimental Element. Do Not Use." />
+			<fileset dir="${rr.basedir}" includesfile="${src.dir}/api.txt" casesensitive="yes" />
+
+			<link href="http://download.oracle.com/javase/6/docs/api/" />
+		</javadoc>
 	</target>
 
 

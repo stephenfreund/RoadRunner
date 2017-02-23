@@ -40,12 +40,13 @@ package rr.instrument.methods;
 
 import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
-
+import rr.RRMain;
 import rr.instrument.hooks.SpecialMethods;
 import rr.loader.MethodResolutionException;
 import rr.loader.RRTypeInfo;
 import rr.meta.MethodInfo;
 import acme.util.Assert;
+import acme.util.Util;
 
 public class SpecialMethodReplacer extends RRMethodAdapter implements Opcodes {
 
@@ -62,7 +63,7 @@ public class SpecialMethodReplacer extends RRMethodAdapter implements Opcodes {
 				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} catch (MethodResolutionException e) {
-			Assert.warn("Can't find method in Special Method Replacer: " + e);
+			if (RRMain.slowMode()) Util.log("Can't find method in Special Method Replacer: " + e);
 			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}

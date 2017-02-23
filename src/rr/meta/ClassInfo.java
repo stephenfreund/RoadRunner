@@ -272,7 +272,6 @@ public class ClassInfo extends MetaDataInfo implements Comparable<ClassInfo> {
 	public int getOffsetOfInstanceField(FieldInfo x) {
 		makeFieldList();
 		int i = instanceFields.indexOf(x);
-		// commented out for performance: Assert.assertTrue(i != -1 || x.isStatic() || x.isFinal());
 		return i;
 	}
 

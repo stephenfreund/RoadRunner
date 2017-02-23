@@ -327,7 +327,6 @@ public class RREventGenerator extends RR {
 						} else {
 							t.join();
 						}
-						getTool().stop(newTD);
 						newTD.terminate();
 						RRMain.decThreads();
 					} catch (Exception e) {
@@ -574,7 +573,6 @@ public class RREventGenerator extends RR {
 
 	public static void arrayWrite(Object array, int index, int arrayAccessId, ShadowThread td) {
 		final AbstractArrayState as = arrayShadow(array, index, arrayAccessId, td);
-
 		arrayWrite(array, index, arrayAccessId, td, as);
 	}
 
@@ -583,7 +581,6 @@ public class RREventGenerator extends RR {
 			if (!matches(index)) return;
 			ArrayAccessEvent aae = prepArrayAccessEvent(array, index,
 					arrayAccessId, td, as, true);
-
 			firstAccess.access(aae);
 			aae.setTarget(null);
 		} catch (Throwable e) {
@@ -801,10 +798,7 @@ public class RREventGenerator extends RR {
 		} catch (Throwable e) {
 			Assert.panic(e);
 		}
-	}
-
-
-
+	}	
 }
 
 

@@ -39,16 +39,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package tools.hb;
 
 import rr.state.ShadowLock;
-import tools.util.CV;
+import tools.util.VectorClock;
 
 public class HBBarrierState {
 	
-	CV entering = new CV(8);
+	VectorClock entering = new VectorClock(8);
 	
 	
-	public synchronized void reset(CV old) {
+	public synchronized void reset(VectorClock old) {
 		if (entering == old) {
-			entering = new CV(8);
+			entering = new VectorClock(8);
 		}
 	}
 	

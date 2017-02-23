@@ -57,6 +57,7 @@ import rr.meta.ClassInfo;
 import rr.meta.MetaDataInfoMaps;
 import acme.util.Assert;
 import acme.util.Util;
+import acme.util.Yikes;
 import acme.util.io.URLUtils;
 import acme.util.option.CommandLine;
 import acme.util.option.CommandLineOption;
@@ -100,7 +101,7 @@ public class LoaderContext {
 		if (repositoryLoader != null) {
 			url = repositoryLoader.getResource(fileName);
 			if (url == null) {
-				Assert.warn("Using repository but failed to find: " + fileName);
+				Yikes.yikes("Using repository but failed to find: " + fileName);
 			} 
 		}
 		return url;

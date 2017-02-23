@@ -66,8 +66,8 @@ import rr.state.ShadowLock;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.tool.Tool;
-import tools.util.CV;
-import tools.util.CVPair;
+import tools.util.VectorClock;
+import tools.util.VectorClockPair;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.decorations.Decoration;
@@ -77,8 +77,11 @@ import acme.util.decorations.NullDefault;
 import acme.util.option.CommandLine;
 
 /**
- * VC-based HappensBefore Race Detector.
+ * A simple VC-based HappensBefore Race Detector.
  *
+ * This does not handle many special cases related to static initializers, etc.
+ * and may report spurious warnings as a result.  The FastTrack implementations
+ * do handles those items.
  */
 
 @Abbrev("HB")
@@ -106,23 +109,23 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 
 	/* 
 	 * Special methods that tells the instrumentor to create a field in ShadowThread
-	 * named "hb" of type "CV".  This is for performance only -- you could do the same
+	 * named "hb" of type "VectorClock".  This is for performance only -- you could do the same
 	 * thing using a decoration on ThreadStates.
 	 */
-	static CV ts_get_cv_hb(ShadowThread ts) { Assert.panic("Bad");	return null; }
-	static void ts_set_cv_hb(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
+	static VectorClock ts_get_cv_hb(ShadowThread ts) { Assert.panic("Bad");	return null; }
+	static void ts_set_cv_hb(ShadowThread ts, VectorClock cv) { Assert.panic("Bad");  }
 
-	private CV get(ShadowThread td) {
+	private VectorClock get(ShadowThread td) {
 		return ts_get_cv_hb(td);
 	}
 
 	/*
 	 * Attach a VectorClock to each object used as a lock. 
 	 */
-	Decoration<ShadowLock,CV> shadowLock = ShadowLock.decoratorFactory.make("HB:lock", DecorationFactory.Type.MULTIPLE,
-			new DefaultValue<ShadowLock,CV>() { public CV get(ShadowLock ld) { return new CV(1); }});
+	Decoration<ShadowLock,VectorClock> shadowLock = ShadowLock.decoratorFactory.make("HB:lock", DecorationFactory.Type.MULTIPLE,
+			new DefaultValue<ShadowLock,VectorClock>() { public VectorClock get(ShadowLock ld) { return new VectorClock(1); }});
 
-	private CV get(ShadowLock td) {
+	private VectorClock get(ShadowLock td) {
 		return shadowLock.get(td);
 	}
 
@@ -131,7 +134,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 	@Override
 	public void create(NewThreadEvent e) {
 		ShadowThread td = e.getThread();
-		CV cv = new CV(td.getTid() + 1);
+		VectorClock cv = new VectorClock(td.getTid() + 1);
 		ts_set_cv_hb(td, cv);
 		super.create(e);
 
@@ -141,7 +144,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 	 * increment the time of the current thread.
 	 */
 	public void tick(ShadowThread currentThread) {
-		get(currentThread).inc(currentThread.getTid());
+		get(currentThread).tick(currentThread.getTid());
 	}
 
 	@Override
@@ -161,7 +164,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		final ShadowThread currentThread = re.getThread();
 		final ShadowLock shadowLock = re.getLock();
 		synchronized(shadowLock) {
-			get(shadowLock).assign(get(currentThread));
+			get(shadowLock).copy(get(currentThread));
 		}
 		tick(currentThread);
 		super.release(re);
@@ -172,12 +175,12 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		ShadowVar g = fae.getOriginalShadow();
 		final ShadowThread currentThread = fae.getThread();
 
-		if (g instanceof CVPair) {
+		if (g instanceof VectorClockPair) {
 			final ShadowVar orig = fae.getOriginalShadow();
 			final ShadowThread td = fae.getThread();
-			CVPair p = (CVPair)g;
+			VectorClockPair p = (VectorClockPair)g;
 
-			final CV cv = ts_get_cv_hb(td);
+			final VectorClock cv = ts_get_cv_hb(td);
 			if (fae.isWrite()) {
 				p.rd.max(get(currentThread));
 				tick(td); 			
@@ -200,11 +203,11 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		final ShadowThread currentThread = fae.getThread();
 
 
-		if (g instanceof CVPair) {
+		if (g instanceof VectorClockPair) {
 			boolean passAlong = false;
-			CVPair p = (CVPair)g;
+			VectorClockPair p = (VectorClockPair)g;
 			boolean isWrite = fae.isWrite();
-			CV cv = get(currentThread);
+			VectorClock cv = get(currentThread);
 //			Util.log("p=" + p);
 //			Util.log("t=" + cv);
 			final int tid = currentThread.getTid();
@@ -214,13 +217,17 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 				passAlong |= checkAfter(p.rd, "read", currentThread, "write", fae, true, p);
 				// check after prev write
 				passAlong |= checkAfter(p.wr, "write", currentThread, "write", fae, true, p);
-				p.wr.set(tid, cv.get(tid));
+				synchronized(p.wr) { 	
+					p.wr.set(tid, cv.get(tid));
+				}
  
 			} else {
 
 				// check after prev write
 				passAlong |= checkAfter(p.wr, "write", currentThread, "read", fae, true, p);
-				p.rd.set(tid, cv.get(tid));
+				synchronized(p.rd) { 	
+					p.rd.set(tid, cv.get(tid));
+				}
 //				p.rd.max(cv);
 			}
 			if (passAlong) {
@@ -234,10 +241,10 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 	}
 
 
-	private boolean checkAfter(CV prev, String prevOp, ShadowThread currentThread, String curOp, 
+	private boolean checkAfter(VectorClock prev, String prevOp, ShadowThread currentThread, String curOp, 
 			AccessEvent fad, boolean isWrite, ShadowVar p) {
 
-		CV cv = get(currentThread);
+		VectorClock cv = get(currentThread);
 		if(prev.anyGt(cv)) { 
 			int start=0; 
 			while(true) {
@@ -285,7 +292,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 
 	@Override
 	public ShadowVar makeShadowVar(AccessEvent fae) {
-		return new CVPair();
+		return new VectorClockPair();
 	}
 
 	@Override
@@ -294,7 +301,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		final ShadowThread td = se.getThread();
 		final ShadowThread forked = se.getNewThread();
 
-		ts_set_cv_hb(forked, new CV(ts_get_cv_hb(td)));
+		ts_set_cv_hb(forked, new VectorClock(ts_get_cv_hb(td)));
 
 		this.tick(forked);
 		this.tick(td);
@@ -343,12 +350,12 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 		super.postJoin(je);
 	}
 
-	private final Decoration<ShadowThread, CV> cvForExit = 
-		ShadowThread.makeDecoration("HB:sbarrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, CV>());
+	private final Decoration<ShadowThread, VectorClock> cvForExit = 
+		ShadowThread.makeDecoration("HB:sbarrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, VectorClock>());
 
 	public void postDoBarrier(BarrierEvent<HBBarrierState> be) {
 		ShadowThread currentThread = be.getThread();
-		CV old = cvForExit.get(currentThread);
+		VectorClock old = cvForExit.get(currentThread);
 		be.getBarrier().reset(old);
 		get(currentThread).max(old);
 		this.tick(currentThread);
@@ -356,7 +363,7 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 
 	public void preDoBarrier(BarrierEvent<HBBarrierState> be) {
 		ShadowThread td = be.getThread();
-		CV entering = be.getBarrier().entering;
+		VectorClock entering = be.getBarrier().entering;
 		entering.max(get(td));	
 		cvForExit.set(td, entering);
 	}
@@ -368,16 +375,16 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 	}
 	
 	
-	protected static Decoration<ShadowThread,Vector<CV>> interruptions = 
+	protected static Decoration<ShadowThread,Vector<VectorClock>> interruptions = 
 		ShadowThread.makeDecoration("interruptions", DecorationFactory.Type.MULTIPLE,
-				new DefaultValue<ShadowThread, Vector<CV>>() { public Vector<CV> get(ShadowThread ld) { return new Vector<CV>(); }} );
+				new DefaultValue<ShadowThread, Vector<VectorClock>>() { public Vector<VectorClock> get(ShadowThread ld) { return new Vector<VectorClock>(); }} );
 
 	@Override
 	public synchronized void preInterrupt(InterruptEvent me) {
 		final ShadowThread td = me.getThread();
 		final ShadowThread joining = me.getInterruptedThread();
 
-		CV cv = new CV(get(td));
+		VectorClock cv = new VectorClock(get(td));
 		interruptions.get(joining).add(cv);
 		tick(td);
 	}
@@ -385,9 +392,9 @@ public final class HappensBeforeTool extends Tool implements BarrierListener<HBB
 	@Override
 	public synchronized void interrupted(InterruptedEvent e) {
 		final ShadowThread current = e.getThread();
-		Vector<CV> v = interruptions.get(current);
+		Vector<VectorClock> v = interruptions.get(current);
 
-		for (CV cv : v) {
+		for (VectorClock cv : v) {
 			get(current).max(cv);
 		} 
 		

@@ -73,7 +73,7 @@ public class NoOpMethodReplacer extends RRMethodAdapter implements Opcodes {
 				super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 			}
 		} catch(Exception e) {
-			Assert.warn("Can't find method in NoOp Method Replacer: " + e);
+			Util.log("Can't find method in NoOp Method Replacer: " + e);
 			super.visitMethodInsn(opcode, owner, name, desc, isInterface);
 		}
 	}

@@ -51,7 +51,7 @@ public class Assert {
 	
 	public static void warn(String format, Object... args) {
 		synchronized(Util.class) {
-			Util.pad();
+			//			Util.pad();
 			Util.error("WARNING: " + format, args);
 			Util.err.println();
 			numWarnings++;
@@ -98,7 +98,7 @@ public class Assert {
 
 	public static void fail(String s, Throwable e) {
 		Assert.failed = true;
-		Assert.failedReason = s;
+		Assert.failedReason = s + "(" + e + ")";
 		synchronized(Util.class) {
 			Util.error("\n");
 			Util.error("%s ", s);
@@ -116,7 +116,7 @@ public class Assert {
 
 	public static void panic(String s) {
 		Assert.failed = true;
-		Assert.failedReason = s;
+		Assert.failedReason = s  + "(panicked)";
 
 		Util.error("\n");
 		Util.error("PANIC %s\n", s);
@@ -135,20 +135,20 @@ public class Assert {
 			System.err.println("## Out of Memory");
 			System.err.flush();
 		} else {
-		String exc = e.toString();
-		Assert.failedReason = exc;
-		Util.error("\n");
-		Util.error("PANIC %s\n", exc);
-		StackDump.printStack(Util.err, e, Util.ERROR_PREFIX);
-		Throwable cause = e.getCause();
+			String exc = e.toString();
+			Assert.failedReason = exc;
+			Util.error("\n");
+			Util.error("PANIC %s\n", exc);
+			StackDump.printStack(Util.err, new Throwable(), Util.ERROR_PREFIX);
+			Throwable cause = e;
 			while (cause != null) {
-				Util.error("Caused by[%s]...\n", cause.getClass());
+				Util.error("Caused by [%s]...\n", cause.getClass());
 				Util.error("%s\n", cause.getCause());
 				Util.error("%s\n", cause.getMessage());
 				StackDump.printStack(Util.err, cause, Util.ERROR_PREFIX);
 				cause = cause.getCause();
-		}
-		Util.err.flush();
+			}
+			Util.err.flush();
 		}
 		Runtime.getRuntime().halt(17);
 	}

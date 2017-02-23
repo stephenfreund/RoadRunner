@@ -24,4 +24,8 @@ public class ByteCodeIndexNode extends AbstractInsnNode {
     public AbstractInsnNode clone(final Map<LabelNode, LabelNode> labels) {
         return new ByteCodeIndexNode(index);
     }
+    
+    public String toString() {
+    	return "BCI:" + index;
+    }
 }

@@ -85,21 +85,20 @@ public class ArrayStateFactory {
 			CommandLine.makeEnumChoice("array", ArrayMode.FINE, CommandLineOption.Kind.STABLE, "Determine the granularity of array shadow memory.\n    NONE tracks no array info.\n    FINE uses one location per index.\n    COARSE uses one location per array\n    SPECIAL can change from COARSE to FINE if tool requests it.", ArrayMode.class);
 
 
-	public static CommandLineOption<Constructor<? extends AbstractArrayState>> userArrayOption;
+	public static CommandLineOption<ArrayStateCreator> userArrayOption;
 
 	static {
 		try {
 			userArrayOption =
-					new CommandLineOption<Constructor<? extends AbstractArrayState>>("userArray", 
-							(Constructor<? extends AbstractArrayState>)rr.state.FineArrayState.class.getConstructor(Object.class), 
+					new CommandLineOption<ArrayStateCreator>("userArray", 
+							ArrayStateCreator.defaultCreator(), 
 							true, CommandLineOption.Kind.EXPERIMENTAL, "User defined array mode class") {
 				@Override
 				protected void apply(String arg) {
 					try {
-						Class<AbstractArrayState> c = (Class<AbstractArrayState>)RR.getToolLoader().loadClass(arg);
+						Class<ArrayStateCreator> c = (Class<ArrayStateCreator>)RR.getToolLoader().loadClass(arg);
 						Assert.assertTrue(c != null);
-						Constructor<AbstractArrayState> x = c.getConstructor(Object.class);
-						set(x);
+						set(c.newInstance());
 					} catch (Exception e) {
 						Assert.panic("Invalid option for userArray: " + arg + ".  " + e);
 					}
@@ -180,7 +179,7 @@ public class ArrayStateFactory {
 				break;
 			case USER:
 				try {
-					state = userArrayOption.get().newInstance(array);
+					state = userArrayOption.get().make(array);
 				} catch (Exception ex) {
 					Assert.panic(ex);
 				}
@@ -225,7 +224,7 @@ public class ArrayStateFactory {
 		}
 		count++;
 		size.inc();
-		if (count % mapCheck == 0) {
+		if (count > 0 && count % mapCheck == 0) {
 			synchronized (ArrayStateFactory.class) {
 				ArrayStateFactory.class.notify();
 			}
@@ -258,13 +257,26 @@ public class ArrayStateFactory {
 		return make(array, arrayOption.get(), Updaters.updateOptions.get() == Updaters.UpdateMode.CAS);
 	}
 
+	public static void clearAll() {
+		synchronized(attic) {
+			attic.clear();
+		}
+		table.clear();
+	        for (int i = 0; i < RR.maxTidOption.get(); i++) {
+			AbstractArrayStateCache.clearAll(i);
+		}		
+	}
 	
+
 	/* Add listeners to clean up caches on gc */
 
 	static class AtticListener implements javax.management.NotificationListener {
 		public void handleNotification(Notification notification, Object handback)  {
 			synchronized (ArrayStateFactory.class) {
 				ArrayStateFactory.class.notify();
+			}
+			for (ShadowThread t : ShadowThread.getThreads()) {
+				t.clearCaches = true;
 			}
 		}
 	}
@@ -295,9 +307,12 @@ public class ArrayStateFactory {
 
 			AtticListener listener = new AtticListener();
 			for (GarbageCollectorMXBean gc: ManagementFactory.getGarbageCollectorMXBeans()) {
-				Util.log("Adding Attic Listener to GC " + gc.getName());
-				NotificationEmitter emitter = (NotificationEmitter) gc;
-				emitter.addNotificationListener(listener, null, null);
+				String name = gc.getName();
+				if (name.contains("Mark")) {
+					Util.log("Adding Attic Listener to GC " + name);
+					NotificationEmitter emitter = (NotificationEmitter) gc;
+					emitter.addNotificationListener(listener, null, null);
+				}
 			}
 		}
 	}

@@ -128,7 +128,7 @@ public class RR {
 	public static CommandLineOption<Long> memMaxOption = CommandLine.makeLong("maxMem", (10 * 1024), CommandLineOption.Kind.STABLE, "Maximum memory in MB.");
 
 	public static CommandLineOption<Integer> maxTidOption = 
-			CommandLine.makeInteger("maxTid", 16, CommandLineOption.Kind.STABLE, "Maximum number of active threads.");
+	    CommandLine.makeInteger("maxTid", Math.max(16,Runtime.getRuntime().availableProcessors()), CommandLineOption.Kind.STABLE, "Maximum number of active threads.");
 
 	public static CommandLineOption<Boolean> stackOption = 
 			CommandLine.makeBoolean("stacks", false, CommandLineOption.Kind.STABLE, "Record stack traces for printing in erros messages.  Stacks are expensive to compute, so by default RoadRunner doesn't (See ShadowThread.java).");
@@ -233,14 +233,18 @@ public class RR {
 						List<Tool> writeFP = getTool().findAllImplementors("writeFastPath");
 						List<Tool> arrayReadFP = getTool().findAllImplementors("arrayReadFastPath");
 						List<Tool> arrayWriteFP = getTool().findAllImplementors("arrayWriteFastPath");
-						if (readFP.size() + writeFP.size() + arrayReadFP.size() + arrayWriteFP.size() == 0) {
+						List<Tool> fieldReadFP = getTool().findAllImplementors("fieldReadFastPath");
+						List<Tool> fieldWriteFP = getTool().findAllImplementors("fieldWriteFastPath");
+						if (readFP.size() + writeFP.size() + arrayReadFP.size() + arrayWriteFP.size() + fieldReadFP.size() + fieldWriteFP.size() == 0) {
 							Util.log("No fastpath code found");
 							nofastPathOption.set(true);
 						} else {
 							Util.log("Read Fastpath code found in " + readFP);						
 							Util.log("Write Fastpath code found in " + writeFP);						
 							Util.log("Array Read Fastpath code found in " + arrayReadFP);						
-							Util.log("Array Write Fastpath code found in " + arrayWriteFP);						
+							Util.log("Array Write Fastpath code found in " + arrayWriteFP);				
+							Util.log("Field Read Fastpath code found in " + fieldReadFP);						
+							Util.log("Field Write Fastpath code found in " + fieldWriteFP);						
 						}
 					} else {
 						Util.log("User has disabled fastpath instrumentation.");

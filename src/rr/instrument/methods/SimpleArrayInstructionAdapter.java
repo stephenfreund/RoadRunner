@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package rr.instrument.methods;
 
 
+import rr.RRMain;
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.meta.ArrayAccessInfo;
@@ -105,7 +106,7 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 
 			ArrayAccessInfo access = MetaDataInfoMaps.makeArrayAccess(this.getLocation(), this.getMethod(), false);
 			if (!InstrumentationFilter.shouldInstrument(access)) {
-				Util.log("Skipping: " + access);
+				if (RRMain.slowMode()) Util.log("Skipping: " + access);
 				super.visitArrayInsn(opcode);
 				return;
 			} 
@@ -168,7 +169,7 @@ public class SimpleArrayInstructionAdapter extends GuardStateInstructionAdapter 
 
 			ArrayAccessInfo access = MetaDataInfoMaps.makeArrayAccess(this.getLocation(), this.getMethod(), true);
 			if (!InstrumentationFilter.shouldInstrument(access)) {
-				Util.log("Skipping: " + access);
+				if (RRMain.slowMode()) Util.log("Skipping: " + access);
 				super.visitArrayInsn(opcode);
 				return;
 			} 

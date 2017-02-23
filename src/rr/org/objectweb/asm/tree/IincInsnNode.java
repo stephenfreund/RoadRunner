@@ -73,6 +73,10 @@ public class IincInsnNode extends AbstractInsnNode {
         return IINC_INSN;
     }
 
+    public int getVar() {
+    	return var;
+    }
+    
     @Override
     public void accept(final MethodVisitor mv) {
         mv.visitIincInsn(var, incr);

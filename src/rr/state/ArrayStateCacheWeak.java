@@ -55,10 +55,6 @@ public class ArrayStateCacheWeak extends AbstractArrayStateCache {
 		}
 	}
 
-	public void clear(int tid) {
-		shadowCache[tid] = WEAK_NULL;
-	}
-
 	@Override
 	public AbstractArrayState get(Object array, ShadowThread td) {
 		try {
@@ -75,5 +71,9 @@ public class ArrayStateCacheWeak extends AbstractArrayStateCache {
 			Assert.panic("Tid > cache size.  Change w/ -maxTid");
 			return null;
 		}
+	}
+
+	@Override
+	public void clear(int tid) {
 	}
 }

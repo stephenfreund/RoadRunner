@@ -1,13 +1,16 @@
 package rr.loader;
 
+import rr.RRMain;
 import rr.org.objectweb.asm.ClassReader;
 import rr.org.objectweb.asm.ClassWriter;
-
 import rr.meta.ClassInfo;
 import rr.meta.FieldInfo;
 import rr.meta.InstrumentationFilter;
 import rr.meta.MetaDataInfoMaps;
 import rr.state.agent.DefineClassListener;
+
+import java.io.PrintWriter;
+
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.option.CommandLine;
@@ -28,7 +31,7 @@ public class InstrumentingDefineClassLoader implements DefineClassListener {
 		} else {
 			Loader.classes.put(internalName, currentLoader); 
 			if (!InstrumentationFilter.shouldInstrument(rrClass)) {
-				//				Util.log("Skipping " + name + " (Loader=" + Util.objectToIdentityString(definingLoader) + ")");
+				if (RRMain.slowMode()) Util.log("Skipping " + name + " (Loader=" + Util.objectToIdentityString(definingLoader) + ")");
 				MetaDataBuilder.preLoadFully(currentLoader, bytes);
 				if (sanityOption.get()) {
 					currentLoader.sanityCheck(new ClassReader(bytes));

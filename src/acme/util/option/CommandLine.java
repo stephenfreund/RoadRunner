@@ -417,6 +417,7 @@ public class CommandLine {
 
 		add(Debug.debugKeysOption);
 		add(Util.quietOption);
+		add(Util.logDepthOption);
 		add(Util.outputPathOption); 
 		add(Util.outputFileOption); 
 		add(Util.errorFileOption); 

@@ -35,6 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #########################################################################
 
+[See README.txt for more recent changes]
+
 June 11, 2015: Various small bug fixes and memory performance improvements.
 
                Now requires Java 1.7.

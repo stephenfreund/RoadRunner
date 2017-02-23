@@ -72,6 +72,11 @@ final public class HighWaterMark extends AbstractCounter {
 	}
 	
 	@Override
+	public long getCount() {
+		return max;
+	}
+
+	@Override
 	public String get() {
 		return "" + max;
 	}	

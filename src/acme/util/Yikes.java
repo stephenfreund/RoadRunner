@@ -69,7 +69,7 @@ public class Yikes {
 			numYikes++;
 			yikesMessages.put(msg, n);
 			if (n <= Yikes.maxYikesOption.get()) {
-				Util.pad();
+//				Util.pad();
 				Util.error("YIKES: " + msg);
 				if (n== Yikes.maxYikesOption.get()) {
 					Util.error("Suppressing further yikes messages like that one."); 

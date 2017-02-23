@@ -40,7 +40,7 @@ package rr.instrument.methods;
 
 import java.util.HashMap;
 
-
+import rr.RRMain;
 import rr.instrument.ASMUtil;
 import rr.instrument.Constants;
 import rr.instrument.analysis.MethodVisitorWithAnalysisFrames;
@@ -216,7 +216,7 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 			//
 
 			if (!InstrumentationFilter.shouldInstrument(access)) {
-				Util.log("Skipping: " + access);
+				if (RRMain.slowMode()) Util.log("Skipping: " + access);
 				//					super.visitArrayInsn(opcode);
 				//						return;
 			} else {
@@ -280,7 +280,7 @@ public class FancyArrayInstructionAdapter extends GuardStateInstructionAdapter i
 			ArrayAccessInfo access = MetaDataInfoMaps.makeArrayAccess(this.getLocation(), this.getMethod(), true);
 
 			if (!InstrumentationFilter.shouldInstrument(access)) {
-				Util.log("Skipping: " + access);
+				if (RRMain.slowMode()) Util.log("Skipping: " + access);
 				super.visitArrayInsn(opcode);
 				return;
 			} 

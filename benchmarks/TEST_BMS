@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# Copyright (c) 2016, Cormac Flanagan (University of California, Santa Cruz)
+#                     and Stephen Freund (Williams College) 
+#
+# All rights reserved.  
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+# 
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#
+#    * Redistributions in binary form must reproduce the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials provided
+#      with the distribution.
+#
+#    * Neither the names of the University of California, Santa Cruz
+#      and Williams College nor the names of its contributors may be
+#      used to endorse or promote products derived from this software
+#      without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+#
+#
+# Usage: ./TEST_BMS N benchmarks Name Args
+#
+# Runs each benchmark N times with the given Args.  Name is used for output files.
+# Produces log files log/Name-bm.out and summary file Name.csv
+#
+# Examples:
+#        ./TEST_BMS 20 crypt:lufact FastTrack -tool=FT2 -quiet -maxWarn=1
+#        ./TEST_BMS 20 all FastTrack -tool=FT2 -quiet -maxWarn=1
+#        ./TEST_BMS 20 none FastTrack
+#
+# The second and third are short-hands to run all and none of the bms.
+#
+#
+# Note: You will want to run this script multiple times and 
+# aggregate the results.
+#
+
+ALL_BMS="crypt:lufact:moldyn:montecarlo:raytracer:series:sor:sparsematmult:avrora:batik:fop:h2:jython:luindex:lusearch:pmd:sunflow:tomcat:xalan"
+
+N=$1
+shift
+BMS=$1
+shift
+if [ "$BMS" = "all" ]; then
+    BMS=$ALL_BMS
+elif [ "$BMS" = "none" ]; then
+    BMS=""
+fi
+
+NAME=$1
+shift
+DIR=`pwd`
+
+mkdir -p $DIR/log
+
+echo "Environment Variables:"
+echo "  PROGRAM_ARGS: " $PROGRAM_ARGS
+echo "  JVM_ARGS:     " $JVM_ARGS
+echo "  AVAIL_PROCS:  " $AVAIL_PROCS
+echo ""
+echo "Running Benchmarks " $BMS " with " $*
+
+echo $BMS | tr ':' '\n' | while read bm; do
+    cd $bm
+    echo "  " $bm
+    ./TEST_BENCH -benchmark=$N -logs=$DIR/log -xml=$NAME-$bm.out $* > $DIR/log/$NAME-$bm.log 2>&1
+    cd ..
+done
+
+echo "Making CSV File " $NAME.csv
+
+rm -f $NAME.csv
+echo $ALL_BMS | tr ':' '\n' | while read bm; do
+    cd $bm
+    echo "  " $bm
+    cd ..
+    echo $NAME,$bm,`./bench-ave.py $DIR/log/$NAME-$bm.out` >> $NAME.csv
+done
+

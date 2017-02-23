@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 To Install:
 -----------
 
-1. You will need Ant, Java 1.7, and cpp to build RoadRunner. 
+1. You will need Ant, Java 1.7 or 1.8, and cpp to build RoadRunner. 
    The $JAVA_HOME environment variable must point to the proper
    Java distribution.  (Depending on the Java version, you may need
    to add tools.jar from the JDK to your classpath in build.xml or
@@ -56,7 +56,7 @@ To Run:
 2. source msetup
 
 	Note: this sets up environment variables and configures 
-	      everything for Java 1.7.  
+	      everything for a specific machine -- change as necessary.  
 	      
 3. Test it:
 
@@ -69,6 +69,9 @@ To Run:
 	> rrrun -tool=TL:RS:LS test.Test
 
    You should get many race errors on field Test.y.
+   Test with FastTrack:
+   
+   	> rrrun -tool=FT2 test.Test
 	
 4.  Look at options:
 
@@ -101,7 +104,7 @@ To Run:
 
 6.  Running on benchmarks:
 
-    When performing comparisions to other analysis platforms, you will
+    When performing comparisons to other analysis platforms, you will
     need to pay particular attention to several options, including 
     -array and -field to ensure memory is instrumented as you intend. 
 

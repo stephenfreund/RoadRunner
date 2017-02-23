@@ -33,7 +33,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Must be a 1.7 or later VM
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_92.jdk/Contents/Home/
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home/
 
 # These two lines are for OS X, to set the max memory to just under
 # the total machine memory
@@ -56,4 +56,14 @@ echo "rrrun       -> " `which rrrun`
 echo "RR_HOME     =  " $RR_HOME
 echo "RR_TOOLPATH =  " $RR_TOOLPATH
 echo
+echo "================================================"
+
+
+echo "Available Processors"
+echo "================================================"
+echo ""
+javac test/Proc.java
+export AVAIL_PROCS=`java test/Proc`
+echo "Runtime.getRuntime().availableProcessors() returned ${AVAIL_PROCS}"
+echo ""
 echo "================================================"

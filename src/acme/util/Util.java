@@ -78,6 +78,8 @@ public class Util {
 	public static final CommandLineOption<Boolean> quietOption = 
 		CommandLine.makeBoolean("quiet", false, CommandLineOption.Kind.STABLE, "Quiet mode.  Will not print debugging or logging messages.");
 
+	public static CommandLineOption<Integer> logDepthOption = 
+			CommandLine.makeInteger("logDepth", 100, CommandLineOption.Kind.STABLE, "Ignore log messages greater than this nesting depth.");
 	
 	public static CommandLineOption<String> outputPathOption = 
 		CommandLine.makeString("logs", "log", CommandLineOption.Kind.STABLE, "The path to the directory where log files will be stored.");
@@ -178,18 +180,22 @@ public class Util {
 
 	/**
 	 * Run the timed statement, reporting how long it took.
+	 * Returns time in milliseconds.
 	 */
-	public static void log(TimedStmt lo) throws Exception {
+	public static long log(TimedStmt lo) throws Exception {
 		ThreadStatus status = threadStatus.get();
 		log(lo.toString());
 		status.logLevel++;
 		long time = System.currentTimeMillis();
+		long d;
 		try {
 			lo.run();
 		} finally {
 			status.logLevel--;
-			logf("%.3g sec",(System.currentTimeMillis() - time) / 1000.0);
+			d = (System.currentTimeMillis() - time) ;
+			logf("%.3g sec",d / 1000.0);
 		}
+		return d;
 	}
 
 	/**
@@ -236,7 +242,7 @@ public class Util {
 	 */
 	public static void logf(String s, Object... ops) {
 		ThreadStatus status = threadStatus.get();
-		if (quietOption.get()) {
+		if (quietOption.get() || logDepthOption.get() < status.logLevel) {
 			return;
 		}
 		synchronized(Util.class) {
@@ -248,14 +254,14 @@ public class Util {
 	/**
 	 * Log to out, unless -quiet is specified.
 	 */
-	public static synchronized void log(String s) {
+	public static void log(String s) {
 		logf("%s", s);
 	}
 
 	/**
 	 * Log to out, unless -quiet is specified.
 	 */
-	public static synchronized void log(Object o) {
+	public static void log(Object o) {
 		log(o == null ? "null" : o.toString());
 	}
 
@@ -264,7 +270,7 @@ public class Util {
 	 */
 	public static void lognl(String s) {
 		ThreadStatus status = threadStatus.get();
-		if (quietOption.get()) {
+		if (quietOption.get() || logDepthOption.get() < status.logLevel) {
 			return;
 		}
 		synchronized(Util.class) {
@@ -393,7 +399,6 @@ public class Util {
 	static {
 		err = new SyncPrintWriter(System.err);
 		out = new SyncPrintWriter(System.out);
-
 	}
 
 	/******************/
@@ -419,6 +424,7 @@ public class Util {
 	 * Method to generate sequenced file names.
 	 */
 	public static String makeLogFileName(String relName) {
+		new File(outputPathOption.get()).mkdirs();
 		String path = outputPathOption.get();
 		if (!path.equals("") && path.charAt(path.length() - 1) != File.separatorChar) {
 			path += File.separatorChar;
@@ -431,7 +437,7 @@ public class Util {
 	 */
 	static public NamedFileWriter openLogFile(String name) {
 		try {	
-			new File(outputPathOption.get()).mkdirs();
+//			new File(outputPathOption.get()).mkdirs();
 			return new NamedFileWriter(makeLogFileName(name));
 		} catch (IOException e) {
 			Assert.fail(e);

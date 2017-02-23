@@ -9,15 +9,15 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
 
-    * Redistributions of source code must retain the above copyright
+ * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
 
-    * Redistributions in binary form must reproduce the above
+ * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * Neither the names of the University of California, Santa Cruz
+ * Neither the names of the University of California, Santa Cruz
       and Williams College nor the names of its contributors may be
       used to endorse or promote products derived from this software
       without specific prior written permission.
@@ -34,7 +34,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-******************************************************************************/
+ ******************************************************************************/
 
 package rr.state;
 
@@ -102,13 +102,14 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public static <T> Decoration<ShadowThread, T> makeDecoration(String name, DecorationFactory.Type type, DefaultValue<ShadowThread, T> defaultValueMaker) {
 		return decorations.make(name, type, defaultValueMaker);
 	}
-	
-	private static ShadowThread tidMap[];
+
+	// protected by ShadowThread.class
+	private static final ShadowThread tidMap[] = new ShadowThread[rr.tool.RR.maxTidOption.get()];
 
 	/** 
-	 * The RoadRunner thread id of the thread, or -1 if the thread has been terminated.  ReadOnly by tools.  
+	 * The RoadRunner thread id of the thread.  
 	 */
-	protected int tid;
+	protected final int tid;
 
 	/** 
 	 * The Java thread object for this ShadowThread object. 
@@ -119,11 +120,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * The ShadowThread for parent thread.
 	 */
 	protected final ShadowThread parent;
-	
+
 	/**
- 	 * True if the thread has stopped running.  Create new flag each time we start this
-  	 * ShadowThread to avoid issues with reusing ShadowThread structures for new threads when
-  	 * someone may still be waiting to join the old thread.
+	 * True if the thread has stopped running. 
 	 * @RRInternal
 	 */
 	protected volatile AtomicFlag isStopped = new AtomicFlag();
@@ -131,7 +130,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/*
 	 * Put here to make efficient for re-entrant locks in RREventGenerator
 	 */
-	private final ShadowLock lockDataMap[] = new ShadowLock[100]; // FIXME?
+	private final ShadowLock lockDataMap[] = new ShadowLock[100]; 
 	private int lockDataCount = 0;
 
 	/*
@@ -152,6 +151,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 */
 	public final AbstractArrayUpdater arrayUpdater = createArrayUpdater();
 	public final ArrayStateFactory arrayStateFactory = new ArrayStateFactory(this);
+	public boolean clearCaches = false;
 
 	/**
 	 * @RRInternal
@@ -175,27 +175,19 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/**
 	 * @RRInternal
 	 */
-	public int invokeId = InvokeInfo.NULL_ID; // InvokeInfo.NULL.getId();
+	public int invokeId = InvokeInfo.NULL_ID;
 
-
-	private static void initFreeList() {
-		if (tidMap == null) {
-			final Integer n = rr.tool.RR.maxTidOption.get();
-			tidMap = new ShadowThread[n];
-			Util.log("Creating Free List With " + n + " Tids");
-		}
-	}
 
 	// require ShadowThread.class
-	private int allocTid(ShadowThread newThread) {
+	private static synchronized int allocTid(ShadowThread newThread) {
 		for (int i = 0; i < tidMap.length; i++) {
 			if (tidMap[i] == null) {
 				tidMap[i] = newThread;
-				newThread.isStopped = new AtomicFlag();
 				maxCounter.set(i+1);
 				return i;
 			}
 		}
+		Assert.panic("Out of Tids.  Set -maxTid to be bigger than " + rr.tool.RR.maxTidOption.get());
 		return -1;
 	}
 
@@ -204,21 +196,17 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 */
 	protected ShadowThread(Thread thread, ShadowThread parent) {
 		Assert.assertTrue(thread != null, "Null Thread!");
-		synchronized(ShadowThread.class) {
-			initFreeList();
-			int tid = allocTid(this);
-			if (tid == -1) {
-				Assert.panic("Out of Tids.  Set -maxTid to be bigger than " + rr.tool.RR.maxTidOption.get());
-			}
-			Util.logf("New Thread %s with tid=%d.", thread.getName(), tid);
-			this.tid = tid;
-			this.parent = parent;
-			this.thread = new WeakReference<Thread>(thread);
-		}
+
+		int tid = allocTid(this);
+		this.tid = tid;
+		this.parent = parent;
+		this.thread = new WeakReference<Thread>(thread);
+
 		for (int i = 0; i < blockStack.length; i++) {
 			blockStack[i] = new MethodEvent(this);
 		}
 		threadDataCounter.inc();
+		Util.logf("New Thread %s with tid=%d.", thread.getName(), tid);
 	}
 
 	private AbstractArrayUpdater createArrayUpdater() {
@@ -232,7 +220,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 
 	@Override
 	public String toString() {
-		return getThread() + "[tid = " + getTid() + "]";
+		final Thread t = getThread();
+		final String name = t == null ? "Thread GC'd already" : t.getName();
+		return name + "[tid = " + getTid() + "]";
 	}
 
 
@@ -329,7 +319,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * Return the number of threads being tracked.
 	 */
 	public static int numThreads() {
-		synchronized (threadToThreadDataMap) {
+		synchronized (ShadowThread.class) {
 			return threadToThreadDataMap.size();
 		}
 	}
@@ -339,14 +329,14 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * one time.
 	 */
 	public static int maxActiveThreads() {
-		return Integer.parseInt(maxCounter.get());
+		return (int)maxCounter.getCount();
 	}
 
 	/**
 	 * Return ThreadStates for all known threads.
 	 */
 	public static Collection<ShadowThread> getThreads() {
-		synchronized (threadToThreadDataMap) {
+		synchronized (ShadowThread.class) {
 			final Vector<ShadowThread> result = new Vector<ShadowThread>();
 
 			threadToThreadDataMap.applyToAllActiveValues(new ValueFunction<ShadowThread>() {
@@ -387,9 +377,9 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/**
 	 * Create a new ShadowThread for the thread, given the parent thread. 
 	 */
-	public static synchronized ShadowThread make(Thread thread, ShadowThread parent) {
+	public static ShadowThread make(Thread thread, ShadowThread parent) {
 		final ShadowThread td = RR.noEventReuseOption.get() ? new ThreadStateNoEventReuse(thread, parent) : new ShadowThread(thread, parent); 
-		synchronized (threadToThreadDataMap) {
+		synchronized (ShadowThread.class) {
 			threadToThreadDataMap.put(thread, td);
 		}
 		final NewThreadEvent e = new NewThreadEvent(td);
@@ -404,10 +394,7 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 		ShadowThread initialValue() {
 			synchronized (ShadowThread.class) {
 				Thread thread = Thread.currentThread();
-				ShadowThread td;
-				synchronized (threadToThreadDataMap) {
-					td = threadToThreadDataMap.get(thread);
-				}
+				ShadowThread td = threadToThreadDataMap.get(thread);
 				if (td == null) { // Main thread case (no start() instrumented for it)
 					td = make(thread, null);
 				}
@@ -430,24 +417,14 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	/**
 	 * Get the ShadowThread for the given Thread. 
 	 */
-	public static ShadowThread getShadowThread(Thread t) {
-		ShadowThread td;
-		synchronized(threadToThreadDataMap) {
-			td = threadToThreadDataMap.get(t);
-		}
-		if (td == null) {
-			return null;
-		}
-		if (td.tid != -1 && tidMap[td.tid] != null &&  tidMap[td.tid] != td) {
-			td.tid = -1;
-		}
-		return td;
+	public static synchronized ShadowThread getShadowThread(Thread t) {
+		return threadToThreadDataMap.get(t);
 	}
 
 	/**
 	 * Get the ShadowThread for the given tid.  tid must be valid. 
 	 */
-	public static ShadowThread get(int tid) {
+	public static synchronized ShadowThread get(int tid) {
 		return tidMap[tid];
 	}
 
@@ -467,11 +444,31 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	 * Indicate that a thread has stopped running.
 	 */
 	public void terminate() {
+		terminate(this);
+	}
+
+	static public void terminate(Thread t) {
+		ShadowThread st = ShadowThread.getShadowThread(t);
+		terminate(st);
+	}
+
+	static public void terminate(ShadowThread st) {
+		if (st == null) return;
+
+		synchronized (st) {
+			final AtomicFlag stopped = st.getIsStopped();
+
+			if (stopped.get()) return; // bail if already stopped or stopping...
+
+			RR.getTool().stop(st);
+
+			stopped.setToTrue();
+		}
+
 		synchronized (ShadowThread.class) {
-			getIsStopped().setToTrue();
-			Util.log("Stopping"); 
-			if (!RR.noTidGCOption.get()) {
-				tidMap[this.tid] = null;
+			Util.log("Terminating thread: " + st); 
+			if (!RR.noTidGCOption.get() && tidMap[st.tid] == st) {
+				tidMap[st.tid] = null;
 			}
 		}
 	}
@@ -531,4 +528,5 @@ public class ShadowThread extends Decoratable implements ShadowVar {
 	public InterruptedEvent getInterruptedEvent() {
 		return interruptedEvent;
 	}
+
 }

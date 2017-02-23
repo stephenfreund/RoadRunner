@@ -54,6 +54,7 @@ import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
 import rr.org.objectweb.asm.Type;
 import acme.util.Assert;
+import acme.util.Yikes;
 
 public class MetaDataBuilder {
 
@@ -213,7 +214,7 @@ public class MetaDataBuilder {
 			try {
 				ClassInfo r = c.getRRClass(pop);
 			} catch (ClassNotFoundException e) {
-				Assert.warn("Failed to load class " + pop + ".  Hopefully just because RR is more eager in loading than JVM...");
+				Yikes.yikes("Failed to load class " + pop + ".  Hopefully just because RR is more eager in loading than JVM...");
 				MetaDataInfoMaps.getClass(pop).setState(State.COMPLETE);
 			}
 		}

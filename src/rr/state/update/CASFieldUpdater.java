@@ -68,6 +68,7 @@ public class CASFieldUpdater extends AbstractFieldUpdater {
     static private final Unsafe unsafe = Unsafe.getUnsafe();
     
 	private final boolean cas(Object o, ShadowVar expected, ShadowVar newState) {
+		// Assert.assertTrue(o != null);
 		final boolean b = unsafe.compareAndSwapObject(o, offset, expected, newState);
 		if (!b) Yikes.yikes("CASFieldUpdater: atomic updated failed.");
 		return b;

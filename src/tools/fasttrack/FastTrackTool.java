@@ -1,6 +1,6 @@
 /******************************************************************************
 
-Copyright (c) 2010, Cormac Flanagan (University of California, Santa Cruz)
+Copyright (c) 2016, Cormac Flanagan (University of California, Santa Cruz)
                     and Stephen Freund (Williams College) 
 
 All rights reserved.  
@@ -37,19 +37,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
 
-/*
- * For simplicity, this version of FastTrack uses a fairly simple 
- * mutex-based locking strategy on its internal data structures. As such,  
- * performance may vary and degrade when there is high contention 
- * on these locks.  This seems particularly true on older multi-core chips.
- * 
- * We can provide details on other implementation strategies.
- */
-
 package tools.fasttrack;
 
-
-import rr.org.objectweb.asm.Opcodes;
+import rr.RRMain;
 import rr.annotations.Abbrev;
 import rr.barrier.BarrierEvent;
 import rr.barrier.BarrierListener;
@@ -57,434 +47,649 @@ import rr.barrier.BarrierMonitor;
 import rr.error.ErrorMessage;
 import rr.error.ErrorMessages;
 import rr.event.AccessEvent;
+import rr.event.AccessEvent.Kind;
 import rr.event.AcquireEvent;
 import rr.event.ArrayAccessEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.ClassInitializedEvent;
 import rr.event.Event;
 import rr.event.FieldAccessEvent;
 import rr.event.JoinEvent;
 import rr.event.NewThreadEvent;
-import rr.event.NotifyEvent;
 import rr.event.ReleaseEvent;
 import rr.event.StartEvent;
 import rr.event.VolatileAccessEvent;
 import rr.event.WaitEvent;
-import rr.event.AccessEvent.Kind;
 import rr.instrument.classes.ArrayAllocSiteTracker;
 import rr.meta.ArrayAccessInfo;
 import rr.meta.ClassInfo;
 import rr.meta.FieldInfo;
 import rr.meta.MetaDataInfoMaps;
+import rr.meta.OperationInfo;
 import rr.state.ShadowLock;
 import rr.state.ShadowThread;
 import rr.state.ShadowVar;
 import rr.state.ShadowVolatile;
+import rr.tool.RR;
 import rr.tool.Tool;
-import tools.util.CV;
 import tools.util.Epoch;
+import tools.util.VectorClock;
 import acme.util.Assert;
 import acme.util.Util;
 import acme.util.Yikes;
+import acme.util.count.AggregateCounter;
+import acme.util.count.Counter;
+import acme.util.count.ThreadLocalCounter;
 import acme.util.decorations.Decoration;
 import acme.util.decorations.DecorationFactory;
+import acme.util.decorations.DecorationFactory.Type;
 import acme.util.decorations.DefaultValue;
 import acme.util.decorations.NullDefault;
-import acme.util.decorations.DecorationFactory.Type;
 import acme.util.io.XMLWriter;
 import acme.util.option.CommandLine;
 
-@Abbrev("FT")
-public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarrierState>, Opcodes {
+/*
+ * A revised FastTrack Tool.  This makes several improvements over the original:
+ *   - Simpler synchronization scheme for VarStates.  (The old optimistic scheme
+ *     no longer has a performance benefit and was hard to get right.)
+ *   - Rephrased rules to:
+ *       - include a Read-Shared-Same-Epoch test.
+ *       - eliminate an unnecessary update on joins (this was just for the proof).
+ *       - remove the Read-Shared to Exclusive transition.  
+ *     The last change makes the correctness argument easier and that transition
+ *     had little to no performance impact in practice. 
+ *   - Properly replays events when the fast paths detect an error in all cases.
+ *   - Supports long epochs for larger clock values.
+ *   - Handles tid reuse more precisely.
+ *   
+ * The performance over the JavaGrande and DaCapo benchmarks is more or less
+ * identical to the old implementation (within ~1% overall in our tests).
+ */
+@Abbrev("FT2")
+public class FastTrackTool extends Tool implements BarrierListener<FTBarrierState>  {
 
-	static final int INIT_CV_SIZE = 4;
+	private static final boolean COUNT_OPERATIONS = RRMain.slowMode();
+	private static final int INIT_VECTOR_CLOCK_SIZE = 4;
+
 	public final ErrorMessage<FieldInfo> fieldErrors = ErrorMessages.makeFieldErrorMessage("FastTrack");
 	public final ErrorMessage<ArrayAccessInfo> arrayErrors = ErrorMessages.makeArrayErrorMessage("FastTrack");
 
-	public static final Decoration<ClassInfo,CV> classInitTime = MetaDataInfoMaps.getClasses().makeDecoration("FastTrack:InitTime", Type.MULTIPLE, 
-			new DefaultValue<ClassInfo,CV>() {
-		public CV get(ClassInfo t) {
-			return new CV(INIT_CV_SIZE);
+	private final VectorClock maxEpochPerTid = new VectorClock(INIT_VECTOR_CLOCK_SIZE);
+
+	// guarded by classInitTime
+	public static final Decoration<ClassInfo,VectorClock> classInitTime = MetaDataInfoMaps.getClasses().makeDecoration("FastTrack:ClassInitTime", Type.MULTIPLE, 
+			new DefaultValue<ClassInfo,VectorClock>() {
+		public VectorClock get(ClassInfo st) {
+			return new VectorClock(INIT_VECTOR_CLOCK_SIZE);
 		}
 	});
+	
+	public static VectorClock getClassInitTime(ClassInfo ci) {
+		synchronized(classInitTime) {
+			return classInitTime.get(ci);
+		}
+	}
 
 	public FastTrackTool(final String name, final Tool next, CommandLine commandLine) {
 		super(name, next, commandLine);
-		new BarrierMonitor<FastTrackBarrierState>(this, new DefaultValue<Object,FastTrackBarrierState>() {
-			public FastTrackBarrierState get(Object k) {
-				return new FastTrackBarrierState(ShadowLock.get(k));
+		new BarrierMonitor<FTBarrierState>(this, new DefaultValue<Object,FTBarrierState>() {
+			public FTBarrierState get(Object k) {
+				return new FTBarrierState(k, INIT_VECTOR_CLOCK_SIZE);
 			}
 		});
 	}
 
-	static int ts_get_epoch(ShadowThread ts) { Assert.panic("Bad");	return -1;	}
-	static void ts_set_epoch(ShadowThread ts, int v) { Assert.panic("Bad");  }
+	/* 
+	 * Shadow State:
+	 *   St.E -- epoch decoration on ShadowThread
+	 *          - Thread-local.  Never access from a different thread
+	 *   
+	 *   St.V -- VectorClock decoration on ShadowThread
+	 *          - Thread-local while thread is running.
+	 *          - The thread starting t may access st.V before the start.
+	 *          - Any thread joining on t may read st.V after the join.
+	 *   
+	 *   Sm.V -- FTLockState decoration on ShadowLock
+	 *          - See FTLockState for synchronization rules.
+	 *   
+	 *   Sx.R,Sx.W,Sx.V -- FTVarState objects
+	 *          - See FTVarState for synchronization rules.
+	 *             
+	 *   Svx.V -- FTVolatileState decoration on ShadowVolatile  (serves same purpose as L for volatiles)
+	 *          - See FTVolatileState for synchronization rules.
+	 *
+	 *   Sb.V -- FTBarrierState decoration on Barriers 
+	 *          - See FTBarrierState for synchronization rules.   
+	 */
 
-	static CV ts_get_cv(ShadowThread ts) { Assert.panic("Bad");	return null; }
-	static void ts_set_cv(ShadowThread ts, CV cv) { Assert.panic("Bad");  }
+	// invariant: st.E == st.V(st.tid)
+	protected static int/*epoch*/ ts_get_E(ShadowThread st) { Assert.panic("Bad");	return -1;	}
+	protected static void ts_set_E(ShadowThread st, int/*epoch*/ e) { Assert.panic("Bad");  }
+
+	protected static VectorClock ts_get_V(ShadowThread st) { Assert.panic("Bad");	return null; }
+	protected static void ts_set_V(ShadowThread st, VectorClock V) { Assert.panic("Bad");  }
 
 
-	static void setEpoch(ShadowThread shadow, int v) {
-		Assert.assertTrue(shadow.getTid() == Epoch.tid(v));
-		ts_set_epoch(shadow,v);
+	protected void maxAndIncEpochAndCV(ShadowThread st, VectorClock other, OperationInfo info) {
+		final int tid = st.getTid();
+		final VectorClock tV = ts_get_V(st);
+		tV.max(other);
+		tV.tick(tid);
+		ts_set_E(st, tV.get(tid));
+	}
+
+	protected void maxEpochAndCV(ShadowThread st, VectorClock other, OperationInfo info) {
+		final int tid = st.getTid();
+		final VectorClock tV = ts_get_V(st);
+		tV.max(other);
+		ts_set_E(st, tV.get(tid));
+	}
+
+	protected void incEpochAndCV(ShadowThread st, OperationInfo info) {
+		final int tid = st.getTid();
+		final VectorClock tV = ts_get_V(st);
+		tV.tick(tid);
+		ts_set_E(st, tV.get(tid));
 	}
 
 
-	static final Decoration<ShadowLock,FastTrackLockData> ftLockData = ShadowLock.makeDecoration("FastTrack:ShadowLock", DecorationFactory.Type.MULTIPLE,
-			new DefaultValue<ShadowLock,FastTrackLockData>() { public FastTrackLockData get(final ShadowLock ld) { return new FastTrackLockData(ld); }});
+	static final Decoration<ShadowLock,FTLockState> lockVs = ShadowLock.makeDecoration("FastTrack:ShadowLock", DecorationFactory.Type.MULTIPLE,
+			new DefaultValue<ShadowLock,FTLockState>() { public FTLockState get(final ShadowLock lock) { return new FTLockState(lock, INIT_VECTOR_CLOCK_SIZE); }});
 
-	static final FastTrackLockData get(final ShadowLock ld) {
-		return ftLockData.get(ld);
+	// only call when ld.peer() is held
+	static final FTLockState getV(final ShadowLock ld) {
+		return lockVs.get(ld);
 	}
 
-	static final Decoration<ShadowVolatile,FastTrackVolatileData> ftVolatileData = ShadowVolatile.makeDecoration("FastTrack:shadowVolatile", DecorationFactory.Type.MULTIPLE,
-			new DefaultValue<ShadowVolatile,FastTrackVolatileData>() { public FastTrackVolatileData get(final ShadowVolatile ld) { return new FastTrackVolatileData(ld); }});
+	static final Decoration<ShadowVolatile,FTVolatileState> volatileVs = ShadowVolatile.makeDecoration("FastTrack:shadowVolatile", DecorationFactory.Type.MULTIPLE,
+			new DefaultValue<ShadowVolatile,FTVolatileState>() { public FTVolatileState get(final ShadowVolatile vol) { return new FTVolatileState(vol, INIT_VECTOR_CLOCK_SIZE); }});
 
-	static final FastTrackVolatileData get(final ShadowVolatile ld) {
-		return ftVolatileData.get(ld);
+	// only call when we are in an event handler for the volatile field.
+	protected static final FTVolatileState getV(final ShadowVolatile ld) {
+		return volatileVs.get(ld);
 	}
 
-
-	protected ShadowVar createHelper(AccessEvent e) {
-		return new FastTrackGuardState(e.isWrite(), ts_get_epoch(e.getThread()));
-	}
 
 	@Override
-	final public ShadowVar makeShadowVar(final AccessEvent fae) {
-		if (fae.getKind() == Kind.VOLATILE) {
-			FastTrackVolatileData vd = get(((VolatileAccessEvent)fae).getShadowVolatile());
-			ShadowThread currentThread = fae.getThread();
-			vd.cv.max(ts_get_cv(currentThread));
-			return super.makeShadowVar(fae);
+	public ShadowVar makeShadowVar(final AccessEvent event) {
+		if (event.getKind() == Kind.VOLATILE) {
+			final ShadowThread st = event.getThread();
+			final VectorClock volV = getV(((VolatileAccessEvent)event).getShadowVolatile());
+			volV.max(ts_get_V(st));
+			return super.makeShadowVar(event);
 		} else {
-			return createHelper(fae);
+			return new FTVarState(event.isWrite(), ts_get_E(event.getThread()));
 		}
 	}
 
 
-	protected void maxAndIncEpochAndCV(ShadowThread currentThread, CV other, Event e) {
-		CV cv = ts_get_cv(currentThread);
-		cv.max(other);
-		cv.inc(currentThread.getTid());
-		setEpoch(currentThread, cv.get(currentThread.getTid()));
-	}
-
-
-	protected void maxEpochAndCV(ShadowThread currentThread, CV other, Event e) {
-		CV cv = ts_get_cv(currentThread);
-		cv.max(other);
-		setEpoch(currentThread, cv.get(currentThread.getTid()));
-	}
-
-
-	protected void incEpochAndCV(ShadowThread currentThread, Event e) {
-		CV cv = ts_get_cv(currentThread);
-		cv.inc(currentThread.getTid());
-		setEpoch(currentThread, cv.get(currentThread.getTid()));
-	}
-
-
 	@Override
-	public void create(NewThreadEvent e) {
-		ShadowThread currentThread = e.getThread();
-		CV cv = ts_get_cv(currentThread);
+	public void create(NewThreadEvent event) {
+		final ShadowThread st = event.getThread();
 
-		if (cv == null) {
-			cv = new CV(INIT_CV_SIZE);
-			ts_set_cv(currentThread, cv);
-			cv.set(currentThread.getTid(), Epoch.make(currentThread.getTid(), 0));
-			this.incEpochAndCV(currentThread, null);
-		}
-
-		super.create(e);
-
-	}
-
-
-	@Override
-	public void stop(ShadowThread td) {
-		super.stop(td);
-	}
-
-	@Override
-	public void acquire(final AcquireEvent ae) {
-		final ShadowThread td = ae.getThread();
-		final ShadowLock shadowLock = ae.getLock();
-		final FastTrackLockData fhbLockData = get(shadowLock);
-
-		this.maxEpochAndCV(td, fhbLockData.cv, ae);
-
-		super.acquire(ae);
-	}
-
-
-
-	@Override
-	public void release(final ReleaseEvent re) {
-		final ShadowThread td = re.getThread();
-		final ShadowLock shadowLock = re.getLock();
-		final FastTrackLockData fhbLockData = get(shadowLock);
-
-		CV cv = ts_get_cv(td);
-		fhbLockData.cv.assign(cv);
-		this.incEpochAndCV(td, re);
-
-		super.release(re);
-
-	}
-
-
-	@Override
-	public void access(final AccessEvent fae) {
-		final ShadowVar orig = fae.getOriginalShadow();
-		final ShadowThread td = fae.getThread();
-
-		if (orig instanceof FastTrackGuardState) {
-			FastTrackGuardState x = (FastTrackGuardState)orig;
-
-			final int tdEpoch = ts_get_epoch(td);
-			final CV tdCV = ts_get_cv(td);
-
-			Object target = fae.getTarget();
-			if (target == null) {
-				CV initTime = classInitTime.get(((FieldAccessEvent)fae).getInfo().getField().getOwner());
-				tdCV.max(initTime);
+		if (ts_get_V(st) == null) {
+			final int tid = st.getTid();
+			final VectorClock tV = new VectorClock(INIT_VECTOR_CLOCK_SIZE);
+			ts_set_V(st, tV);
+			synchronized (maxEpochPerTid) {
+				final int/*epoch*/ epoch = maxEpochPerTid.get(tid) + 1;
+				tV.set(tid, epoch);
+				ts_set_E(st, epoch);
 			}
+			incEpochAndCV(st, null);
+			Util.log("Initial E for " + tid + ": " + Epoch.toString(ts_get_E(st)));
+		}
 
-			synchronized(x) {
+		super.create(event);
 
-				if (fae.isWrite()) {
+	}
 
-					// WRITE
-					final int lastWriteEpoch = x.lastWrite;
-					if (lastWriteEpoch == tdEpoch) {
-						return;
-					}
+	@Override
+	public void acquire(final AcquireEvent event) {
+		final ShadowThread st = event.getThread();
+		final FTLockState lockV = getV(event.getLock());
 
-					final int lastWriter = Epoch.tid(lastWriteEpoch);				
-					if (lastWriteEpoch > tdCV.get(lastWriter)) {
-						error(fae, 1, "write-by-thread-", lastWriter, "write-by-thread-", td.getTid());
-					}
+		maxEpochAndCV(st, lockV, event.getInfo());
 
-					final int lastReadEpoch = x.lastRead;				
-					if (lastReadEpoch != Epoch.READ_SHARED) {
-						final int lastReader = Epoch.tid(lastReadEpoch);
-						if (lastReader != td.getTid() && lastReadEpoch > tdCV.get(lastReader)) {
-							error(fae, 2, "read-by-thread-", lastReader, "write-by-thread-", td.getTid());
-						}
-					} else {
-						if (x.anyGt(tdCV)) {
-							for (int prevReader = x.nextGt(tdCV, 0); prevReader > -1; prevReader = x.nextGt(tdCV, prevReader + 1)) {
-								if (prevReader != td.getTid()) {
-									error(fae, 3, "read-by-thread-", prevReader, "write-by-thread-", td.getTid());
-								}
-							}
-						}
-					}
-					x.lastWrite = tdEpoch;
-					x.lastRead = tdEpoch;
+		super.acquire(event);
+		if (COUNT_OPERATIONS) acquire.inc(st.getTid());
+	}
 
-				} else {
-					// READ
-					final int lastReadEpoch = x.lastRead;
 
-					if (lastReadEpoch == tdEpoch) {
-						return;
-					} else if (lastReadEpoch == Epoch.READ_SHARED) {
-						if (x.get(td.getTid()) == tdEpoch) {
-							return;
-						}
-					}
 
-					final int lastWriteEpoch = x.lastWrite;
-					final int lastWriter = Epoch.tid(lastWriteEpoch);
-					if (lastWriteEpoch > tdCV.get(lastWriter)) {
-						error(fae, 4, "write-by-thread-", lastWriter, "read-by-thread-", td.getTid());
-					}
+	@Override
+	public void release(final ReleaseEvent event) {
+		final ShadowThread st = event.getThread();
+		final VectorClock tV = ts_get_V(st);
+		final VectorClock lockV = getV(event.getLock());
 
-					if (lastReadEpoch != Epoch.READ_SHARED) {
-						final int lastReader = Epoch.tid(lastReadEpoch);
-						if (lastReadEpoch <= tdCV.get(lastReader)) {
-							x.lastRead = tdEpoch;
-						} else {
-							x.makeCV(INIT_CV_SIZE);
-							x.set(lastReader, lastReadEpoch);
-							x.set(td.getTid(), tdEpoch);
-							x.lastRead = Epoch.READ_SHARED;
-						}
-					} else {
-						x.set(td.getTid(), tdEpoch);					
-					}
+		lockV.max(tV);
+		incEpochAndCV(st, event.getInfo());
+
+		super.release(event);
+		if (COUNT_OPERATIONS) release.inc(st.getTid());
+	}
+
+	static FTVarState ts_get_badVarState(ShadowThread st) { Assert.panic("Bad");	return null;	}
+	static void ts_set_badVarState(ShadowThread st, FTVarState v) { Assert.panic("Bad");  }
+
+	protected static ShadowVar getOriginalOrBad(ShadowVar original, ShadowThread st) {
+		final FTVarState savedState = ts_get_badVarState(st);
+		if (savedState != null) {
+			ts_set_badVarState(st, null);
+			return savedState;
+		} else {
+			return original;
+		}
+	}
+
+	@Override
+	public void access(final AccessEvent event) {
+		final ShadowThread st = event.getThread();
+		final ShadowVar shadow = getOriginalOrBad(event.getOriginalShadow(), st);
+
+		if (shadow instanceof FTVarState) {
+			FTVarState sx = (FTVarState)shadow;
+
+			Object target = event.getTarget();
+			if (target == null) {
+				ClassInfo owner = ((FieldAccessEvent)event).getInfo().getField().getOwner();
+				final VectorClock tV = ts_get_V(st);
+				synchronized (classInitTime) {
+					VectorClock initTime = classInitTime.get(owner);
+					maxEpochAndCV(st, initTime, event.getAccessInfo()); // won't change current epoch
 				}
 			}
+
+			if (event.isWrite()) {
+				write(event, st, sx);
+			} else {
+				read(event, st, sx);
+			}
 		} else {
-			super.access(fae);
+			super.access(event);
 		}
 	}
 
-	@Override
-	public void volatileAccess(final VolatileAccessEvent fae) {
-		final ShadowVar orig = fae.getOriginalShadow();
-		final ShadowThread td = fae.getThread();
 
-		FastTrackVolatileData vd = get((fae).getShadowVolatile());
-		final CV cv = ts_get_cv(td);
-		if (fae.isWrite()) {
-			vd.cv.max(cv);
-			this.incEpochAndCV(td, fae); 		
-		} else {
-			cv.max(vd.cv);
-		}
-		super.volatileAccess(fae);
+	// Counters for relative frequencies of each rule
+	private static final ThreadLocalCounter readSameEpoch = new ThreadLocalCounter("FT", "Read Same Epoch", RR.maxTidOption.get());
+	private static final ThreadLocalCounter readSharedSameEpoch = new ThreadLocalCounter("FT", "ReadShared Same Epoch", RR.maxTidOption.get());
+	private static final ThreadLocalCounter readExclusive = new ThreadLocalCounter("FT", "Read Exclusive", RR.maxTidOption.get());
+	private static final ThreadLocalCounter readShare = new ThreadLocalCounter("FT", "Read Share", RR.maxTidOption.get());
+	private static final ThreadLocalCounter readShared = new ThreadLocalCounter("FT", "Read Shared", RR.maxTidOption.get());
+	private static final ThreadLocalCounter writeReadError = new ThreadLocalCounter("FT", "Write-Read Error", RR.maxTidOption.get());
+	private static final ThreadLocalCounter writeSameEpoch = new ThreadLocalCounter("FT", "Write Same Epoch", RR.maxTidOption.get());
+	private static final ThreadLocalCounter writeExclusive = new ThreadLocalCounter("FT", "Write Exclusive", RR.maxTidOption.get());
+	private static final ThreadLocalCounter writeShared = new ThreadLocalCounter("FT", "Write Shared", RR.maxTidOption.get());
+	private static final ThreadLocalCounter writeWriteError = new ThreadLocalCounter("FT", "Write-Write Error", RR.maxTidOption.get());
+	private static final ThreadLocalCounter readWriteError = new ThreadLocalCounter("FT", "Read-Write Error", RR.maxTidOption.get());
+	private static final ThreadLocalCounter sharedWriteError = new ThreadLocalCounter("FT", "Shared-Write Error", RR.maxTidOption.get());
+	private static final ThreadLocalCounter acquire = new ThreadLocalCounter("FT", "Acquire", RR.maxTidOption.get());
+	private static final ThreadLocalCounter release = new ThreadLocalCounter("FT", "Release", RR.maxTidOption.get());
+	private static final ThreadLocalCounter fork = new ThreadLocalCounter("FT", "Fork", RR.maxTidOption.get());
+	private static final ThreadLocalCounter join = new ThreadLocalCounter("FT", "Join", RR.maxTidOption.get());
+	private static final ThreadLocalCounter barrier = new ThreadLocalCounter("FT", "Barrier", RR.maxTidOption.get());
+	private static final ThreadLocalCounter wait = new ThreadLocalCounter("FT", "Wait", RR.maxTidOption.get());
+	private static final ThreadLocalCounter vol = new ThreadLocalCounter("FT", "Volatile", RR.maxTidOption.get());
+
+	
+	private static final ThreadLocalCounter other = new ThreadLocalCounter("FT", "Other", RR.maxTidOption.get());
+
+	static {
+		AggregateCounter reads = new AggregateCounter("FT", "Total Reads", readSameEpoch, readSharedSameEpoch, readExclusive, readShare, readShared, writeReadError);
+		AggregateCounter writes = new AggregateCounter("FT", "Total Writes", writeSameEpoch, writeExclusive, writeShared, writeWriteError, readWriteError, sharedWriteError);
+		AggregateCounter accesses = new AggregateCounter("FT", "Total Access Ops", reads, writes);
+		new AggregateCounter("FT", "Total Ops", accesses, acquire, release, fork, join, barrier, wait, vol, other);
 	}
 
-	private void error(final AccessEvent ae, final int errorCase, final String prevOp, final int prevTid, final String curOp, final int curTid) {
 
+	protected void read(final AccessEvent event, final ShadowThread st, final FTVarState sx) {
+		final int/*epoch*/ e = ts_get_E(st);
 
-		try {		
-			if (ae instanceof FieldAccessEvent) {
-				FieldAccessEvent fae = (FieldAccessEvent)ae;
-				final FieldInfo fd = fae.getInfo().getField();
-				final ShadowThread currentThread = fae.getThread();
-				final Object target = fae.getTarget();
+		/* optional */ {
+			final int/*epoch*/ r = sx.R;
+			if (r == e) {
+				if (COUNT_OPERATIONS) readSameEpoch.inc(st.getTid());
+				return;
+			} else if (r == Epoch.READ_SHARED && sx.get(st.getTid()) == e) {
+				if (COUNT_OPERATIONS) readSharedSameEpoch.inc(st.getTid());
+				return;
+			}
+		}
 
-				fieldErrors.error(currentThread,
-						fd,
-						"Guard State", 					fae.getOriginalShadow(),
-						"Current Thread",				toString(currentThread), 
-						"Class",						target==null?fd.getOwner():target.getClass(),
-						"Field",						Util.objectToIdentityString(target) + "." + fd, 
-						"Prev Op",						prevOp + prevTid,
-						"Cur Op",						curOp + curTid, 
-						"Case", 						"#" + errorCase,
-						"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
-				);
-				if (!fieldErrors.stillLooking(fd)) {
-					advance(ae);
-					return;
+		synchronized(sx) {
+			final VectorClock tV = ts_get_V(st);
+			final int/*epoch*/ r = sx.R;
+			final int/*epoch*/ w = sx.W;
+			final int wTid = Epoch.tid(w);
+			final int tid = st.getTid();
+			
+			if (wTid != tid && !Epoch.leq(w, tV.get(wTid))) {
+				if (COUNT_OPERATIONS) writeReadError.inc(tid);
+				error(event, sx, "Write-Read Race", "Write by ", wTid, "Read by ", tid);
+				// best effort recovery: 
+				return;
+			} 
+
+			if (r != Epoch.READ_SHARED) {
+				final int rTid = Epoch.tid(r);
+				if (rTid == tid || Epoch.leq(r, tV.get(rTid))) {
+					if (COUNT_OPERATIONS) readExclusive.inc(tid);
+					sx.R = e;
+				} else {
+					if (COUNT_OPERATIONS) readShare.inc(tid);
+					int initSize = Math.max(Math.max(rTid,tid), INIT_VECTOR_CLOCK_SIZE); 
+					sx.makeCV(initSize);
+					sx.set(rTid, r);
+					sx.set(tid, e);
+					sx.R = Epoch.READ_SHARED;
 				}
 			} else {
-				ArrayAccessEvent aae = (ArrayAccessEvent)ae;
-				final ShadowThread currentThread = aae.getThread();
-				final Object target = aae.getTarget();
+				if (COUNT_OPERATIONS) readShared.inc(tid);
+				sx.set(tid, e);					
+			}
+		}
+	}
 
-				arrayErrors.error(currentThread,
-						aae.getInfo(),
-						"Alloc Site", 					ArrayAllocSiteTracker.get(aae.getTarget()),
-						"Guard State", 					aae.getOriginalShadow(),
-						"Current Thread",				toString(currentThread), 
-						"Array",						Util.objectToIdentityString(target) + "[" + aae.getIndex() + "]",
-						"Prev Op",						prevOp + prevTid + ("name = " + ShadowThread.get(prevTid).getThread().getName()),
-						"Cur Op",						curOp + curTid + ("name = " + ShadowThread.get(curTid).getThread().getName()), 
-						"Case", 						"#" + errorCase,
-						"Stack",						ShadowThread.stackDumpForErrorMessage(currentThread) 
-				);
 
-				aae.getArrayState().specialize();
+	public static boolean readFastPath(final ShadowVar shadow, final ShadowThread st) {
+		if (shadow instanceof FTVarState) {
+			final FTVarState sx = ((FTVarState)shadow);
 
-				if (!arrayErrors.stillLooking(aae.getInfo())) {
-					advance(aae);
-					return;
+			final int/*epoch*/ e = ts_get_E(st);
+
+			/* optional */ {
+				final int/*epoch*/ r = sx.R;
+				if (r == e) {
+					if (COUNT_OPERATIONS) readSameEpoch.inc(st.getTid());
+					return true;
+				} else if (r == Epoch.READ_SHARED && sx.get(st.getTid()) == e) {
+					if (COUNT_OPERATIONS) readSharedSameEpoch.inc(st.getTid());
+					return true;
 				}
 			}
-		} catch (Throwable e) {
-			Assert.panic(e);
-		}
-	}
 
-	@Override
-	public void preStart(final StartEvent se) {
+			synchronized(sx) {
+				final int tid = st.getTid();
+				final VectorClock tV = ts_get_V(st);
+				final int/*epoch*/ r = sx.R;
+				final int/*epoch*/ w = sx.W;
+				final int wTid = Epoch.tid(w);
+				if (wTid != tid && !Epoch.leq(w, tV.get(wTid))) {
+					ts_set_badVarState(st, sx);
+					return false;
+				}
 
-		final ShadowThread td = se.getThread();
-		final ShadowThread forked = se.getNewThread();
-
-		final CV curCV = ts_get_cv(td);
-
-		CV forkedCV = ts_get_cv(forked);
-		this.maxAndIncEpochAndCV(forked, curCV, se);
-
-		this.incEpochAndCV(td, se);
-
-
-		super.preStart(se);
-	}
-
-
-	@Override
-	public void postJoin(final JoinEvent je) {
-		final ShadowThread td = je.getThread();
-		final ShadowThread joining = je.getJoiningThread();
-
-		// this test tells use whether the tid has been reused already or not.  Necessary
-		// to still account for stopped thread, even if that thread's tid has been reused,
-		// but good to know if this is happening alot...
-		if (joining.getTid() != -1) {
-			this.incEpochAndCV(joining, je);
-			this.maxEpochAndCV(td, ts_get_cv(joining), je);
+				if (r != Epoch.READ_SHARED) {
+					final int rTid = Epoch.tid(r);
+					if (rTid == tid || Epoch.leq(r, tV.get(rTid))) {
+						if (COUNT_OPERATIONS) readExclusive.inc(tid);
+						sx.R = e;
+					} else {
+						if (COUNT_OPERATIONS) readShare.inc(tid);
+						int initSize = Math.max(Math.max(rTid,tid), INIT_VECTOR_CLOCK_SIZE); 
+						sx.makeCV(initSize);
+						sx.set(rTid, r);
+						sx.set(tid, e);
+						sx.R = Epoch.READ_SHARED;
+					}
+				} else {
+					if (COUNT_OPERATIONS) readShared.inc(tid);
+					sx.set(tid, e);					
+				}
+				return true;
+			}
 		} else {
-			Yikes.yikes("Joined after tid got reused --- don't touch anything related to tid here!");
-			this.maxEpochAndCV(td, ts_get_cv(joining), je);
+			return false;
+		}
+	}
+
+
+	/***/
+
+	protected void write(final AccessEvent event, final ShadowThread st, final FTVarState sx) {
+		final int/*epoch*/ e = ts_get_E(st);
+
+		/* optional */ {
+			final int/*epoch*/ w = sx.W;
+			if (w == e) {
+				if (COUNT_OPERATIONS) writeSameEpoch.inc(st.getTid());
+				return;
+			}
 		}
 
-		super.postJoin(je);	
-	}
+		synchronized(sx) {
+			final int/*epoch*/ w = sx.W;
+			final int wTid = Epoch.tid(w);				
+			final int tid = st.getTid();
+			final VectorClock tV = ts_get_V(st);
 
-
-	@Override
-	public void preNotify(NotifyEvent we) {
-		super.preNotify(we);
-	}
-
-	@Override
-	public void preWait(WaitEvent we) {
-		FastTrackLockData lockData = get(we.getLock());
-		this.incEpochAndCV(we.getThread(), we);
-		synchronized(lockData) {
-			lockData.cv.max(ts_get_cv(we.getThread()));
+			if (wTid != tid /* optimization */ && !Epoch.leq(w, tV.get(wTid))) {
+				if (COUNT_OPERATIONS) writeWriteError.inc(tid);
+				error(event, sx, "Write-Write Race", "Write by ", wTid, "Write by ", tid);
+			}
+			
+			final int/*epoch*/ r = sx.R;				
+			if (r != Epoch.READ_SHARED) {
+				final int rTid = Epoch.tid(r);
+				if (rTid != tid /* optimization */ && !Epoch.leq(r, tV.get(rTid))) {
+					if (COUNT_OPERATIONS) readWriteError.inc(tid);
+					error(event, sx, "Read-Write Race", "Read by ", rTid, "Write by ", tid);
+				} else {
+					if (COUNT_OPERATIONS) writeExclusive.inc(tid);
+				}
+			} else {
+				if (sx.anyGt(tV)) {
+					for (int prevReader = sx.nextGt(tV, 0); prevReader > -1; prevReader = sx.nextGt(tV, prevReader + 1)) {
+						error(event, sx, "Read(Shared)-Write Race", "Read by ", prevReader, "Write by ", tid);
+					}
+					if (COUNT_OPERATIONS) sharedWriteError.inc(tid);
+				} else {
+					if (COUNT_OPERATIONS) writeShared.inc(tid);
+				}
+			}
+			sx.W = e;
 		}
-		super.preWait(we);
+	}
+
+	// only count events when returning true;
+	public static boolean writeFastPath(final ShadowVar shadow, final ShadowThread st) {
+		if (shadow instanceof FTVarState) {
+			final FTVarState sx = ((FTVarState)shadow);
+
+			final int/*epoch*/ E = ts_get_E(st);
+
+			/* optional */ {
+				final int/*epoch*/ w = sx.W;
+				if (w == E) {
+					if (COUNT_OPERATIONS) writeSameEpoch.inc(st.getTid());
+					return true;
+				}
+			}
+
+			synchronized(sx) {
+				final int tid = st.getTid();
+				final int/*epoch*/ w = sx.W;
+				final int wTid = Epoch.tid(w);
+				final VectorClock tV = ts_get_V(st);
+
+				if (wTid != tid && !Epoch.leq(w, tV.get(wTid))) {
+					ts_set_badVarState(st, sx);
+					return false;
+				}
+
+				final int/*epoch*/ r = sx.R;				
+				if (r != Epoch.READ_SHARED) {
+					final int rTid = Epoch.tid(r);
+					if (rTid != tid && !Epoch.leq(r, tV.get(rTid))) {
+						ts_set_badVarState(st, sx);
+						return false;
+					}
+					if (COUNT_OPERATIONS) writeExclusive.inc(tid);
+				} else {
+					if (sx.anyGt(tV)) {
+						ts_set_badVarState(st, sx);
+						return false;
+					}
+					if (COUNT_OPERATIONS) writeShared.inc(tid);
+				}
+				sx.W = E;
+				return true;
+			}
+		} else {
+			return false;
+		}
+	}
+
+	/*****/
+
+
+	@Override
+	public void volatileAccess(final VolatileAccessEvent event) {
+		final ShadowThread st = event.getThread();
+		final VectorClock volV = getV((event).getShadowVolatile());
+
+		if (event.isWrite()) {
+			final VectorClock tV = ts_get_V(st);
+			volV.max(tV);
+			incEpochAndCV(st, event.getAccessInfo()); 		
+		} else {
+			maxEpochAndCV(st, volV, event.getAccessInfo());
+		}
+
+		super.volatileAccess(event);
+		if (COUNT_OPERATIONS) vol.inc(st.getTid());
+	}
+
+
+	// st forked su
+	@Override
+	public void preStart(final StartEvent event) {
+		final ShadowThread st = event.getThread();
+		final ShadowThread su = event.getNewThread();
+		final VectorClock tV = ts_get_V(st);
+
+		/* 
+		 * Safe to access su.V, because u has not started yet.  
+		 * This will give us exclusive access to it.  There may 
+		 * be a race if two or more threads race are starting u, but
+		 * of course, a second attempt to start u will crash...
+		 * 
+		 * RR guarantees that the forked thread will synchronize with 
+		 * thread t before it does anything else.
+		 */
+		maxAndIncEpochAndCV(su, tV, event.getInfo());
+		incEpochAndCV(st, event.getInfo());
+
+		super.preStart(event);
+		if (COUNT_OPERATIONS) fork.inc(st.getTid());
+	}
+
+
+
+	@Override
+	public void stop(ShadowThread st) {
+		synchronized (maxEpochPerTid) {
+			maxEpochPerTid.set(st.getTid(), ts_get_E(st));
+		}
+		super.stop(st);
+		if (COUNT_OPERATIONS) other.inc(st.getTid());
+	}
+
+	// t joined on u
+	@Override
+	public void postJoin(final JoinEvent event) {
+		final ShadowThread st = event.getThread();
+		final ShadowThread su = event.getJoiningThread();
+
+		// move our clock ahead.  Safe to access su.V, as above, when
+		// lock is held and u is not running.  Also, RR guarantees
+		// this thread has sync'd with u.
+
+		maxEpochAndCV(st, ts_get_V(su), event.getInfo());
+		// no need to inc su's clock here -- that was just for
+		// the proof in the original FastTrack rules.
+
+		super.postJoin(event);	
+		if (COUNT_OPERATIONS) join.inc(st.getTid());
+	}
+
+
+	@Override
+	public void preWait(WaitEvent event) {
+		final ShadowThread st = event.getThread();
+		final VectorClock lockV = getV(event.getLock());
+		lockV.max(ts_get_V(st)); // we hold lock, so no need to sync here...
+		incEpochAndCV(st, event.getInfo());
+		super.preWait(event);
+		if (COUNT_OPERATIONS) wait.inc(st.getTid());
 	}
 
 	@Override
-	public void postWait(WaitEvent we) { 
-		FastTrackLockData lockData = get(we.getLock());
-		this.maxEpochAndCV(we.getThread(), lockData.cv, we);
-		super.postWait(we);
+	public void postWait(WaitEvent event) { 
+		final ShadowThread st = event.getThread();
+		final VectorClock lockV = getV(event.getLock());
+		maxEpochAndCV(st, lockV, event.getInfo()); // we hold lock here
+		super.postWait(event);
+		if (COUNT_OPERATIONS) wait.inc(st.getTid());
 	}
 
 	public static String toString(final ShadowThread td) {
-		return String.format("[tid=%-2d   cv=%s   epoch=%s]", td.getTid(), ts_get_cv(td), Epoch.toString(ts_get_epoch(td)));
+		return String.format("[tid=%-2d   C=%s   E=%s]", td.getTid(), ts_get_V(td), Epoch.toString(ts_get_E(td)));
 	}
 
 
-	private final Decoration<ShadowThread, CV> cvForExit = 
-		ShadowThread.makeDecoration("FT:barrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, CV>());
+	private final Decoration<ShadowThread, VectorClock> vectorClockForBarrierEntry = 
+			ShadowThread.makeDecoration("FT:barrier", DecorationFactory.Type.MULTIPLE, new NullDefault<ShadowThread, VectorClock>());
 
-	public void preDoBarrier(BarrierEvent<FastTrackBarrierState> be) {
-		FastTrackBarrierState ftbe = be.getBarrier();
-		ShadowThread currentThread = be.getThread();
-		CV entering = ftbe.getEntering();
-		entering.max(ts_get_cv(currentThread));
-		cvForExit.set(currentThread, entering);
+	public void preDoBarrier(BarrierEvent<FTBarrierState> event) {
+		final ShadowThread st = event.getThread();
+		final FTBarrierState barrierObj = event.getBarrier();
+		synchronized(barrierObj) {
+			final VectorClock barrierV = barrierObj.enterBarrier();
+			barrierV.max(ts_get_V(st));
+			vectorClockForBarrierEntry.set(st, barrierV);
+		}
+		if (COUNT_OPERATIONS) barrier.inc(st.getTid());
 	}
 
-	public void postDoBarrier(BarrierEvent<FastTrackBarrierState> be) {
-		FastTrackBarrierState ftbe = be.getBarrier();
-		ShadowThread currentThread = be.getThread();
-		CV old = cvForExit.get(currentThread);
-		ftbe.reset(old);
-		this.maxAndIncEpochAndCV(currentThread, old, be);
+	public void postDoBarrier(BarrierEvent<FTBarrierState> event) {
+		final ShadowThread st = event.getThread();
+		final FTBarrierState barrierObj = event.getBarrier();
+		synchronized(barrierObj) {
+			final VectorClock barrierV = vectorClockForBarrierEntry.get(st);
+			barrierObj.stopUsingOldVectorClock(barrierV);
+			maxAndIncEpochAndCV(st, barrierV, null);
+		}
+		if (COUNT_OPERATIONS) this.barrier.inc(st.getTid());
+	}
 
+	///
+
+	@Override
+	public void classInitialized(ClassInitializedEvent event) {
+		final ShadowThread st = event.getThread();
+		final VectorClock tV = ts_get_V(st);
+		synchronized(classInitTime) {
+			VectorClock initTime = classInitTime.get(event.getRRClass());
+			initTime.copy(tV);
+		}
+		incEpochAndCV(st, null);
+		super.classInitialized(event);
+		if (COUNT_OPERATIONS) other.inc(st.getTid());
 	}
 
 	@Override
-	public void classInitialized(ClassInitializedEvent e) {
-		final ShadowThread currentThread = e.getThread();
-		final CV cv = this.ts_get_cv(currentThread);
-		Util.log("Class Init for " + e + " -- " + cv);
-		classInitTime.get(e.getRRClass()).max(cv);
-		this.incEpochAndCV(currentThread, e);
-		super.classInitialized(e);
+	public void classAccessed(ClassAccessedEvent event) {
+		final ShadowThread st = event.getThread();
+		synchronized(classInitTime) {
+			final VectorClock initTime = classInitTime.get(event.getRRClass());
+			maxEpochAndCV(st, initTime, null);
+		}
+		if (COUNT_OPERATIONS) other.inc(st.getTid());
 	}
+
 
 
 	@Override
@@ -495,130 +700,62 @@ public class FastTrackTool extends Tool implements BarrierListener<FastTrackBarr
 	}
 
 
-	/******/
+	protected void error(final AccessEvent ae, final FTVarState x, final String description, final String prevOp, final int prevTid, final String curOp, final int curTid) {
 
-	public static boolean readFastPath(final ShadowVar gs, final ShadowThread td) {
-		if (gs instanceof FastTrackGuardState) {
-			final FastTrackGuardState x = ((FastTrackGuardState)gs);
-			final int tdEpoch = ts_get_epoch(td);
-			final int lastReadEpoch = x.lastRead;
-
-			if (lastReadEpoch == tdEpoch) {
-				return true;
-			}
-
-			final int tid = td.getTid();
-
-			final int lastWriteEpoch = x.lastWrite;
-
-
-			final CV fhbCV = ts_get_cv(td);			
-
-			final int lastWriter = Epoch.tid(lastWriteEpoch);
-
-			if (lastWriter != tid && lastWriteEpoch > fhbCV.get(lastWriter)) {
-				return false;
-			}
-
-			if (lastReadEpoch == Epoch.READ_SHARED) {
-				if (x.get(tid) != tdEpoch) {
-					synchronized(x) {
-						if (x.lastWrite != lastWriteEpoch) return false;
-						if (x.lastRead != lastReadEpoch) return false;
-						x.set(tid, tdEpoch);
-						return true;
-					}
-				} else {
-					return true;
-				}
-			} else {
-				final int lastReader = Epoch.tid(lastReadEpoch);
-				if (lastReader == tid) {
-					synchronized(x) {
-						if (x.lastWrite != lastWriteEpoch) return false;
-						if (x.lastRead != lastReadEpoch) return false;
-						x.lastRead = tdEpoch;
-						return true;
-					}
-				}
-				if (lastReadEpoch <= fhbCV.get(lastReader)) {
-					synchronized(x) {
-						if (x.lastWrite != lastWriteEpoch) return false;
-						if (x.lastRead != lastReadEpoch) return false;
-						x.lastRead = tdEpoch;
-						return true;
-					}
-				} else {
-					synchronized(x) {
-						if (x.lastWrite != lastWriteEpoch) return false;
-						if (x.lastRead != lastReadEpoch) return false;
-						x.makeCV(INIT_CV_SIZE);
-						x.set(lastReader, lastReadEpoch);
-						x.set(td.getTid(), tdEpoch);
-						x.lastRead = Epoch.READ_SHARED;
-						return true;
-					}
-				}
-			}
+		if (ae instanceof FieldAccessEvent) {
+			fieldError((FieldAccessEvent)ae, x, description, prevOp, prevTid, curOp, curTid);
+		} else {
+			arrayError((ArrayAccessEvent)ae, x, description, prevOp, prevTid, curOp, curTid);
 		}
-		return false;
 	}
 
-	public static boolean writeFastPath(final ShadowVar gs, final ShadowThread td) {
-		if (gs instanceof FastTrackGuardState) {
-			final FastTrackGuardState x = ((FastTrackGuardState)gs);
+	protected void arrayError(final ArrayAccessEvent aae, final FTVarState sx, final String description, final String prevOp, final int prevTid, final String curOp, final int curTid) {
+		final ShadowThread st = aae.getThread();
+		final Object target = aae.getTarget();
 
-			final int lastWriteEpoch = x.lastWrite;
-			final int tdEpoch = ts_get_epoch(td);
-			if (lastWriteEpoch == tdEpoch) {
-				return true;
-			} 
-
-			final int lastWriter = Epoch.tid(lastWriteEpoch);
-			final int tid = td.getTid();
-
-			final CV tdCV = ts_get_cv(td);
-			if (lastWriter != tid && lastWriteEpoch > tdCV.get(lastWriter)) {
-				return false;
-			}
-
-			final int lastReadEpoch = x.lastRead;				
-
-			if (lastReadEpoch == tdEpoch) { 
-				synchronized(x) {
-					if (x.lastWrite != lastWriteEpoch) return false;
-					if (x.lastRead != lastReadEpoch) return false;
-					x.lastWrite = tdEpoch;
-					return true;
-				}
-			}
-
-			if (lastReadEpoch != Epoch.READ_SHARED) {
-				final int lastReader = Epoch.tid(lastReadEpoch);
-				if (lastReader != tid && lastReadEpoch > tdCV.get(lastReader)) {
-					return false;
-				}
-				synchronized(x) {
-					if (x.lastWrite != lastWriteEpoch) return false;
-					if (x.lastRead != lastReadEpoch) return false;
-					x.lastWrite = tdEpoch;
-					x.lastRead = tdEpoch;
-					return true;
-				}
-			} else {
-				synchronized(x) {
-					if (x.lastWrite != lastWriteEpoch) return false;
-					if (x.lastRead != lastReadEpoch) return false;
-					if (x.anyGt(tdCV)) return false;
-					x.lastWrite = tdEpoch;
-					x.lastRead = tdEpoch;
-					return true;
-				}
-			}
+		if (arrayErrors.stillLooking(aae.getInfo())) {
+			arrayErrors.error(st,
+					aae.getInfo(),
+					"Alloc Site", 		ArrayAllocSiteTracker.get(target),
+					"Shadow State", 	sx,
+					"Current Thread",	toString(st), 
+					"Array",			Util.objectToIdentityString(target) + "[" + aae.getIndex() + "]",
+					"Message", 			description,
+					"Previous Op",		prevOp + " " + ShadowThread.get(prevTid),
+					"Currrent Op",		curOp + " " + ShadowThread.get(curTid), 
+					"Stack",			ShadowThread.stackDumpForErrorMessage(st)); 
 		}
-		return false;
+		Assert.assertTrue(prevTid != curTid);
+
+		aae.getArrayState().specialize();
+
+		if (!arrayErrors.stillLooking(aae.getInfo())) {
+			advance(aae);
+		}
 	}
 
+	protected void fieldError(final FieldAccessEvent fae, final FTVarState sx, final String description, final String prevOp, final int prevTid, final String curOp, final int curTid) {
+		final FieldInfo fd = fae.getInfo().getField();
+		final ShadowThread st = fae.getThread();
+		final Object target = fae.getTarget();
 
+		if (fieldErrors.stillLooking(fd)) {
+			fieldErrors.error(st,
+					fd,
+					"Shadow State", 	sx,
+					"Current Thread",	toString(st), 
+					"Class",			(target==null?fd.getOwner():target.getClass()),
+					"Field",			Util.objectToIdentityString(target) + "." + fd, 
+					"Message", 			description,
+					"Previous Op",		prevOp + " " + ShadowThread.get(prevTid),
+					"Currrent Op",		curOp + " " + ShadowThread.get(curTid), 
+					"Stack",			ShadowThread.stackDumpForErrorMessage(st));
+		}
 
+		Assert.assertTrue(prevTid != curTid);
+
+		if (!fieldErrors.stillLooking(fd)) {
+			advance(fae);
+		}
+	}
 }

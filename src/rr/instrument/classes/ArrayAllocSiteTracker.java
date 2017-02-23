@@ -41,18 +41,22 @@ package rr.instrument.classes;
 import rr.org.objectweb.asm.ClassVisitor;
 import rr.org.objectweb.asm.MethodVisitor;
 import rr.org.objectweb.asm.Opcodes;
+import rr.instrument.Constants;
 import rr.instrument.methods.RRMethodAdapter;
 import rr.instrument.tools.ArrayFilterTool;
 import rr.loader.MethodResolutionException;
 import rr.loader.RRTypeInfo;
 import rr.meta.ClassInfo;
+import rr.meta.MetaDataInfoKeys;
 import rr.meta.MethodInfo;
 import rr.meta.SourceLocation;
 import rr.org.objectweb.asm.Label;
 import rr.state.ArrayStateFactory;
+
 import acme.util.Assert;
 import acme.util.StringMatchResult;
 import acme.util.StringMatcher;
+import acme.util.Util;
 import acme.util.identityhash.ConcurrentIdentityHashMap;
 import acme.util.identityhash.WeakIdentityHashMap;
 import acme.util.option.CommandLine;
@@ -83,9 +87,10 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 			if (ArrayStateFactory.arrayOption.get() != ArrayStateFactory.ArrayMode.NONE && ArrayFilterTool.arrayAllocsToWatch.get().test(loc.getKey()) == StringMatchResult.ACCEPT) {
 				super.visitInsn(Opcodes.DUP);
 				super.visitLdcInsn(this.getByteCodeIndex());
-				super.visitLdcInsn(this.getFileLine());
-				super.visitLdcInsn(this.getFileName());
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ArrayAllocSiteTracker", "__$rr_array", "(Ljava/lang/Object;IILjava/lang/String;)V", false);
+				MethodInfo m = this.getMethod();
+				String s = MetaDataInfoKeys.getMethodKey(m.getOwner(), Constants.recoverOriginalNameFromMangled(m.getName()), m.getDescriptor());
+				super.visitLdcInsn(s);
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, "rr/instrument/classes/ArrayAllocSiteTracker", "__$rr_array", "(Ljava/lang/Object;ILjava/lang/String;)V", false);
 			} else {
 //				Util.log("Skipping array allocs at " + loc);
 			}
@@ -137,57 +142,45 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 		}
 	}
 	
-	public static class ArrayAllocSourceLocation extends SourceLocation {
+	public static class ArrayAllocSourceLocation {
 		final private int dimension;
-		public ArrayAllocSourceLocation(String file, int line, int offset, int dim) {
-			super(file, line, offset);
+		final private String methodKey;
+		final private int bci;
+
+		public ArrayAllocSourceLocation(String methodKey, int bci, int dim) {
 			this.dimension = dim;
+			this.bci = bci;
+			this.methodKey = methodKey;
+		}
+
+		public String getMethodKey() {
+			return methodKey;
 		}
 
 		public int getDimension() {
 			return dimension;
 		}
 		
+		public int getBci() {
+			return bci;
+		}
+
 		public String toString() {
-			return super.toString() + ":" + getDimension();
+			return  methodKey + ":" + bci + ":" + getDimension();
 		}
 
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + dimension;
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ArrayAllocSourceLocation other = (ArrayAllocSourceLocation) obj;
-			if (dimension != other.dimension)
-				return false;
-			return true;
-		}
-		
-		
 	}
-
 	// this version takes the dimension too.
-	public static final void __$rr_array(Object o, int byteCodeIndex, int line, String file, int dimension) {
+	public static final void __$rr_array(Object o, int byteCodeIndex, String methodKey, int dimension) {
 		try {
-			final ArrayAllocSourceLocation loc = new ArrayAllocSourceLocation(file, line, byteCodeIndex, dimension);
+			final ArrayAllocSourceLocation loc = new ArrayAllocSourceLocation(methodKey, byteCodeIndex, dimension);
 			synchronized(allocSites) { allocSites.put(o, loc); }
 
 			if (o instanceof Object[]) {
 				Object[] a = (Object[])o;
 				for (Object aa : a) {
 					if (aa != null && aa.getClass().isArray()) {
-						__$rr_array(aa, byteCodeIndex, line, file, dimension + 1);
+						__$rr_array(aa, byteCodeIndex, methodKey, dimension + 1);
 					}
 				}
 			}
@@ -198,8 +191,8 @@ public class ArrayAllocSiteTracker extends RRClassAdapter {
 	}
 
 	
-	public static final void __$rr_array(Object o, int byteCodeIndex, int line, String file) {
-		__$rr_array(o, byteCodeIndex, line, file, 0);
+	public static final void __$rr_array(Object o, int byteCodeIndex, String methodKey) {
+		__$rr_array(o, byteCodeIndex, methodKey, 0);
 	}
 
 }

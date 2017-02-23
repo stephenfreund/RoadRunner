@@ -69,7 +69,8 @@ public abstract class WeakResourceManager<K,V> {
 					} catch (Exception e) {
 						Assert.panic(e);
 					}
-
+					Util.log("Cleaning...");
+					
 					// remove gc'd
 					synchronized (managers) {
 						for (int i = managers.size() - 1; i >= 0; i--) {

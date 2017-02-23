@@ -44,6 +44,7 @@ import java.lang.reflect.Method;
 import rr.instrument.hooks.SpecialMethodCallBack;
 import rr.instrument.hooks.SpecialMethodListener;
 import rr.instrument.hooks.SpecialMethods;
+import rr.meta.InstrumentationFilter;
 import rr.state.ShadowThread;
 import acme.util.WeakResourceManager;
 import acme.util.Util;
@@ -140,34 +141,40 @@ public class BarrierMonitor<T> implements SpecialMethodListener {
 			SpecialMethods.addHook("java.util.concurrent.CyclicBarrier", "int await()", this);
 			SpecialMethods.addHook("java.util.concurrent.CyclicBarrier", "int await(long, java.util.concurrent.TimeUnit)", this);
 			SpecialMethods.addHook(".*Barrier", "void await()", this);
+			Util.log("Turning off Instrumentation for all classes match .*Barrier.*: see -nobarrier");
+			InstrumentationFilter.classesToWatch.get().addFirst("-.*Barrier.*");
 		}
 	}
 
-	private synchronized void preBarrier(final Object barrierObj, ShadowThread td) {
-		T data = barriers.get(barrierObj);
-		BarrierEvent<T> e = events.get(td);
-		e.setBarrier(data);
-		e.setEntering(true);
-		BarrierState b = barrierState.get(barrierObj);
-		b.count++;
-		e.setParties(b.parties);
-		e.setCount(b.count);
-
+	private  void preBarrier(final Object barrierObj, ShadowThread td) {
+		BarrierEvent<T> e;
+		synchronized(this) {
+			T data = barriers.get(barrierObj);
+			e = events.get(td);
+			e.setBarrier(data);
+			e.setEntering(true);
+			BarrierState b = barrierState.get(barrierObj);
+			b.count++;
+			e.setParties(b.parties);
+			e.setCount(b.count);
+		}
 		this.listener.preDoBarrier(e);
 	}
 
 
 
-	private synchronized void postBarrier(final Object barrierObj, ShadowThread td) {
-		T data = barriers.get(barrierObj);
-		BarrierEvent<T> e = events.get(td);
-		e.setBarrier(data);
-		e.setEntering(false);
-		BarrierState b = barrierState.get(barrierObj);
-		b.count--;
-		e.setParties(b.parties);
-		e.setCount(b.count);
-
+	private void postBarrier(final Object barrierObj, ShadowThread td) {
+		BarrierEvent<T> e;
+		synchronized(this) {
+			T data = barriers.get(barrierObj);
+			e = events.get(td);
+			e.setBarrier(data);
+			e.setEntering(false);
+			BarrierState b = barrierState.get(barrierObj);
+			b.count--;
+			e.setParties(b.parties);
+			e.setCount(b.count);
+		}
 		this.listener.postDoBarrier(e);
 	}
 

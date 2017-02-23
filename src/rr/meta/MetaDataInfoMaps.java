@@ -233,6 +233,7 @@ public class MetaDataInfoMaps {
 	public static ClassInfo getClass(String className) {		
 		ClassInfo x = getClasses().get(MetaDataInfoKeys.getClassKey(className));
 		if (x == null) {
+//			System.err.println("NOT FOUND:" + className);
 			boolean isSynthetic = Constants.isSyntheticName(className);
 			x = new ClassInfo(getClasses().size(), SourceLocation.NULL, className, isSynthetic);
 			getClasses().put(x);
@@ -251,13 +252,20 @@ public class MetaDataInfoMaps {
 		return x;
 	}
 
+	public static FieldInfo getField(String key) {
+		FieldInfo x = getFields().get(key);
+		Assert.assertTrue(x != null, key);
+		return x;
+	}
+
+	
 	public static AcquireInfo makeAcquire(SourceLocation loc, MethodInfo enclosing) {
 		AcquireInfo a;
 		while (true) {
 			a = getAcquires().get(MetaDataInfoKeys.getLockKey(loc, true));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc");
+//			Yikes.yikes("making bogus loc");
 		}
 		a = new AcquireInfo(getAcquires().size(), loc, enclosing);
 		getAcquires().put(a);
@@ -271,7 +279,7 @@ public class MetaDataInfoMaps {
 			a = getReleases().get(MetaDataInfoKeys.getLockKey(loc, false));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc");
+//			Yikes.yikes("making bogus loc");
 		}
 		a = new ReleaseInfo(getReleases().size(), loc, enclosing);
 		getReleases().put(a);
@@ -285,7 +293,7 @@ public class MetaDataInfoMaps {
 			a = getArrayAccesses().get(MetaDataInfoKeys.getArrayAccessKey(loc, isWrite));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc");
+//			Yikes.yikes("making bogus loc");
 		}
 		a = new ArrayAccessInfo(getArrayAccesses().size(), loc, enclosing, isWrite);
 		getArrayAccesses().put(a);
@@ -299,7 +307,7 @@ public class MetaDataInfoMaps {
 			a = getFieldAccesses().get(MetaDataInfoKeys.getFieldAccessKey(loc, enclosing, field, isWrite));
 			if (a == null) break;
 			loc = new SourceLocation(loc.getFile(), loc.getLine(), loc.getOffset() + 1);
-			Yikes.yikes("making bogus loc");
+//			Yikes.yikes("making bogus loc");
 		}
 		a = new FieldAccessInfo(getFieldAccesses().size(), loc, enclosing, isWrite, field);
 		getFieldAccesses().put(a);
