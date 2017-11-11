@@ -45,6 +45,7 @@ import rr.barrier.BarrierMonitor;
 import rr.event.AccessEvent;
 import rr.event.AcquireEvent;
 import rr.event.ClassInitializedEvent;
+import rr.event.ClassAccessedEvent;
 import rr.event.InterruptEvent;
 import rr.event.InterruptedEvent;
 import rr.event.JoinEvent;
@@ -242,11 +243,16 @@ final public class PrintTool extends Tool implements BarrierListener<Integer> {
 		super.preStart(e);
 	}
 	
-
 	@Override
 	public void classInitialized(ClassInitializedEvent e) {
 		logf(e.getThread(), "%s", e);
 		super.classInitialized(e);
+	}
+
+	@Override
+	public void classAccessed(ClassAccessedEvent e) {
+		logf(e.getThread(), "%s", e);
+		super.classAccessed(e);
 	}
 
 	@Override
